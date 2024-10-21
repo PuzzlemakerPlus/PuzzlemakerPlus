@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 
     QQmlApplicationEngine engine;
     //TODO: Deprecated, change later.
-    const QUrl url("qrc:/qt/qml/puzzlemakerplus/HelloWorld.qml");
+    const QUrl url("qrc:puzzlemakerplus/HelloWorld.qml");
 
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject* obj, const QUrl &objUrl) {
