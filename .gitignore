@@ -9,6 +9,13 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+
+// CLion
 cmake-build-debug
 .idea
 
+// Visual Studio
+.vs
+out
+// I think this is VS specific...
+CMakeSettings.json
