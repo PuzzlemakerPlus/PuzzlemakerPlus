@@ -1,10 +1,20 @@
-#include <QApplication>
-#include <QPushButton>
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
+#include <QUrl>
 
-int main(int argc, char* argv[]) {
-    QApplication a(argc, argv);
-    QPushButton button("Hello world!", nullptr);
-    button.resize(200, 100);
-    button.show();
-    return QApplication::exec();
+int main(int argc, char* argv[])
+{
+    QGuiApplication app(argc, argv);
+
+    QQmlApplicationEngine engine;
+    const QUrl url(u"file:../HelloWorld.qml"_qs);
+
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
+                     &app, [url](QObject* obj, const QUrl &objUrl) {
+                if (!obj && url == objUrl)
+                    QCoreApplication::exit(-1);
+            }, Qt::QueuedConnection);
+    engine.load(url);
+
+    return app.exec();
 }

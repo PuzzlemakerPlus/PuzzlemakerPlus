@@ -9,13 +9,13 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt6 COMPONENTS
         Core
         Gui
-        Widgets
+        Quick
         REQUIRED)
 
 add_executable(PuzzlemakerPlus main.cpp)
 target_link_libraries(PuzzlemakerPlus
-        Qt::Core
-        Qt::Gui
-        Qt::Widgets
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Quick
 )
 
