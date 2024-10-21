@@ -19,3 +19,6 @@ cmake-build-debug
 out
 // I think this is VS specific...
 CMakeSettings.json
+//Visual Studio Code
+build
+CMakePresets.json
