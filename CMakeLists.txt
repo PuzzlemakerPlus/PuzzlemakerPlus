@@ -8,12 +8,14 @@ find_package(Qt6 COMPONENTS Core Gui Quick REQUIRED)
 
 qt_standard_project_setup()
 
-qt_add_executable(PuzzlemakerPlus main.cpp)
+qt_add_executable(PuzzlemakerPlus src/main.cpp
+        src/palette/palette.cpp
+        src/palette/palette.h)
 
 qt_add_qml_module(PuzzlemakerPlus
         URI puzzlemakerplus
         QML_FILES
-                HelloWorld.qml
+        qml/HelloWorld.qml
 )
 
 target_link_libraries(PuzzlemakerPlus PRIVATE
