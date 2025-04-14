@@ -8,7 +8,7 @@
 
 #include <QAbstractButton>
 
-namespace pmp {
+namespace PMP {
     class PaletteElement : public QWidget {
 
     Q_OBJECT

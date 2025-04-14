@@ -9,6 +9,6 @@
 
 
 
-void pmp::PaletteElement::handleClick() {
+void PMP::PaletteElement::handleClick() {
     std::cout << "You clicked me :3" << std::endl;
 }
