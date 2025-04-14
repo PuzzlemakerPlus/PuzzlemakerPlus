@@ -4,6 +4,8 @@ project(PuzzlemakerPlus)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 find_package(Qt6 COMPONENTS Core Gui Quick REQUIRED)
 
 qt_standard_project_setup()
@@ -23,4 +25,3 @@ target_link_libraries(PuzzlemakerPlus PRIVATE
         Qt6::Gui
         Qt6::Quick
 )
-

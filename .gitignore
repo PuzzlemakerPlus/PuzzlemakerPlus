@@ -9,6 +9,13 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+.rcc
+PuzzlemakerPlus
+PuzzlemakerPlus_autogen
+meta_types
+qmltypes
+puzzlemakerplus
+puzzlemakerplus_qmltyperegistrations.cpp
 
 // CLion
 cmake-build-debug
@@ -22,3 +29,9 @@ CMakeSettings.json
 //Visual Studio Code
 build
 CMakePresets.json
+
+//Clangd
+.cache
+
+//Qt
+.qt
