@@ -6,7 +6,7 @@
 #define PUZZLEMAKERPLUS_PALETTE_H
 
 
-class Pallette {
+class Palette {
 
 
 
