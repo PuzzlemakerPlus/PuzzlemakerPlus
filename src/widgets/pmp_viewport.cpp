@@ -8,7 +8,7 @@ void PMPViewport::paintGL()
 	// TODO
 }
 
-void PMPViewport::resizeGL()
+void PMPViewport::resizeGL( int width, int height )
 {
 	// TODO
 }

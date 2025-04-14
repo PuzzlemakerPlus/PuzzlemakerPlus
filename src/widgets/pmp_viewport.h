@@ -8,7 +8,7 @@
 class PMPViewport : public QOpenGLWidget
 {
 	virtual void paintGL();
-	virtual void resizeGL();
+	virtual void resizeGL( int width, int height );
 	virtual void initializeGL();
 };
 
