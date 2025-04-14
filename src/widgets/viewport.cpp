@@ -1,7 +1,7 @@
 // viewport.cpp
 // Implements the main editor viewport as an extension of QOpenGLWidget
 
-#include <QOpenGlFunctions>
+#include <QOpenGLFunctions>
 #include "viewport.h"
 
 namespace PMP
