@@ -5,15 +5,15 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
- 
+
 find_package(Qt6 COMPONENTS Core Gui Widgets OpenGLWidgets REQUIRED)
 
 qt_standard_project_setup()
 
 qt_add_executable(PuzzlemakerPlus
         src/main.cpp
-        src/palette/palette.cpp
-        src/palette/palette.h
+        src/widgets/palette.cpp
+        src/widgets/palette.h
         src/widgets/pmp_viewport.cpp
         src/widgets/pmp_viewport.h
         )
