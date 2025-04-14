@@ -36,10 +36,9 @@ int main(int argc, char* argv[])
     QPushButton button("This is the first element in the palette", &mainViewport);
     button.resize(400, 200);
 
-    PMP::PaletteElement firstElement;
+    PMP::PaletteElement firstElement(0);
     QObject::connect(&button, SIGNAL(clicked(bool)), &firstElement, SLOT(handleClick()));
 
-    //causes sigsev right now since the button doesn't exist in the UI right now
     button.show();
 
     return QApplication::exec();

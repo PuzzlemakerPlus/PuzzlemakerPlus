@@ -5,7 +5,6 @@
 #ifndef PUZZLEMAKERPLUS_PALETTEELEMENT_H
 #define PUZZLEMAKERPLUS_PALETTEELEMENT_H
 
-
 #include <QAbstractButton>
 
 namespace PMP {
@@ -15,6 +14,14 @@ namespace PMP {
 
     public slots:
         void handleClick();
+
+    public:
+        int m_id;
+
+        explicit PaletteElement(int id) : m_id(id) {};
+
+    private:
+        int id{};
     };
 }
 #endif //PUZZLEMAKERPLUS_PALETTEELEMENT_H

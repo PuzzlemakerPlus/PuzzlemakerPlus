@@ -6,12 +6,26 @@
 #define PUZZLEMAKERPLUS_PALETTE_H
 
 
-class Palette {
+#include "PaletteElement.h"
+
+namespace PMP {
+
+    class Palette {
+
+    private:
+        std::vector<PMP::PaletteElement*> m_paletteElements;
+
+    public:
+
+        Palette();
+
+        void addItem(const PMP::PaletteElement* item);
+
+        PMP::PaletteElement* getItem(int index);
+        std::vector<PMP::PaletteElement*> getItems();
 
 
-
-
-};
-
+    };
+}
 
 #endif //PUZZLEMAKERPLUS_PALETTE_H
