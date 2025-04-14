@@ -1,21 +1,11 @@
-#include <QGuiApplication>
-#include <QQmlApplicationEngine>
-#include <QUrl>
+#include <QApplication>
+#include <QPushButton>
 
 int main(int argc, char* argv[])
 {
-    QGuiApplication app(argc, argv);
-
-    QQmlApplicationEngine engine;
-    //TODO: Deprecated, change later.
-    const QUrl url("qrc:puzzlemakerplus/qml/HelloWorld.qml");
-
-    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
-                     &app, [url](QObject* obj, const QUrl &objUrl) {
-                if (!obj && url == objUrl)
-                    QCoreApplication::exit(-1);
-            }, Qt::QueuedConnection);
-    engine.load(url);
-
-    return app.exec();
+    QApplication a(argc, argv);
+    QPushButton button("Hello world!", nullptr);
+    button.resize(200, 100);
+    button.show();
+    return QApplication::exec();
 }

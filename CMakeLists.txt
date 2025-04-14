@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 COMPONENTS Core Gui Quick REQUIRED)
+find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
 
 qt_standard_project_setup()
 
@@ -14,14 +14,8 @@ qt_add_executable(PuzzlemakerPlus src/main.cpp
         src/palette/palette.cpp
         src/palette/palette.h)
 
-qt_add_qml_module(PuzzlemakerPlus
-        URI puzzlemakerplus
-        QML_FILES
-        qml/HelloWorld.qml
-)
-
 target_link_libraries(PuzzlemakerPlus PRIVATE
         Qt6::Core
         Qt6::Gui
-        Qt6::Quick
+        Qt6::Widgets
 )
