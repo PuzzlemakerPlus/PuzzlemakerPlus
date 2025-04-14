@@ -2,6 +2,7 @@
 // Defines the entry point for the application
 
 #include <QApplication>
+#include <QPushButton>
 #include "widgets/viewport.h"
 
 #include "widgets/palette.h"
@@ -10,14 +11,6 @@
 int main(int argc, char* argv[])
 {
     QApplication a(argc, argv);
-//    QPushButton button("Hello world!", nullptr);
-    QPushButton button("This is the first element in the palette");
-    button.resize(400, 200);
-    button.show();
-
-    pmp::PaletteElement* firstElement;
-    QObject::connect(&button, SIGNAL(clicked(bool)), firstElement, SLOT(handleClick()));
-
 
     // TODO: We probably want the main viewport to be a child of a separate "base" panel
     PMP::Viewport mainViewport(nullptr);
@@ -33,6 +26,15 @@ int main(int argc, char* argv[])
     mainViewport.setFormat( format );
 
     mainViewport.show();
+
+    QPushButton button("This is the first element in the palette", &mainViewport);
+    button.resize(400, 200);
+
+    pmp::PaletteElement firstElement;
+    QObject::connect(&button, SIGNAL(clicked(bool)), &firstElement, SLOT(handleClick()));
+
+    //causes sigsev right now since the button doesn't exist in the UI right now
+    button.show();
 
     return QApplication::exec();
 }

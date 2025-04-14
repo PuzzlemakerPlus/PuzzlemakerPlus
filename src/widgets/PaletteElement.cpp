@@ -7,9 +7,6 @@
 #include "PaletteElement.h"
 
 
-pmp::PaletteElement::PaletteElement() {
-
-}
 
 
 void pmp::PaletteElement::handleClick() {

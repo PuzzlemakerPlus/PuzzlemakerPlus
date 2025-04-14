@@ -13,9 +13,6 @@ namespace pmp {
 
     Q_OBJECT
 
-    public:
-        PaletteElement();
-
     public slots:
         void handleClick();
     };
