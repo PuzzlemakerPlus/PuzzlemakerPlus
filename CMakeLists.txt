@@ -16,7 +16,8 @@ qt_add_executable(PuzzlemakerPlus
         src/widgets/palette.h
         src/widgets/viewport.cpp
         src/widgets/viewport.h
-        )
+        src/widgets/PaletteElement.cpp
+)
 
 target_link_libraries(PuzzlemakerPlus PRIVATE
         Qt6::Core
