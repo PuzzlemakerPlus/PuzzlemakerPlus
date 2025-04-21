@@ -3,11 +3,9 @@
 
 #include <QApplication>
 #include <cstdlib>
-#include <QPushButton>
 #include "widgets/viewport.h"
 
 #include "widgets/palette.h"
-#include "widgets/PaletteElement.h"
 
 int main(int argc, char* argv[])
 {
@@ -33,13 +31,8 @@ int main(int argc, char* argv[])
 
     mainViewport.show();
 
-    QPushButton button("This is the first element in the palette", &mainViewport);
-    button.resize(400, 200);
-
-    PMP::PaletteElement firstElement(0);
-    QObject::connect(&button, SIGNAL(clicked(bool)), &firstElement, SLOT(handleClick()));
-
-    button.show();
+    //creates all the buttons for the palette Right now most of the data for each element is junk for demo
+    PMP::Palette Palette(&mainViewport);
 
     return QApplication::exec();
 }

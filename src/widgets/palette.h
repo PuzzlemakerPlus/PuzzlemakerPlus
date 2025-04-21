@@ -10,16 +10,17 @@
 
 namespace PMP {
 
-    class Palette {
+    class Palette : public QWidget {
 
     private:
         std::vector<PMP::PaletteElement*> m_paletteElements;
 
     public:
 
-        Palette();
+        explicit Palette(QWidget* parent);
 
-        void addItem(const PMP::PaletteElement* item);
+        void addItem(PMP::PaletteElement* item);
+        void addItems(std::vector<PMP::PaletteElement*>& newElements);
 
         PMP::PaletteElement* getItem(int index);
         std::vector<PMP::PaletteElement*> getItems();
