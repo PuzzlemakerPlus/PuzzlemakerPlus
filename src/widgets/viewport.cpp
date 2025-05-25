@@ -11,7 +11,12 @@ namespace PMP
 	static GLfloat const tempVertices[] = {
 		-0.5f, -0.5f, 0.0f,
 		0.5f, -0.5f, 0.0f,
-		0.0f,  0.5f, 0.0f
+		0.5f,  0.5f, 0.0f,
+		-0.5f,  0.5f, 0.0f
+	};
+	static GLint const tempIndices[] = {
+		0, 1, 2,
+		0, 2, 3
 	};
 
 	void Viewport::initializeGL()
@@ -59,15 +64,22 @@ namespace PMP
 
 		m_vertexBuffer.create();
 		m_vertexBuffer.bind();
-		m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
-		m_vertexBuffer.allocate(tempVertices, 9 * sizeof(GLfloat)); // todo
+		// Disabling for now until we are more certain it's what we want - Kelsey
+		//m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+		m_vertexBuffer.allocate(tempVertices, sizeof(tempVertices)); // todo
+
+		m_indexBuffer.create();
+		m_indexBuffer.bind();
+		m_indexBuffer.allocate(tempIndices, sizeof(tempIndices));
 
 		int vertexPosLocation = m_wallShader.attributeLocation("aPos");
 		m_wallShader.enableAttributeArray(vertexPosLocation);
 		m_wallShader.setAttributeBuffer(vertexPosLocation, GL_FLOAT, 0, 3, 3 * sizeof(GLfloat));
 
-		m_vertexBuffer.release();
 		m_VAO.release();
+
+		m_indexBuffer.release();
+		m_vertexBuffer.release();
 	}
 
 	void Viewport::resizeGL( int width, int height )
@@ -81,12 +93,12 @@ namespace PMP
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 		glEnable( GL_DEPTH_TEST );
-		glEnable( GL_CULL_FACE );
+		//glEnable( GL_CULL_FACE );
 		
 		m_wallShader.bind();
 		m_VAO.bind();
 
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		m_VAO.release();
 		m_wallShader.release();

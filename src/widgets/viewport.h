@@ -26,6 +26,8 @@ namespace PMP
 	private:
 		QOpenGLShaderProgram m_wallShader;
 		QOpenGLBuffer m_vertexBuffer{QOpenGLBuffer::Type::VertexBuffer};
+		QOpenGLBuffer m_indexBuffer{QOpenGLBuffer::Type::IndexBuffer};
+
 		QOpenGLVertexArrayObject m_VAO;
 
 #ifdef _DEBUG
