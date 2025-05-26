@@ -1,7 +1,8 @@
 // viewport.cpp
 // Implements the main editor viewport as an extension of QOpenGLWidget
 
-#include <QList>
+#include <QMouseEvent>
+#include <QWheelEvent>
 
 #include "viewport.h"
 
@@ -9,14 +10,34 @@ namespace PMP
 {
 	// FIXME: remove
 	static GLfloat const tempVertices[] = {
-		-0.5f, -0.5f, 0.0f,
-		0.5f, -0.5f, 0.0f,
-		0.5f,  0.5f, 0.0f,
-		-0.5f,  0.5f, 0.0f
+		0.0f,   0.0f,   0.0f,
+		128.0f, 0.0f,   0.0f,
+		128.0f, 128.0f, 0.0f,
+		0.0f,   128.0f, 0.0f,
+		0.0f,   0.0f,   128.0f,
+		128.0f, 0.0f,   128.0f,
+		128.0f, 128.0f, 128.0f,
+		0.0f,   128.0f, 128.0f,
 	};
 	static GLint const tempIndices[] = {
+		// bottom
 		0, 1, 2,
-		0, 2, 3
+		0, 2, 3,
+		// south
+		0, 5, 1,
+		0, 4, 5,
+		// east
+		1, 6, 2,
+		1, 5, 6,
+		// north
+		2, 7, 3,
+		2, 6, 7,
+		// west
+		3, 4, 0,
+		3, 7, 4,
+		// top
+		4, 6, 5,
+		4, 7, 6,
 	};
 
 	void Viewport::initializeGL()
@@ -33,7 +54,7 @@ namespace PMP
 		}
 		else
 		{
-			qDebug() << "Debug extension not available!\n";
+			qDebug() << "WARNING: OpenGL debug output is not supported on this system.\n";
 		}
 #endif
 
@@ -43,16 +64,21 @@ namespace PMP
 		// FIXME: Un-hardcode shaders, this is just temporary so I can get it rendering something - Kelsey
 		const char* vertexShaderSource = "#version 330 core\n"
 			"layout (location = 0) in vec3 aPos;\n"
+			"uniform mat4 view;"
+			"uniform mat4 projection;"
+			"out vec4 vertexColor;\n"
 			"void main()\n"
 			"{\n"
-			"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+			"   gl_Position = projection * view * vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+			"   vertexColor = vec4(aPos.x / 128.0, aPos.y / 128.0, aPos.z / 128.0, 1.0);\n"
 			"}\0";
 
 		const char* fragmentShaderSource = "#version 330 core\n"
 			"out vec4 FragColor;\n"
+			"in vec4 vertexColor;\n"
 			"void main()\n"
 			"{\n"
-			"	FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+			"	FragColor = vertexColor;\n"
 			"}\0";
 
 		m_wallShader.addShaderFromSourceCode(QOpenGLShader::Vertex, vertexShaderSource);
@@ -76,6 +102,7 @@ namespace PMP
 		m_wallShader.enableAttributeArray(vertexPosLocation);
 		m_wallShader.setAttributeBuffer(vertexPosLocation, GL_FLOAT, 0, 3, 3 * sizeof(GLfloat));
 
+		// must release VAO before index/vertex buffers, otherwise they get unbound from the VAO too!
 		m_VAO.release();
 
 		m_indexBuffer.release();
@@ -84,7 +111,10 @@ namespace PMP
 
 	void Viewport::resizeGL( int width, int height )
 	{
-		// Update projection matrix and other size related settings
+		const float aspect = (float)width / (float)(height > 0 ? height : 1);
+		m_projection.setToIdentity();
+		// Source near clip plane value, might change later
+		m_projection.perspective(m_fov, aspect, 7.0f, 32767.0f);
 	}
 
 	void Viewport::paintGL()
@@ -93,14 +123,75 @@ namespace PMP
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 		glEnable( GL_DEPTH_TEST );
-		//glEnable( GL_CULL_FACE );
+		glEnable( GL_CULL_FACE );
 		
 		m_wallShader.bind();
+
+		QMatrix4x4 view;
+		// Do camera offset from target point before rotating, easier that way
+		view.translate(QVector3D(0, 0, -m_cameraDistance));
+		view.rotate(QQuaternion::fromEulerAngles(m_cameraAngles));
+		view.translate(m_cameraTarget);
+		m_wallShader.setUniformValue("view", view);
+		m_wallShader.setUniformValue("projection", m_projection);
+
 		m_VAO.bind();
 
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, sizeof(tempIndices) / sizeof(GLint), GL_UNSIGNED_INT, 0);
 
 		m_VAO.release();
 		m_wallShader.release();
+	}
+
+	void Viewport::mousePressEvent(QMouseEvent* event)
+	{
+		if ( event->button() == Qt::MouseButton::RightButton )
+		{
+			m_rightMouseDown = true;
+			event->accept();
+		}
+		else if ( event->button() == Qt::MouseButton::LeftButton ||
+				  event->button() == Qt::MouseButton::MiddleButton )
+		{
+			m_leftMouseDown = true;
+			event->accept();
+		}
+
+		m_lastMousePos = QVector2D(event->position());
+	}
+
+	void Viewport::mouseReleaseEvent(QMouseEvent* event)
+	{
+		if ( event->button() == Qt::MouseButton::RightButton )
+		{
+			m_rightMouseDown = false;
+			event->accept();
+		}
+		else if ( event->button() == Qt::MouseButton::LeftButton ||
+				  event->button() == Qt::MouseButton::MiddleButton )
+		{
+			m_leftMouseDown = false;
+			event->accept();
+		}
+	}
+
+	void Viewport::mouseMoveEvent( QMouseEvent* event )
+	{
+		QVector2D delta = QVector2D(event->position()) - m_lastMousePos;
+		if ( m_leftMouseDown )
+		{
+			m_cameraAngles += QVector3D(delta.y(), 0, delta.x());
+			event->accept();
+		}
+
+		// TODO: panning
+
+		m_lastMousePos = QVector2D(event->position());
+		update();
+	}
+
+	void Viewport::wheelEvent( QWheelEvent* event )
+	{
+		// TODO: zoom
 	}
 }
