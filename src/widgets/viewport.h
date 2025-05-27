@@ -9,7 +9,7 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLTexture>
 #include <QOpenGLDebugLogger>
-#include <QOpenGlVertexArrayObject>
+#include <QOpenGLVertexArrayObject>
 
 #include <QMatrix4x4>
 #include <QVector3D>
@@ -67,7 +67,7 @@ namespace PMP
 
 		QOpenGLVertexArrayObject m_VAO;
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 		QOpenGLDebugLogger m_debugLogger;
 #endif
 	};

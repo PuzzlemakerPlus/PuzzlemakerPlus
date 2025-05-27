@@ -14,7 +14,9 @@ PMP::Palette::Palette(QWidget* parent) {
     for(int i = 0; i < 10; i++) {
 
         //TODO: Eventually PMP::PaletteElement is probably going to be a custom implementation of QPushButton making this obsolete
-        auto* button = new QPushButton(QString((QChar) i + '0'), parent);
+        auto* text = new QString("Element ");
+        text->append(std::to_string(i));
+        auto* button = new QPushButton(*text, parent);
         //randomly picked size for now
         button->resize(75, 75);
         //x: every other item move width to the right y: move height down every 2 items
