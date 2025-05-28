@@ -26,15 +26,17 @@ namespace PMP
 	public:
 		Viewport(QWidget *parent) : 
 			QOpenGLWidget(parent), 
-			QOpenGLFunctions_3_2_Core(), 
+			QOpenGLFunctions_3_2_Core(),
+#ifndef NDEBUG
+			m_debugLogger(this),
+#endif
 			m_fov(90.0f),
 			m_cameraTarget(0.0f, 0.0f, 0.0f),
 			m_cameraAngles(0.0f, 0.0f, 0.0f),
 			m_cameraDistance(cameraDistDefault),
 			m_isOrbiting(false),
 			m_isPanning(false),
-			m_lastMousePos(0.0f, 0.0f),
-			m_debugLogger(this)
+			m_lastMousePos(0.0f, 0.0f)
 		{ }
 
 	protected:
