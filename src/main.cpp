@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     format.setStencilBufferSize(8);
     format.setVersion(3,2);
     format.setProfile(QSurfaceFormat::CoreProfile);
-#ifdef _DEBUG
+#ifndef NDEBUG
     format.setOption(QSurfaceFormat::DebugContext);
 #endif
     QSurfaceFormat::setDefaultFormat( format );
