@@ -17,6 +17,10 @@
 
 namespace PMP
 {
+	const float cameraDistDefault = 512.0f;
+	const float cameraDistMin = 256.0f;
+	const float cameraDistMax = 3500.0f;
+
 	class Viewport : public QOpenGLWidget, protected QOpenGLFunctions_3_2_Core
 	{
 	public:
@@ -26,9 +30,9 @@ namespace PMP
 			m_fov(90.0f),
 			m_cameraTarget(0.0f, 0.0f, 0.0f),
 			m_cameraAngles(0.0f, 0.0f, 0.0f),
-			m_cameraDistance(256.0f),
-			m_leftMouseDown(false),
-			m_rightMouseDown(false),
+			m_cameraDistance(cameraDistDefault),
+			m_isOrbiting(false),
+			m_isPanning(false),
 			m_lastMousePos(0.0f, 0.0f),
 			m_debugLogger(this)
 		{ }
@@ -57,8 +61,8 @@ namespace PMP
 		QVector3D m_cameraAngles;
 		float m_cameraDistance;
 
-		bool m_leftMouseDown;
-		bool m_rightMouseDown;
+		bool m_isOrbiting;
+		bool m_isPanning;
 		QVector2D m_lastMousePos;
 
 		// TODO: These will probably be moved elsewhere - Kelsey

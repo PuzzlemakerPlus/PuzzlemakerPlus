@@ -44,7 +44,7 @@ namespace PMP
 	{
 		initializeOpenGLFunctions();
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 		if ( m_debugLogger.initialize() )
 		{
 			connect( &m_debugLogger, &QOpenGLDebugLogger::messageLogged, [=](const QOpenGLDebugMessage &debugMessage) {
@@ -147,13 +147,13 @@ namespace PMP
 	{
 		if ( event->button() == Qt::MouseButton::RightButton )
 		{
-			m_rightMouseDown = true;
+			m_isPanning = true;
 			event->accept();
 		}
 		else if ( event->button() == Qt::MouseButton::LeftButton ||
 				  event->button() == Qt::MouseButton::MiddleButton )
 		{
-			m_leftMouseDown = true;
+			m_isOrbiting = true;
 			event->accept();
 		}
 
@@ -164,13 +164,13 @@ namespace PMP
 	{
 		if ( event->button() == Qt::MouseButton::RightButton )
 		{
-			m_rightMouseDown = false;
+			m_isPanning = false;
 			event->accept();
 		}
 		else if ( event->button() == Qt::MouseButton::LeftButton ||
 				  event->button() == Qt::MouseButton::MiddleButton )
 		{
-			m_leftMouseDown = false;
+			m_isOrbiting = false;
 			event->accept();
 		}
 	}
@@ -178,13 +178,31 @@ namespace PMP
 	void Viewport::mouseMoveEvent( QMouseEvent* event )
 	{
 		QVector2D delta = QVector2D(event->position()) - m_lastMousePos;
-		if ( m_leftMouseDown )
+		if ( m_isOrbiting )
 		{
-			m_cameraAngles += QVector3D(delta.y(), 0, delta.x());
+			m_cameraAngles += QVector3D(delta.y() / 2.0f, 0, delta.x() / 2.0f); // todo make this customizable
+
+			// Don't allow flipping the camera
+			// 0 is straight down and -180 is straight up due to the way we handle the view matrix transform right now
+			if ( m_cameraAngles.x() > 0.0f )
+				m_cameraAngles.setX(0.0f);
+			else if ( m_cameraAngles.x() < -180.0f )
+				m_cameraAngles.setX(-180.0f);
+
 			event->accept();
 		}
 
-		// TODO: panning
+		if ( m_isPanning )
+		{
+			QMatrix4x4 camAngle;
+			camAngle.rotate(QQuaternion::fromEulerAngles(m_cameraAngles));
+			camAngle = camAngle.transposed(); // Reverse the transformation
+
+			QVector3D moveAmount(delta.x(), -delta.y(), 0.0f);
+			moveAmount = camAngle * moveAmount;
+
+			m_cameraTarget += moveAmount;
+		}
 
 		m_lastMousePos = QVector2D(event->position());
 		update();
@@ -192,6 +210,14 @@ namespace PMP
 
 	void Viewport::wheelEvent( QWheelEvent* event )
 	{
-		// TODO: zoom
+		m_cameraDistance -= event->angleDelta().y() / 2.0f; // todo make this customizable
+
+		if ( m_cameraDistance < cameraDistMin )
+			m_cameraDistance = cameraDistMin;
+		else if ( m_cameraDistance > cameraDistMax )
+			m_cameraDistance = cameraDistMax;
+
+		event->accept();
+		update();
 	}
 }
