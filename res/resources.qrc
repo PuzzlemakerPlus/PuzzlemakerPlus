@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>shaders/chamber_surface.vert</file>
+        <file>shaders/chamber_surface.frag</file>
+    </qresource>
+</RCC>

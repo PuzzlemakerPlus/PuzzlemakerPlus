@@ -61,28 +61,8 @@ namespace PMP
 		// Puzzlemaker background color
 		glClearColor( 0.803, 0.815, 0.807, 1.0f );
 
-		// FIXME: Un-hardcode shaders, this is just temporary so I can get it rendering something - Kelsey
-		const char* vertexShaderSource = "#version 330 core\n"
-			"layout (location = 0) in vec3 aPos;\n"
-			"uniform mat4 view;"
-			"uniform mat4 projection;"
-			"out vec4 vertexColor;\n"
-			"void main()\n"
-			"{\n"
-			"   gl_Position = projection * view * vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-			"   vertexColor = vec4(aPos.x / 128.0, aPos.y / 128.0, aPos.z / 128.0, 1.0);\n"
-			"}\0";
-
-		const char* fragmentShaderSource = "#version 330 core\n"
-			"out vec4 FragColor;\n"
-			"in vec4 vertexColor;\n"
-			"void main()\n"
-			"{\n"
-			"	FragColor = vertexColor;\n"
-			"}\0";
-
-		m_wallShader.addShaderFromSourceCode(QOpenGLShader::Vertex, vertexShaderSource);
-		m_wallShader.addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShaderSource);
+		m_wallShader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/chamber_surface.vert");
+		m_wallShader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/chamber_surface.frag");
 		m_wallShader.link();
 
 		m_VAO.create();
