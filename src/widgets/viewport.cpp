@@ -10,34 +10,56 @@ namespace PMP
 {
 	// FIXME: remove
 	static GLfloat const tempVertices[] = {
-		0.0f,   0.0f,   0.0f,
-		128.0f, 0.0f,   0.0f,
-		128.0f, 128.0f, 0.0f,
-		0.0f,   128.0f, 0.0f,
-		0.0f,   0.0f,   128.0f,
-		128.0f, 0.0f,   128.0f,
-		128.0f, 128.0f, 128.0f,
-		0.0f,   128.0f, 128.0f,
+		// bottom
+		0.0f,   0.0f,   0.0f,   0.0f, 0.0f, 1.0f,
+		128.0f, 0.0f,   0.0f,   0.0f, 0.0f, 1.0f,
+		128.0f, 128.0f, 0.0f,   0.0f, 0.0f, 1.0f,
+		0.0f,   128.0f, 0.0f,   0.0f, 0.0f, 1.0f,
+		// south
+		128.0f, 0.0f,   0.0f,   0.0f, 1.0f, 0.0f,
+		0.0f,   0.0f,   0.0f,   0.0f, 1.0f, 0.0f,
+		0.0f,   0.0f,   128.0f, 0.0f, 1.0f, 0.0f,
+		128.0f, 0.0f,   128.0f, 0.0f, 1.0f, 0.0f,
+		// east
+		128.0f, 128.0f, 0.0f,   -1.0f, 0.0f, 0.0f,
+		128.0f, 0.0f,   0.0f,   -1.0f, 0.0f, 0.0f,
+		128.0f, 0.0f,   128.0f, -1.0f, 0.0f, 0.0f,
+		128.0f, 128.0f, 128.0f, -1.0f, 0.0f, 0.0f,
+		// north
+		0.0f,   128.0f, 0.0f,   0.0f, -1.0f, 0.0f,
+		128.0f, 128.0f, 0.0f,   0.0f, -1.0f, 0.0f,
+		128.0f, 128.0f, 128.0f, 0.0f, -1.0f, 0.0f,
+		0.0f,   128.0f, 128.0f, 0.0f, -1.0f, 0.0f,
+		// west
+		0.0f,   0.0f,   0.0f,   1.0f, 0.0f, 0.0f,
+		0.0f,   128.0f, 0.0f,   1.0f, 0.0f, 0.0f,
+		0.0f,   128.0f, 128.0f, 1.0f, 0.0f, 0.0f,
+		0.0f,   0.0f,   128.0f, 1.0f, 0.0f, 0.0f,
+		// top
+		128.0f, 0.0f,   128.0f, 0.0f, 0.0f, -1.0f,
+		0.0f,   0.0f,   128.0f, 0.0f, 0.0f, -1.0f,
+		0.0f,   128.0f, 128.0f, 0.0f, 0.0f, -1.0f,
+		128.0f, 128.0f, 128.0f, 0.0f, 0.0f, -1.0f,
 	};
 	static GLint const tempIndices[] = {
 		// bottom
 		0, 1, 2,
 		0, 2, 3,
 		// south
-		0, 5, 1,
-		0, 4, 5,
+		4, 5, 6,
+		4, 6, 7,
 		// east
-		1, 6, 2,
-		1, 5, 6,
+		8, 9,  10,
+		8, 10, 11,
 		// north
-		2, 7, 3,
-		2, 6, 7,
+		12, 13, 14,
+		12, 14, 15,
 		// west
-		3, 4, 0,
-		3, 7, 4,
+		16, 17, 18,
+		16, 18, 19,
 		// top
-		4, 6, 5,
-		4, 7, 6,
+		20, 21, 22,
+		20, 22, 23,
 	};
 
 	void Viewport::initializeGL()
@@ -80,7 +102,11 @@ namespace PMP
 
 		int vertexPosLocation = m_wallShader.attributeLocation("aPos");
 		m_wallShader.enableAttributeArray(vertexPosLocation);
-		m_wallShader.setAttributeBuffer(vertexPosLocation, GL_FLOAT, 0, 3, 3 * sizeof(GLfloat));
+		m_wallShader.setAttributeBuffer(vertexPosLocation, GL_FLOAT, 0, 3, 6 * sizeof(GLfloat));
+
+		int vertexNormalLocation = m_wallShader.attributeLocation("aNormal");
+		m_wallShader.enableAttributeArray(vertexNormalLocation);
+		m_wallShader.setAttributeBuffer(vertexNormalLocation, GL_FLOAT, 3 * sizeof(GLfloat), 3, 6 * sizeof(GLfloat));
 
 		// must release VAO before index/vertex buffers, otherwise they get unbound from the VAO too!
 		m_VAO.release();
@@ -112,8 +138,7 @@ namespace PMP
 		view.translate(QVector3D(0, 0, -m_cameraDistance));
 		view.rotate(QQuaternion::fromEulerAngles(m_cameraAngles));
 		view.translate(m_cameraTarget);
-		m_wallShader.setUniformValue("view", view);
-		m_wallShader.setUniformValue("projection", m_projection);
+		m_wallShader.setUniformValue("uVP", m_projection * view);
 
 		m_VAO.bind();
 

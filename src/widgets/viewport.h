@@ -31,6 +31,7 @@ namespace PMP
 			m_debugLogger(this),
 #endif
 			m_fov(90.0f),
+			// FIXME: Position/angle handling here is reversed from what's expected - Kelsey
 			m_cameraTarget(0.0f, 0.0f, 0.0f),
 			m_cameraAngles(0.0f, 0.0f, 0.0f),
 			m_cameraDistance(cameraDistDefault),
