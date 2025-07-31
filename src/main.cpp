@@ -9,12 +9,6 @@
 
 int main(int argc, char* argv[])
 {
-    //HACK: Force X11 for now as Wayland's not working for some reason.
-    #ifdef Q_OS_LINUX
-        char env[] = "QT_QPA_PLATFORM=xcb";
-        putenv(env);
-    #endif
-
     QApplication a(argc, argv);
 
     // Configure OpenGL format
