@@ -23,7 +23,25 @@ namespace PMP
 		TestChamberNode& parentNode = m_nodeMap[parentID];
 		for ( int i = 0; i < 8; ++i )
 		{
-			parentNode.m_childNodes[i] = CreateOctreeNode(parentID);
+			parentNode.m_childIDs[i] = CreateOctreeNode(parentID);
+		}
+	}
+
+	void TestChamber::DestroyChildrenForNode( NodeID parentID )
+	{
+		TestChamberNode& parentNode = m_nodeMap[parentID];
+
+		for ( int i = 0; i < 8; ++i )
+		{
+			NodeID childID = parentNode.m_childIDs[i].value();
+			TestChamberNode& childNode = m_nodeMap[childID];
+
+			// if any child node is present than all others should be and vice versa
+			if ( childNode.m_childIDs[0].has_value() )
+				DestroyChildrenForNode(childID);
+
+			m_nodeMap.erase(childID);
+			parentNode.m_childIDs[i].reset();
 		}
 	}
 

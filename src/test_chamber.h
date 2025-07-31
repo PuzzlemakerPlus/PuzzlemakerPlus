@@ -19,14 +19,14 @@ namespace PMP
 	{
 	public:
 		TestChamberNode( NodeID parentID ) :
-			m_parentNode(parentID)
+			m_parentID(parentID)
 		{}
 
 		TestChamberNode() {} // Constructor without parent, used for root node only
 
 		// Array itself being optional would be better, but std::optional doesn't seem to allow that
-		std::optional<NodeID> m_childNodes[8];
-		std::optional<NodeID> m_parentNode;
+		std::optional<NodeID> m_childIDs[8];
+		std::optional<NodeID> m_parentID;
 	};
 
 	class TestChamber
