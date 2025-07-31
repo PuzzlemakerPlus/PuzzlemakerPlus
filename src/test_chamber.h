@@ -9,21 +9,24 @@
 
 namespace PMP
 {
+	// In case we need to change this data type later
+	using NodeID = unsigned int;
+
 	// DO NOT USE THIS DIRECTLY, this is just used to initialize the value in the test chamber class
 	const float defaultRootNodeSize = 8192.0f;
 
 	class TestChamberNode
 	{
 	public:
-		TestChamberNode( int parentID ) :
+		TestChamberNode( NodeID parentID ) :
 			m_parentNode(parentID)
 		{}
 
 		TestChamberNode() {} // Constructor without parent, used for root node only
 
 		// Array itself being optional would be better, but std::optional doesn't seem to allow that
-		std::optional<int> m_childNodes[8];
-		std::optional<int> m_parentNode;
+		std::optional<NodeID> m_childNodes[8];
+		std::optional<NodeID> m_parentNode;
 	};
 
 	class TestChamber
@@ -31,21 +34,21 @@ namespace PMP
 	public:
 		TestChamber();
 
-		void CreateChildrenForNode( int parentID );
-		// TODO
-		//void DestroyChildrenForNode( int parentID );
+		void CreateChildrenForNode( NodeID parentID );
+		// Recursive
+		void DestroyChildrenForNode( NodeID parentID );
 
 	private:
 		// Add node, return its ID, and increment next node ID
 		// std::nullopt for the parent ID means it's the root node
 		// - not making this a default value so it is a deliberate programming choice
-		int CreateOctreeNode( std::optional<int> parentID );
+		NodeID CreateOctreeNode( std::optional<NodeID> parentID );
 
-		std::map<int, TestChamberNode> m_nodeMap;
-		int m_rootNode;
+		std::map<NodeID, TestChamberNode> m_nodeMap;
+		NodeID m_rootNode;
 
 		// FIXME: needs logic to reuse old IDs so this doesn't overflow and break everything
-		int m_nextNodeId;
+		NodeID m_nextNodeId;
 
 		// Size of the root node in hammer units - this is effectively the internal max map size
 		float m_rootNodeWorldSize;

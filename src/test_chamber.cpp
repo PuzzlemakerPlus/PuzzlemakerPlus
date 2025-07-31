@@ -18,7 +18,7 @@ namespace PMP
 		m_rootNode = CreateOctreeNode( std::nullopt );
 	}
 
-	void TestChamber::CreateChildrenForNode( int parentID )
+	void TestChamber::CreateChildrenForNode( NodeID parentID )
 	{
 		TestChamberNode& parentNode = m_nodeMap[parentID];
 		for ( int i = 0; i < 8; ++i )
@@ -27,9 +27,9 @@ namespace PMP
 		}
 	}
 
-	int TestChamber::CreateOctreeNode( std::optional<int> parentID )
+	NodeID TestChamber::CreateOctreeNode( std::optional<NodeID> parentID )
 	{
-		int newID = m_nextNodeId;
+		NodeID newID = m_nextNodeId;
 		m_nextNodeId++;
 
 		if ( parentID.has_value() )
