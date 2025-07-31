@@ -14,12 +14,19 @@ find_package(Qt6 COMPONENTS Core Gui Widgets OpenGLWidgets REQUIRED)
 qt_standard_project_setup()
 
 qt_add_executable(PuzzlemakerPlus
+        # Entry point
         src/main.cpp
+
+        # Widgets
         src/widgets/palette.cpp
         src/widgets/palette.h
         src/widgets/viewport.cpp
         src/widgets/viewport.h
         src/widgets/PaletteElement.cpp
+
+        # This is a test chamber. Four walls, ceiling and a floor
+        src/test_chamber.cpp
+        src/test_chamber.h
 
         # Resources
         res/resources.qrc
