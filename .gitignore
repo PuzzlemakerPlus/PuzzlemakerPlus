@@ -17,21 +17,21 @@ qmltypes
 puzzlemakerplus
 puzzlemakerplus_qmltyperegistrations.cpp
 
-// CLion
+# CLion
 cmake-build-debug
 .idea
 
-// Visual Studio
+# Visual Studio
 .vs
 out
-// I think this is VS specific...
+# I think this is VS specific...
 CMakeSettings.json
-//Visual Studio Code
+# Visual Studio Code
 build
 CMakePresets.json
 
-//Clangd
+# Clangd
 .cache
 
-//Qt
+# Qt
 .qt
