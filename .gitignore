@@ -18,6 +18,7 @@ octtreetest_autogen
 octtreetest
 puzzlemakerplus
 puzzlemakerplus_qmltyperegistrations.cpp
+bin
 
 # CLion
 cmake-build-debug

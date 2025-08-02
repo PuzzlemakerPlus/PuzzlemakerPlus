@@ -3,7 +3,7 @@ project(PuzzlemakerPlus)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
- 
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Qt Resources support
@@ -37,6 +37,12 @@ qt_add_executable(PuzzlemakerPlus
         # Resources
         res/resources.qrc
 )
+set_target_properties(PuzzlemakerPlus
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+    "${CMAKE_CURRENT_SOURCE_DIR}/bin")
+set_target_properties(PuzzlemakerPlus
+    PROPERTIES AUTOGEN_BUILD_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/bin/autogen/PuzzlemakerPlus")
 
 target_link_libraries(PuzzlemakerPlus PRIVATE
         Qt6::Core
@@ -49,4 +55,10 @@ add_executable(octtreetest ${CMAKE_CURRENT_SOURCE_DIR}/tests/octtree_test.cpp
                 src/test_chamber.cpp
                 src/test_chamber.h
         )
+set_target_properties(octtreetest
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+    "${CMAKE_CURRENT_SOURCE_DIR}/bin")
+set_target_properties(octtreetest
+    PROPERTIES AUTOGEN_BUILD_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/bin/autogen/octtreetest")
 add_test(NAME OctTreeTest COMMAND octtreetest)
