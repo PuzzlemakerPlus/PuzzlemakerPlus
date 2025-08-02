@@ -23,7 +23,7 @@ namespace PMP
 		{}
 
 		TestChamberNode() {} // Constructor without parent, used for root node only
-
+		
 		// Array itself being optional would be better, but std::optional doesn't seem to allow that
 		PMP::OptionalArray<NodeID, 8> m_childIDs;
 		//std::optional<NodeID> m_childIDs[8];
@@ -40,6 +40,7 @@ namespace PMP
 		void DestroyChildrenForNode( NodeID parentID );
 
 		void PrintNodes();
+		void PrintNodesTree();
 
 	private:
 		// Add node, return its ID, and increment next node ID
@@ -55,6 +56,7 @@ namespace PMP
 
 		// Size of the root node in hammer units - this is effectively the internal max map size
 		float m_rootNodeWorldSize;
+		void UpdateNextNodeID();
 	};
 }
 

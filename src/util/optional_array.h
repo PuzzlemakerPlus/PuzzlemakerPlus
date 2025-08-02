@@ -31,6 +31,14 @@ namespace PMP
                     throw std::bad_optional_access();
                 }
             }
+            //Returns array and initializes it if it's empty
+            std::array<T,S>& value_initialize() {
+                if (!m_IsFilled) {
+                    m_Inner = std::array<T, S>{};  // default-initialize with zeroes / default-T
+                    m_IsFilled = true;
+                }
+                return m_Inner;
+            }
 
             void set_value(std::array<T, S> val) {
                 m_Inner.swap(val);

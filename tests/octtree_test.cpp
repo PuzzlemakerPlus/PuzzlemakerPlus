@@ -4,10 +4,12 @@
 int main(){
     std::cout << "Running OctTree Test" << std::endl;
     PMP::TestChamber tc;
-    tc.PrintNodes();
-    //tc.CreateChildrenForNode(0);
-    tc.PrintNodes();
-    //tc.CreateChildrenForNode(1);
-    tc.PrintNodes();
+    tc.PrintNodesTree();
+    tc.CreateChildrenForNode(0);
+    std::cout << "Added Children to Node 0" << std::endl;
+    tc.PrintNodesTree();
+    tc.CreateChildrenForNode(1);
+    std::cout << "Added Children to Node 1" << std::endl;
+    tc.PrintNodesTree();
     return 0;
 }

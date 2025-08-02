@@ -3,6 +3,8 @@
 #include "test_chamber.h"
 
 #include <array>
+#include <string>
+#include <vector>
 #include <iostream>
 
 namespace PMP
@@ -23,7 +25,7 @@ namespace PMP
 	void TestChamber::CreateChildrenForNode( NodeID parentID )
 	{
 		TestChamberNode& parentNode = m_nodeMap[parentID];
-		std::array<NodeID, 8>& parentChildIds = parentNode.m_childIDs.value();
+		std::array<NodeID, 8>& parentChildIds = parentNode.m_childIDs.value_initialize();
 		for ( int i = 0; i < 8; ++i )
 		{
 			parentChildIds[i] = CreateOctreeNode(parentID);
@@ -53,7 +55,8 @@ namespace PMP
 	NodeID TestChamber::CreateOctreeNode( std::optional<NodeID> parentID )
 	{
 		NodeID newID = m_nextNodeId;
-		m_nextNodeId++;
+
+		UpdateNextNodeID();
 
 		if ( parentID.has_value() )
 			m_nodeMap.emplace(newID, TestChamberNode( parentID.value() ));
@@ -62,17 +65,55 @@ namespace PMP
 
 		return newID;
 	}
+	void TestChamber::UpdateNextNodeID()
+	{
+		//This code will need to be updated to implement reusing old nodeIDs
+		m_nextNodeId++;
+	}
 
 	void TestChamber::PrintNodes()
 	{
 		std::cout << "TestChamber has " << m_nodeMap.size() << " Node(s)\n";
 		for (const auto& [nodeId, node] : m_nodeMap) {
 			if(node.m_parentID.has_value()){
-				std::cout << "NodeID: " << nodeId << " child of " << node.m_parentID.value() << "\n";
+				std::cout << "NodeID: " << nodeId << ", child of " << node.m_parentID.value() << "\n";
 			}
 			else {
 				std::cout << "NodeID: " << nodeId << " has no parentID" << "\n";
 			}
     	}
 	}
+
+	void _PrintNodesTree(std::map<NodeID, std::vector<NodeID>>& children, NodeID id, std::string prefix, bool isLast) 
+	{
+		std::cout << prefix;
+
+		if (!prefix.empty()) {
+			std::cout << (isLast ? "└── " : "├── ");
+		}
+
+		std::cout << "Node " << id << "\n";
+
+		const auto& childVec = children[id];
+		for (size_t i = 0; i < childVec.size(); ++i) {
+			bool last = (i == childVec.size() - 1);
+			_PrintNodesTree(children, childVec[i], prefix + (isLast ? "    " : "│   "), last);
+		}
+	}
+
+	void TestChamber::PrintNodesTree() {
+		std::map<NodeID, std::vector<NodeID>> children;
+		NodeID root = 0;
+
+		for (const auto& [id, node] : m_nodeMap) {
+			if (node.m_parentID.has_value()) {
+				children[*node.m_parentID].push_back(id);
+			} else {
+				root = id;  // fallback assumption
+			}
+		}
+
+		_PrintNodesTree(children, root, "", true);
+	}
+
 }
