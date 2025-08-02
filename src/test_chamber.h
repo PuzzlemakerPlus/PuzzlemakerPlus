@@ -39,6 +39,8 @@ namespace PMP
 		// Recursive
 		void DestroyChildrenForNode( NodeID parentID );
 
+		void PrintNodes();
+
 	private:
 		// Add node, return its ID, and increment next node ID
 		// std::nullopt for the parent ID means it's the root node

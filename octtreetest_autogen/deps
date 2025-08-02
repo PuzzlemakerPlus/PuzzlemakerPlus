@@ -4,6 +4,8 @@ octtreetest_autogen/timestamp: \
 	/home/matthew/PuzzlemakerPlus/CMakeFiles/3.28.3/CMakeSystem.cmake \
 	/home/matthew/PuzzlemakerPlus/CMakeLists.txt \
 	/home/matthew/PuzzlemakerPlus/res/resources.qrc \
+	/home/matthew/PuzzlemakerPlus/src/test_chamber.cpp \
+	/home/matthew/PuzzlemakerPlus/src/test_chamber.h \
 	/home/matthew/PuzzlemakerPlus/tests/octtree_test.cpp \
 	/home/matthew/Qt/6.9.1/gcc_64/lib/cmake/Qt6/3rdparty/kwin/FindXKB.cmake \
 	/home/matthew/Qt/6.9.1/gcc_64/lib/cmake/Qt6/FindWrapAtomic.cmake \

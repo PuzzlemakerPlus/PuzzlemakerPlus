@@ -3,6 +3,7 @@
 #include "test_chamber.h"
 
 #include <array>
+#include <iostream>
 
 namespace PMP
 {
@@ -60,5 +61,18 @@ namespace PMP
 			m_nodeMap.emplace(newID, TestChamberNode());
 
 		return newID;
+	}
+
+	void TestChamber::PrintNodes()
+	{
+		std::cout << "TestChamber has " << m_nodeMap.size() << " Node(s)\n";
+		for (const auto& [nodeId, node] : m_nodeMap) {
+			if(node.m_parentID.has_value()){
+				std::cout << "NodeID: " << nodeId << " child of " << node.m_parentID.value() << "\n";
+			}
+			else {
+				std::cout << "NodeID: " << nodeId << " has no parentID" << "\n";
+			}
+    	}
 	}
 }

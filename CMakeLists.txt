@@ -45,5 +45,8 @@ target_link_libraries(PuzzlemakerPlus PRIVATE
         Qt6::OpenGLWidgets
 )
 
-add_executable(octtreetest ${CMAKE_CURRENT_SOURCE_DIR}/tests/octtree_test.cpp)
+add_executable(octtreetest ${CMAKE_CURRENT_SOURCE_DIR}/tests/octtree_test.cpp
+                src/test_chamber.cpp
+                src/test_chamber.h
+        )
 add_test(NAME OctTreeTest COMMAND octtreetest)
