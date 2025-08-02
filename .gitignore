@@ -35,3 +35,5 @@ CMakePresets.json
 
 # Qt
 .qt
+
+.vscode

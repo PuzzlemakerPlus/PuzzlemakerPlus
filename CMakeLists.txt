@@ -3,11 +3,13 @@ project(PuzzlemakerPlus)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
+ 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Qt Resources support
 set(CMAKE_AUTORCC ON)
+
+enable_testing()
 
 find_package(Qt6 COMPONENTS Core Gui Widgets OpenGLWidgets REQUIRED)
 
@@ -42,3 +44,6 @@ target_link_libraries(PuzzlemakerPlus PRIVATE
         Qt6::Widgets
         Qt6::OpenGLWidgets
 )
+
+add_executable(octtreetest ${CMAKE_CURRENT_SOURCE_DIR}/tests/octtree_test.cpp)
+add_test(NAME OctTreeTest COMMAND octtreetest)
