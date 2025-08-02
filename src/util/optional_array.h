@@ -15,6 +15,11 @@ namespace PMP
         public:
             OptionalArray(): m_IsFilled(false) {}
 
+            OptionalArray(std::array<T, S> val) :
+                m_IsFilled(val),
+                m_Inner(val)
+            {}
+
             bool has_value() {
                 return m_IsFilled;
             }
