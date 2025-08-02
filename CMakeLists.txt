@@ -24,7 +24,11 @@ qt_add_executable(PuzzlemakerPlus
         src/widgets/viewport.h
         src/widgets/PaletteElement.cpp
 
+        # Utils
+        src/util/optional_array.h
+
         # This is a test chamber. Four walls, ceiling and a floor
+        # ✅ Good enough for science! ❎ Not Aperture Science!
         src/test_chamber.cpp
         src/test_chamber.h
 

@@ -8,6 +8,7 @@ namespace PMP
 {
 	// TestChamber function implementations
 	// ==============================================
+	// TODO: This has been modified to use PMP::OptionalArray, but since it's unused it's currently untested.
 
 	TestChamber::TestChamber() :
 		m_rootNodeWorldSize(defaultRootNodeSize),
@@ -21,28 +22,31 @@ namespace PMP
 	void TestChamber::CreateChildrenForNode( NodeID parentID )
 	{
 		TestChamberNode& parentNode = m_nodeMap[parentID];
+		std::array<NodeID, 8>& parentChildIds = parentNode.m_childIDs.value();
 		for ( int i = 0; i < 8; ++i )
 		{
-			parentNode.m_childIDs[i] = CreateOctreeNode(parentID);
+			parentChildIds[i] = CreateOctreeNode(parentID);
 		}
 	}
 
 	void TestChamber::DestroyChildrenForNode( NodeID parentID )
 	{
 		TestChamberNode& parentNode = m_nodeMap[parentID];
+		std::array<NodeID, 8>& parentChildIds = parentNode.m_childIDs.value();
 
 		for ( int i = 0; i < 8; ++i )
 		{
-			NodeID childID = parentNode.m_childIDs[i].value();
+			NodeID childID = parentChildIds[i];
 			TestChamberNode& childNode = m_nodeMap[childID];
 
 			// if any child node is present than all others should be and vice versa
-			if ( childNode.m_childIDs[0].has_value() )
+			if ( childNode.m_childIDs.has_value() )
 				DestroyChildrenForNode(childID);
 
 			m_nodeMap.erase(childID);
-			parentNode.m_childIDs[i].reset();
 		}
+
+		parentNode.m_childIDs.reset();
 	}
 
 	NodeID TestChamber::CreateOctreeNode( std::optional<NodeID> parentID )

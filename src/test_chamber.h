@@ -5,7 +5,7 @@
 
 #include <map>
 #include <optional>
-#include <memory>
+#include "util/optional_array.h"
 
 namespace PMP
 {
@@ -25,7 +25,8 @@ namespace PMP
 		TestChamberNode() {} // Constructor without parent, used for root node only
 
 		// Array itself being optional would be better, but std::optional doesn't seem to allow that
-		std::optional<NodeID> m_childIDs[8];
+		PMP::OptionalArray<NodeID, 8> m_childIDs;
+		//std::optional<NodeID> m_childIDs[8];
 		std::optional<NodeID> m_parentID;
 	};
 

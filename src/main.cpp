@@ -2,7 +2,6 @@
 // Defines the entry point for the application
 
 #include <QApplication>
-#include <cstdlib>
 #include "widgets/viewport.h"
 
 #include "widgets/palette.h"
