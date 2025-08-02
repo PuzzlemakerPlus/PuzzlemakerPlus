@@ -14,6 +14,8 @@ PuzzlemakerPlus
 PuzzlemakerPlus_autogen
 meta_types
 qmltypes
+octtreetest_autogen
+octtreetest
 puzzlemakerplus
 puzzlemakerplus_qmltyperegistrations.cpp
 
