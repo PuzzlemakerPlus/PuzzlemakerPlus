@@ -11,13 +11,6 @@ void printArray(const std::array<PMP::NodeID, N>& arr) {
     std::cout << "]" << std::endl;
 }
 
-void printFreeID(PMP::TestChamber& tc)
-    {
-        std::array<PMP::NodeID,8> free;
-        tc.FindFreeIDs(free);
-        printArray<8>(free);
-    }
-
 void addChildNodesAndPrint(PMP::TestChamber& tc, PMP::NodeID parentID)
     {
         tc.CreateChildrenForNode(parentID);
@@ -39,27 +32,19 @@ int main(){
 
     addChildNodesAndPrint(tc, 0);
 
-    printFreeID(tc);
-
     addChildNodesAndPrint(tc, 1);
 
-    printFreeID(tc);
+    addChildNodesAndPrint(tc, 2);
 
     addChildNodesAndPrint(tc, 14);
 
-    printFreeID(tc);
+    addChildNodesAndPrint(tc, 19);
 
     removeChildNodesAndPrint(tc, 14);
 
-    printFreeID(tc);
-
     removeChildNodesAndPrint(tc, 14);
-
-    printFreeID(tc);
 
     addChildNodesAndPrint(tc, 15);
-
-    printFreeID(tc);
 
     return 0;
 }

@@ -39,14 +39,17 @@ namespace PMP
 		// Recursive
 		void DestroyChildrenForNode( NodeID parentID );
 
+		// Debug
 		void PrintNodes();
 		void PrintNodesTree();
-		void FindFreeIDs(std::array<NodeID,8>& out);
 
 	private:
+		// Since we always assign 8 new nodes at a time, it is better to find the free ids before adding new nodes
+		// Thus, CreateOctreeNode was changed to require the newID parameter
+		void FindFreeIDs(std::array<NodeID,8>& out);
 		// std::nullopt for the parent ID means it's the root node
 		// - not making this a default value so it is a deliberate programming choice
-		NodeID CreateOctreeNode(NodeID newID, std::optional<NodeID> parentID );
+		void CreateOctreeNode(NodeID newID, std::optional<NodeID> parentID );
 
 		std::map<NodeID, TestChamberNode> m_nodeMap;
 		NodeID m_rootNode;
@@ -56,7 +59,6 @@ namespace PMP
 
 		// Size of the root node in hammer units - this is effectively the internal max map size
 		float m_rootNodeWorldSize;
-		void UpdateNextNodeID();
 		
 	};
 }

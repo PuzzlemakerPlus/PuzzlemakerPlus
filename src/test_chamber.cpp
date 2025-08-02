@@ -19,7 +19,8 @@ namespace PMP
 	{
 		// Create the root node
 		// Currently, this will always be node ID 0, but explicitly storing it seems like a good idea
-		m_rootNode = CreateOctreeNode(0, std::nullopt );
+		CreateOctreeNode(0, std::nullopt );
+		m_rootNode = 0;
 	}
 
 	void TestChamber::CreateChildrenForNode( NodeID parentID )
@@ -30,7 +31,8 @@ namespace PMP
 		FindFreeIDs(freeIDs);
 		for ( int i = 0; i < 8; ++i )
 		{
-			parentChildIds[i] = CreateOctreeNode(freeIDs[i],parentID);
+			CreateOctreeNode(freeIDs[i],parentID);
+			parentChildIds[i] = freeIDs[i];
 		}
 	}
 
@@ -57,21 +59,13 @@ namespace PMP
 		}
 	}
 
-	NodeID TestChamber::CreateOctreeNode(NodeID newID, std::optional<NodeID> parentID )
+	void TestChamber::CreateOctreeNode(NodeID newID, std::optional<NodeID> parentID )
 	{
 
 		if ( parentID.has_value() )
 			m_nodeMap.emplace(newID, TestChamberNode( parentID.value() ));
 		else
 			m_nodeMap.emplace(newID, TestChamberNode());
-
-		return newID;
-	}
-	void TestChamber::UpdateNextNodeID()
-	{
-		//This code will need to be updated to implement reusing old nodeIDs
-		m_nextNodeId++;
-		return;
 	}
 
 	void TestChamber::FindFreeIDs(std::array<NodeID,8>& out)
@@ -94,6 +88,15 @@ namespace PMP
 			}
 			out[i] = minId;
 		}
+		// for ( int i = 0; i < 8; ++i )
+		// {
+		// 	for (const auto& [nodeId, node] : m_nodeMap) {
+		// 		if(out[i] == nodeId)
+		// 		{
+		// 			throw std::range_error("Error Finding Free ID for new nodes");
+		// 		}
+		// 	}
+		// }
 	}
 
 	void TestChamber::PrintNodes()
