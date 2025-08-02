@@ -11,15 +11,31 @@ namespace PMP
 {
 	// In case we need to change this data type later
 	using NodeID = unsigned int;
+	using SurfaceID = unsigned int;
 
 	// DO NOT USE THIS DIRECTLY, this is just used to initialize the value in the test chamber class
 	const float defaultRootNodeSize = 8192.0f;
 
+	// Nodes should be aware which octrant it occupies within the parent node's space
+	// This will help figuring out which surfaces are being drawn and how rooms are formed
+	enum OCTRANT {
+		FULL, // A node without parent. ie the root node
+		P_X_POS_Y_POS_Z,
+		N_X_POS_Y_POS_Z,
+		P_X_NEG_Y_POS_Z,
+		N_X_NEG_Y_POS_Z,
+		P_X_POS_Y_NEG_Z,
+		N_X_POS_Y_NEG_Z,
+		P_X_NEG_Y_NEG_Z,
+		N_X_NEG_Y_NEG_Z,
+	};
+
 	class TestChamberNode
 	{
 	public:
-		TestChamberNode( NodeID parentID ) :
-			m_parentID(parentID)
+		TestChamberNode( NodeID parentID, OCTRANT oct) :
+			m_parentID(parentID),
+			m_oct(oct)
 		{}
 
 		TestChamberNode() {} // Constructor without parent, used for root node only
@@ -28,6 +44,13 @@ namespace PMP
 		PMP::OptionalArray<NodeID, 8> m_childIDs;
 		//std::optional<NodeID> m_childIDs[8];
 		std::optional<NodeID> m_parentID;
+
+		OCTRANT m_oct;
+
+		// since a node represents a 3d space, we need to know how its 6 sides are defined to draw the 3d space
+		std::array<SurfaceID, 6> m_surfaces;
+
+		
 	};
 
 	class TestChamber
@@ -49,7 +72,7 @@ namespace PMP
 		void FindFreeIDs(std::array<NodeID,8>& out);
 		// std::nullopt for the parent ID means it's the root node
 		// - not making this a default value so it is a deliberate programming choice
-		void CreateOctreeNode(NodeID newID, std::optional<NodeID> parentID );
+		void CreateOctreeNode(NodeID newID, std::optional<NodeID> parentID, OCTRANT oct);
 
 		std::map<NodeID, TestChamberNode> m_nodeMap;
 		NodeID m_rootNode;

@@ -11,7 +11,7 @@ namespace PMP
 {
 	// TestChamber function implementations
 	// ==============================================
-	// TODO: This has been modified to use PMP::OptionalArray, but since it's unused it's currently untested.
+	// TODO: This has been modified to use PMP::OptionalArray, but since it's unused it's currently untested. <- Added ctest for this 
 
 	TestChamber::TestChamber() :
 		m_rootNodeWorldSize(defaultRootNodeSize),
@@ -19,7 +19,7 @@ namespace PMP
 	{
 		// Create the root node
 		// Currently, this will always be node ID 0, but explicitly storing it seems like a good idea
-		CreateOctreeNode(0, std::nullopt );
+		CreateOctreeNode(0, std::nullopt,OCTRANT::FULL);
 		m_rootNode = 0;
 	}
 
@@ -31,7 +31,7 @@ namespace PMP
 		FindFreeIDs(freeIDs);
 		for ( int i = 0; i < 8; ++i )
 		{
-			CreateOctreeNode(freeIDs[i],parentID);
+			CreateOctreeNode(freeIDs[i],parentID,static_cast<OCTRANT>(i+1)); //NOTE: this code currently does not support forming a separate room.
 			parentChildIds[i] = freeIDs[i];
 		}
 	}
@@ -59,11 +59,10 @@ namespace PMP
 		}
 	}
 
-	void TestChamber::CreateOctreeNode(NodeID newID, std::optional<NodeID> parentID )
+	void TestChamber::CreateOctreeNode(NodeID newID, std::optional<NodeID> parentID, OCTRANT oct)
 	{
-
 		if ( parentID.has_value() )
-			m_nodeMap.emplace(newID, TestChamberNode( parentID.value() ));
+			m_nodeMap.emplace(newID, TestChamberNode( parentID.value(), oct));
 		else
 			m_nodeMap.emplace(newID, TestChamberNode());
 	}
