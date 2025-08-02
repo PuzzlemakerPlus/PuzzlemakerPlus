@@ -19,44 +19,46 @@ namespace PMP
 	{
 		// Create the root node
 		// Currently, this will always be node ID 0, but explicitly storing it seems like a good idea
-		m_rootNode = CreateOctreeNode( std::nullopt );
+		m_rootNode = CreateOctreeNode(0, std::nullopt );
 	}
 
 	void TestChamber::CreateChildrenForNode( NodeID parentID )
 	{
 		TestChamberNode& parentNode = m_nodeMap[parentID];
 		std::array<NodeID, 8>& parentChildIds = parentNode.m_childIDs.value_initialize();
+		std::array<NodeID, 8> freeIDs;
+		FindFreeIDs(freeIDs);
 		for ( int i = 0; i < 8; ++i )
 		{
-			parentChildIds[i] = CreateOctreeNode(parentID);
+			parentChildIds[i] = CreateOctreeNode(freeIDs[i],parentID);
 		}
 	}
 
 	void TestChamber::DestroyChildrenForNode( NodeID parentID )
 	{
 		TestChamberNode& parentNode = m_nodeMap[parentID];
-		std::array<NodeID, 8>& parentChildIds = parentNode.m_childIDs.value();
-
-		for ( int i = 0; i < 8; ++i )
+		if(parentNode.m_childIDs.has_value())
 		{
-			NodeID childID = parentChildIds[i];
-			TestChamberNode& childNode = m_nodeMap[childID];
+			std::array<NodeID, 8>& parentChildIds = parentNode.m_childIDs.value();
 
-			// if any child node is present than all others should be and vice versa
-			if ( childNode.m_childIDs.has_value() )
-				DestroyChildrenForNode(childID);
+			for ( int i = 0; i < 8; ++i )
+			{
+				NodeID childID = parentChildIds[i];
+				TestChamberNode& childNode = m_nodeMap[childID];
 
-			m_nodeMap.erase(childID);
+				// if any child node is present than all others should be and vice versa
+				if ( childNode.m_childIDs.has_value() )
+					DestroyChildrenForNode(childID);
+
+				m_nodeMap.erase(childID);
+			}
+
+			parentNode.m_childIDs.reset();
 		}
-
-		parentNode.m_childIDs.reset();
 	}
 
-	NodeID TestChamber::CreateOctreeNode( std::optional<NodeID> parentID )
+	NodeID TestChamber::CreateOctreeNode(NodeID newID, std::optional<NodeID> parentID )
 	{
-		NodeID newID = m_nextNodeId;
-
-		UpdateNextNodeID();
 
 		if ( parentID.has_value() )
 			m_nodeMap.emplace(newID, TestChamberNode( parentID.value() ));
@@ -69,6 +71,29 @@ namespace PMP
 	{
 		//This code will need to be updated to implement reusing old nodeIDs
 		m_nextNodeId++;
+		return;
+	}
+
+	void TestChamber::FindFreeIDs(std::array<NodeID,8>& out)
+	{
+		for ( int i = 0; i < 8; ++i )
+		{
+			NodeID minId = 0;
+			for (const auto& [nodeId, node] : m_nodeMap) {
+				if(minId == nodeId)
+				{
+					minId = nodeId + 1;
+				}
+				for(int j = 0; j <= i;++j)
+				{
+					if(minId == out[j])
+					{
+						minId = out[j] + 1;
+					}
+				}
+			}
+			out[i] = minId;
+		}
 	}
 
 	void TestChamber::PrintNodes()
