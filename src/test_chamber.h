@@ -19,21 +19,24 @@ namespace PMP
 	class TestChamberNode
 	{
 	public:
-		TestChamberNode( NodeID parentID, QVector3D center, unsigned int size) :
+		TestChamberNode( NodeID parentID, QVector3D center, unsigned int size, bool active) :
 			m_parentID(parentID),
 			m_center(center),
-			m_size(size)
+			m_size(size),
+			m_active(active)
 		{}
 
 		TestChamberNode(QVector3D center, unsigned int size) :
 			m_center(center),
-			m_size(size)
+			m_size(size),
+			m_active(true)
 		{} // Constructor without parent, used for root node only
 		
 		TestChamberNode() :
 			m_parentID(std::nullopt),
 			m_center(0.0f, 0.0f, 0.0f),
-			m_size(0)
+			m_size(0),
+			m_active(false)
 		{}
 
 		// Array itself being optional would be better, but std::optional doesn't seem to allow that
@@ -42,7 +45,8 @@ namespace PMP
 		std::optional<NodeID> m_parentID;
 		
 		QVector3D m_center;
-		unsigned int m_size; 
+		unsigned int m_size;
+		bool m_active;
 	};
 
 	class TestChamber
@@ -54,12 +58,23 @@ namespace PMP
 		// Recursive
 		void DestroyChildrenForNode( NodeID parentID );
 
+		// Find the smallest node that includes the give coordinate
+		NodeID SearchNodeWithCoord(QVector3D coord, NodeID parentID=0);
+		// Expand the tree until the coordinate is enclosed by a node of given size
+		NodeID SubdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size);
+		bool IsOutOOB(QVector3D coord);
+		bool IsNodeActive(NodeID node) {return m_nodeMap[node].m_active;};
+		void SetNodeActive(NodeID node, bool active);
+		bool NodeHasChild(NodeID node) {return m_nodeMap[node].m_childIDs.has_value();};
+		const unsigned int GetRootNodeSize() {return m_rootNodeWorldSize;};
+		const int GetRootNodeSizeInt() {return static_cast<int>(m_rootNodeWorldSize);};
+		const std::map<NodeID, TestChamberNode>& GetNodeMap() {return m_nodeMap;};
+
 		// Debug
 		void PrintNodes();
 		void PrintNodesTree();
-
 		void TestChildNodeGeneration();
-
+		
 	private:
 		// Since we always assign 8 new nodes at a time, it is better to find the free ids before adding new nodes
 		// Thus, CreateOctreeNode was changed to require the newID parameter
@@ -67,6 +82,8 @@ namespace PMP
 		// std::nullopt for the parent ID means it's the root node
 		// - not making this a default value so it is a deliberate programming choice
 		void CreateOctreeNode(NodeID newID, std::optional<NodeID> parentID, QVector3D center, unsigned int size);
+		
+		void _PrintNodesTree(std::map<NodeID, std::vector<NodeID>>& children, NodeID id, std::string prefix, bool isLast);
 
 		std::map<NodeID, TestChamberNode> m_nodeMap;
 		NodeID m_rootNode;
@@ -76,7 +93,6 @@ namespace PMP
 
 		// Size of the root node in hammer units - this is effectively the internal max map size
 		unsigned int m_rootNodeWorldSize;
-		void _PrintNodesTree(std::map<NodeID, std::vector<NodeID>>& children, NodeID id, std::string prefix, bool isLast);
 	};
 }
 

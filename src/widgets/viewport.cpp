@@ -1,11 +1,14 @@
 // viewport.cpp
 // Implements the main editor viewport as an extension of QOpenGLWidget
+#pragma once
 #include <QMouseEvent>
 #include <QWheelEvent>
+#include <qnamespace.h>
 #include <qvectornd.h>
-
 #include "viewport.h"
 #include "../util/3d/mesh.h"
+
+#include "../test_chamber_quads.h"
 namespace PMP
 {
 	void Viewport::initializeGL()
@@ -25,60 +28,36 @@ namespace PMP
 			qDebug() << "WARNING: OpenGL debug output is not supported on this system.\n";
 		}
 #endif
-
 		// Puzzlemaker background color
 		glClearColor( 0.803, 0.815, 0.807, 1.0f );
-
+		m_wallShader.removeAllShaders();
 		m_wallShader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/chamber_surface.vert");
 		m_wallShader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/chamber_surface.frag");
 		m_wallShader.link();
+	}
 
+	void Viewport::loadTestChamberMesh(TestChamber& tc)
+	{
+		this->makeCurrent();
 		m_VAO.create();
 		m_VAO.bind();
 
 		m_vertexBuffer.create();
 		m_vertexBuffer.bind();
 
-		std::vector<GLfloat> vertexBufferData;
-		std::vector<GLint> indexBufferData;
-		std::array<Quad, 6> quads = {
-			generateCubeFace(WALLSIDE::POS_X, 128.0f),
-			generateCubeFace(WALLSIDE::NEG_X, 128.0f),
-			generateCubeFace(WALLSIDE::POS_Y, 128.0f),
-			generateCubeFace(WALLSIDE::NEG_Y, 128.0f),
-			generateCubeFace(WALLSIDE::POS_Z, 128.0f),
-			generateCubeFace(WALLSIDE::NEG_Z, 128.0f),
-		};
-		unsigned int vertexOffset = 0;
-
-		for (const auto& quad : quads) {
-			// Add vertices
-			//vertexBufferData.insert(vertexBufferData.end(), quad.verts.begin(), quad.verts.end());
-			for (const auto& v : quad.verts) {
-				vertexBufferData.push_back(v.Position.x());
-				vertexBufferData.push_back(v.Position.y());
-				vertexBufferData.push_back(v.Position.z());
-
-				vertexBufferData.push_back(v.Normal.x());
-				vertexBufferData.push_back(v.Normal.y());
-				vertexBufferData.push_back(v.Normal.z());
-			}
-
-			// Add indices (adjusted)
-			for (unsigned int idx : quad.indices) {
-				indexBufferData.push_back(idx + vertexOffset);
-			}
-
-			vertexOffset += static_cast<unsigned int>(quad.verts.size());
-		}
+		TestChamberQuads tcq = TestChamberQuads(tc);
+		
+		tcq.generateQuads();
+		Mesh mesh = CreateMesh(tcq.GetQuads());
 
 		// Disabling for now until we are more certain it's what we want - Kelsey
 		//m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
-		m_vertexBuffer.allocate(vertexBufferData.data(), vertexBufferData.size() * sizeof(Vertex)); // todo
+		m_vertexBuffer.allocate(mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex)); // todo
 
 		m_indexBuffer.create();
 		m_indexBuffer.bind();
-		m_indexBuffer.allocate(indexBufferData.data(), indexBufferData.size() * sizeof(unsigned int));
+		m_indexBuffer.allocate(mesh.indices.data(), mesh.indices.size() * sizeof(unsigned int));
+		m_indicesCount = mesh.indices.size();
 
 		int vertexPosLocation = m_wallShader.attributeLocation("aPos");
 		m_wallShader.enableAttributeArray(vertexPosLocation);
@@ -93,6 +72,7 @@ namespace PMP
 
 		m_indexBuffer.release();
 		m_vertexBuffer.release();
+		this->doneCurrent();
 	}
 
 	void Viewport::resizeGL( int width, int height )
@@ -118,14 +98,36 @@ namespace PMP
 		view.translate(QVector3D(0, 0, -m_cameraDistance));
 		view.rotate(QQuaternion::fromEulerAngles(m_cameraAngles));
 		view.translate(m_cameraTarget);
-		m_wallShader.setUniformValue("uVP", m_projection * view);
+		//m_wallShader.setUniformValue("uVP", m_projection * view);
+		//m_wallShader.setUniformValue("u_view", view);
+		//m_wallShader.setUniformValue("u_proj", m_projection);
+		m_wallShader.setUniformValue("u_view", view);
+		m_wallShader.setUniformValue("u_proj", m_projection);
+		m_wallShader.setUniformValue("u_fogColor", m_fogCol);
+		if(m_fog)
+		{
+			m_wallShader.setUniformValue("u_fogStart", m_fogStart);
+		}
+		else {
+			m_wallShader.setUniformValue("u_fogStart", m_fogEnd);
+		}
+		m_wallShader.setUniformValue("u_fogEnd", m_fogEnd);
 
 		m_VAO.bind();
-
-		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0); //Because you need 36 indices (6 per face) to draw a cube
+		// TODO: obviously this count needs to be fixed to reasonable number
+		glDrawElements(GL_TRIANGLES, m_indicesCount, GL_UNSIGNED_INT, 0); 
 
 		m_VAO.release();
 		m_wallShader.release();
+	}
+
+	void Viewport::keyPressEvent(QKeyEvent* event)
+	{
+		if (event->key() == Qt::Key_F)
+		{
+			m_fog = !m_fog;
+		}
+		update();
 	}
 
 	void Viewport::mousePressEvent(QMouseEvent* event)

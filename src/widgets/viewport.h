@@ -1,5 +1,7 @@
 // viewport.h
 // Declares the main editor viewport as an extension of QOpenGLWidget
+#include <qevent.h>
+#include <qvectornd.h>
 #ifndef PMP_VIEWPORT_H
 #pragma once
 
@@ -15,12 +17,13 @@
 #include <QVector3D>
 #include <QQuaternion>
 
+#include "../test_chamber.h"
 
 namespace PMP
 {
 	const float cameraDistDefault = 512.0f;
 	const float cameraDistMin = 256.0f;
-	const float cameraDistMax = 3500.0f;
+	const float cameraDistMax = 10000.0f;
 
 	class Viewport : public QOpenGLWidget, protected QOpenGLFunctions_3_2_Core
 	{
@@ -41,11 +44,19 @@ namespace PMP
 			m_lastMousePos(0.0f, 0.0f)
 		{ }
 
+		void loadTestChamberMesh(TestChamber& tc);
+
+		void setFog(bool enable) {m_fog = enable;};
+		void setFogStart(float x) {m_fogStart = x;};
+		void setFogEnd(float x) {m_fogEnd = x;};
+		void setFogColor(QVector3D col) {m_fogCol = col;};
+
 	protected:
 		void paintGL() override;
 		void resizeGL( int width, int height ) override;
 		void initializeGL() override;
 
+		void keyPressEvent(QKeyEvent* event) override;
 		void mousePressEvent(QMouseEvent* event) override;
 		void mouseReleaseEvent(QMouseEvent* event) override;
 		void mouseMoveEvent(QMouseEvent* event) override;
@@ -72,9 +83,14 @@ namespace PMP
 		// TODO: These will probably be moved elsewhere - Kelsey
 		QOpenGLBuffer m_vertexBuffer{QOpenGLBuffer::Type::VertexBuffer};
 		QOpenGLBuffer m_indexBuffer{QOpenGLBuffer::Type::IndexBuffer};
+		GLsizei m_indicesCount;
 
 		QOpenGLVertexArrayObject m_VAO;
 		
+		bool m_fog = false;
+		float m_fogStart = 2500.0f;
+		float m_fogEnd = 25000.0f;
+		QVector3D m_fogCol = {0.1,0.13,0.2};
 
 #ifndef NDEBUG
 		QOpenGLDebugLogger m_debugLogger;

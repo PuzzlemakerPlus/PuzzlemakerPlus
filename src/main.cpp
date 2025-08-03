@@ -3,7 +3,7 @@
 
 #include <QApplication>
 #include "widgets/viewport.h"
-
+#include "test_chamber.h"
 #include "widgets/palette.h"
 
 int main(int argc, char* argv[])
@@ -23,10 +23,27 @@ int main(int argc, char* argv[])
 
     // TODO: We probably want the main viewport to be a child of a separate "base" panel
     PMP::Viewport mainViewport(nullptr);
+
     mainViewport.resize(1280, 720);
     mainViewport.setWindowTitle("Puzzlemaker Plus");
 
     mainViewport.show();
+    
+    PMP::TestChamber tc;
+    tc.CreateChildrenForNode(0);
+    tc.CreateChildrenForNode(6);
+    tc.CreateChildrenForNode(2);
+    tc.SetNodeActive(3, false);
+    //tc.SetNodeActive(13, false);
+    
+    tc.CreateChildrenForNode(24);
+    tc.SetNodeActive(31, false);
+    tc.SetNodeActive(30, false);
+    tc.SetNodeActive(29, false);
+
+    tc.PrintNodesTree();
+    mainViewport.loadTestChamberMesh(tc);
+    
 
     //creates all the buttons for the palette Right now most of the data for each element is junk for demo
     PMP::Palette Palette(&mainViewport);
