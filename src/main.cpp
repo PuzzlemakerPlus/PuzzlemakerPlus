@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
     mainViewport.setWindowTitle("Puzzlemaker Plus");
 
     mainViewport.show();
-    
+
     PMP::TestChamber tc;
     tc.CreateChildrenForNode(0);
     tc.CreateChildrenForNode(6);
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     tc.SetNodeActive(29, false);
 
     tc.PrintNodesTree();
-    mainViewport.loadTestChamberMesh(tc);
+    mainViewport.loadTestChamberMesh(tc); //Needs to be called after mainViewport.show()
     
 
     //creates all the buttons for the palette Right now most of the data for each element is junk for demo

@@ -3,9 +3,6 @@
 #include <iostream>
 namespace PMP
 {
-    void PrintVector3D(const QVector3D& v) {
-        std::cout << "(" << v.x() << ", " << v.y() << ", " << v.z() << ")" << std::endl;
-    }
     void TestChamberQuads::generateQuads()
     {
         for (const auto& [id, node] : testChamber.GetNodeMap()) {

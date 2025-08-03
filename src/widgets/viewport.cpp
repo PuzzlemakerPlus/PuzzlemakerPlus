@@ -7,6 +7,7 @@
 #include <qvectornd.h>
 #include "viewport.h"
 #include "../util/3d/mesh.h"
+#include <iostream>
 
 #include "../test_chamber_quads.h"
 namespace PMP
@@ -34,6 +35,9 @@ namespace PMP
 		m_wallShader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/chamber_surface.vert");
 		m_wallShader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/chamber_surface.frag");
 		m_wallShader.link();
+
+		connect(m_frameTimer, &QTimer::timeout, this, &Viewport::onFrameUpdate);
+		m_frameTimer->start(16); // ~60 FPS
 	}
 
 	void Viewport::loadTestChamberMesh(const TestChamber& tc)
@@ -73,6 +77,7 @@ namespace PMP
 		m_indexBuffer.release();
 		m_vertexBuffer.release();
 		this->doneCurrent();
+		update();
 	}
 
 	void Viewport::resizeGL( int width, int height )
@@ -83,6 +88,70 @@ namespace PMP
 		m_projection.perspective(m_fov, aspect, 7.0f, 32767.0f);
 	}
 
+	// This function gets called every 16ms
+	void Viewport::onFrameUpdate()
+	{
+		bool updateGraphics = false;
+		QVector2D currentMouseGlobal = QVector2D(this->mapFromGlobal(QCursor::pos()));
+		QVector2D delta = currentMouseGlobal - m_lastMousePos;
+		if ( m_isOrbiting )
+		{
+			QVector3D deltaOrbitAngle = 0.2f * QVector3D(delta.y() / 2.0f, 0, delta.x() / 2.0f); // todo make this customizable
+			m_cameraAngles += deltaOrbitAngle;
+
+			// Don't allow flipping the camera
+			// 0 is straight down and -180 is straight up due to the way we handle the view matrix transform right now
+			if ( m_cameraAngles.x() > 0.0f )
+				m_cameraAngles.setX(0.0f);
+			else if ( m_cameraAngles.x() < -180.0f )
+				m_cameraAngles.setX(-180.0f);
+
+			m_OrbitVelocity = deltaOrbitAngle;
+			m_shouldOrbitInertia = true;
+			updateGraphics = true;
+		}
+
+		if ( m_isPanning )
+		{
+			QMatrix4x4 camAngle;
+			camAngle.rotate(QQuaternion::fromEulerAngles(m_cameraAngles));
+			camAngle = camAngle.transposed(); // Reverse the transformation
+
+			QVector3D moveAmount(delta.x(), -delta.y(), 0.0f);
+			moveAmount = camAngle * moveAmount * 1.4f;
+
+			m_cameraTarget += moveAmount;
+			updateGraphics = true;
+		}
+
+		m_lastMousePos = currentMouseGlobal;
+		
+		if (m_shouldOrbitInertia && !m_isOrbiting) {
+			m_cameraAngles += m_OrbitVelocity;
+
+			// Clamp again
+			if (m_cameraAngles.x() > 0.0f)
+				m_cameraAngles.setX(0.0f);
+			else if (m_cameraAngles.x() < -180.0f)
+				m_cameraAngles.setX(-180.0f);
+
+			// Dampen inertia
+			m_OrbitVelocity *= 0.9f;
+
+			// Stop when very slow
+			if (m_OrbitVelocity.lengthSquared() < 0.0001f) {
+				m_OrbitVelocity = QVector3D(0, 0, 0);
+				m_shouldOrbitInertia = false;
+			}
+			updateGraphics = true;
+		}
+		if(updateGraphics)
+		{
+			update();//Draws the frame again because the view changed
+		}
+
+	}
+	//Remember that this function does not get called every frame
 	void Viewport::paintGL()
 	{
 		// Very temporary rendering code
@@ -164,35 +233,7 @@ namespace PMP
 
 	void Viewport::mouseMoveEvent( QMouseEvent* event )
 	{
-		QVector2D delta = QVector2D(event->position()) - m_lastMousePos;
-		if ( m_isOrbiting )
-		{
-			m_cameraAngles += QVector3D(delta.y() / 2.0f, 0, delta.x() / 2.0f); // todo make this customizable
 
-			// Don't allow flipping the camera
-			// 0 is straight down and -180 is straight up due to the way we handle the view matrix transform right now
-			if ( m_cameraAngles.x() > 0.0f )
-				m_cameraAngles.setX(0.0f);
-			else if ( m_cameraAngles.x() < -180.0f )
-				m_cameraAngles.setX(-180.0f);
-
-			event->accept();
-		}
-
-		if ( m_isPanning )
-		{
-			QMatrix4x4 camAngle;
-			camAngle.rotate(QQuaternion::fromEulerAngles(m_cameraAngles));
-			camAngle = camAngle.transposed(); // Reverse the transformation
-
-			QVector3D moveAmount(delta.x(), -delta.y(), 0.0f);
-			moveAmount = camAngle * moveAmount;
-
-			m_cameraTarget += moveAmount;
-		}
-
-		m_lastMousePos = QVector2D(event->position());
-		update();
 	}
 
 	void Viewport::wheelEvent( QWheelEvent* event )

@@ -8,8 +8,8 @@ namespace PMP
     {
         public:
             TestChamberQuads(const TestChamber& tc) : testChamber(tc) {};
-            void generateQuads();
             const std::vector<Quad>& GetQuads() {return quads;};
+            void generateQuads();
         private:
             const TestChamber& testChamber;
             std::vector<Quad> quads;

@@ -2,6 +2,7 @@
 // Declares the main editor viewport as an extension of QOpenGLWidget
 #include <qevent.h>
 #include <qvectornd.h>
+#include <qtimer.h>
 #ifndef PMP_VIEWPORT_H
 #pragma once
 
@@ -56,6 +57,7 @@ namespace PMP
 		void resizeGL( int width, int height ) override;
 		void initializeGL() override;
 
+		void onFrameUpdate();
 		void keyPressEvent(QKeyEvent* event) override;
 		void mousePressEvent(QMouseEvent* event) override;
 		void mouseReleaseEvent(QMouseEvent* event) override;
@@ -77,6 +79,8 @@ namespace PMP
 		float m_cameraDistance;
 
 		bool m_isOrbiting;
+		bool m_shouldOrbitInertia;
+		QVector3D m_OrbitVelocity;
 		bool m_isPanning;
 		QVector2D m_lastMousePos;
 
@@ -86,6 +90,8 @@ namespace PMP
 		GLsizei m_indicesCount;
 
 		QOpenGLVertexArrayObject m_VAO;
+
+		QTimer* m_frameTimer = new QTimer(this);
 		
 		bool m_fog = false;
 		float m_fogStart = 2500.0f;
