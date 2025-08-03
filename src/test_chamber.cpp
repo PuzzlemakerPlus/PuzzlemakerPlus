@@ -134,15 +134,6 @@ namespace PMP
 			}
 			out[i] = minId;
 		}
-		// for ( int i = 0; i < 8; ++i )
-		// {
-		// 	for (const auto& [nodeId, node] : m_nodeMap) {
-		// 		if(out[i] == nodeId)
-		// 		{
-		// 			throw std::range_error("Error Finding Free ID for new nodes");
-		// 		}
-		// 	}
-		// }
 	}
 	std::array<QVector3D, 6> GetOuterFaceCoords(const unsigned int nodeSize, const QVector3D nodeCenter, float epsilon = 0.5f)
 	{
@@ -170,13 +161,6 @@ namespace PMP
 		}
 	}
 
-	// Is the given coordinate out of bounds?
-	const bool TestChamber::IsOutOOB(QVector3D coord) const
-	{
-		int halfSize = m_rootNodeWorldSize / 2;
-		return std::abs(coord.x()) > halfSize || std::abs(coord.y()) > halfSize || std::abs(coord.z()) > halfSize;
-	}
-
 	NodeID TestChamber::SubdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size)
 	{
 		if(IsOutOOB(coord)) return parentID;
@@ -188,6 +172,13 @@ namespace PMP
 			CreateChildrenForNode(parentID);
 		}
 		return SubdivideNodeToCoord(coord,  m_nodeMap[parentID].m_childIDs.value()[i], size);
+	}
+
+	// Is the given coordinate out of bounds?
+	bool TestChamber::IsOutOOB(QVector3D coord) const
+	{
+		int halfSize = m_rootNodeWorldSize / 2;
+		return std::abs(coord.x()) > halfSize || std::abs(coord.y()) > halfSize || std::abs(coord.z()) > halfSize;
 	}
 
 	const NodeID TestChamber::SearchNodeWithCoord(QVector3D coord, NodeID parentID) const

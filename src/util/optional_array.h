@@ -23,7 +23,7 @@ namespace PMP
             const bool has_value() const {
                 return m_IsFilled;
             }
-
+            // For read-only access to the array contents
             const std::array<T, S>& valueRead() const {
                 if (has_value()) {
                     return m_Inner;
@@ -39,7 +39,7 @@ namespace PMP
                     throw std::bad_optional_access();
                 }
             }
-            
+
             //Returns array and initializes it if it's empty
             std::array<T,S>& value_initialize() {
                 if (!m_IsFilled) {
