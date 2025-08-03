@@ -44,7 +44,7 @@ namespace PMP
 			m_lastMousePos(0.0f, 0.0f)
 		{ }
 
-		void loadTestChamberMesh(TestChamber& tc);
+		void loadTestChamberMesh(const TestChamber& tc);
 
 		void setFog(bool enable) {m_fog = enable;};
 		void setFogStart(float x) {m_fogStart = x;};

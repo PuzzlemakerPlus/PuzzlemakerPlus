@@ -171,7 +171,7 @@ namespace PMP
 	}
 
 	// Is the given coordinate out of bounds?
-	bool TestChamber::IsOutOOB(QVector3D coord)
+	const bool TestChamber::IsOutOOB(QVector3D coord) const
 	{
 		int halfSize = m_rootNodeWorldSize / 2;
 		return std::abs(coord.x()) > halfSize || std::abs(coord.y()) > halfSize || std::abs(coord.z()) > halfSize;
@@ -190,13 +190,13 @@ namespace PMP
 		return SubdivideNodeToCoord(coord,  m_nodeMap[parentID].m_childIDs.value()[i], size);
 	}
 
-	NodeID TestChamber::SearchNodeWithCoord(QVector3D coord, NodeID parentID)
+	const NodeID TestChamber::SearchNodeWithCoord(QVector3D coord, NodeID parentID) const
 	{
 		if(IsOutOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
-		if(!m_nodeMap[parentID].m_childIDs.has_value()) return parentID; //found
+		if(!m_nodeMap.at(parentID).m_childIDs.has_value()) return parentID; //found
 
-		unsigned int i = getChildOrder(coord, m_nodeMap[parentID].m_size, m_nodeMap[parentID].m_center);
-		return SearchNodeWithCoord(coord,  m_nodeMap[parentID].m_childIDs.value()[i]);
+		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_size, m_nodeMap.at(parentID).m_center);
+		return SearchNodeWithCoord(coord,  m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
 	}
 	void TestChamber::PrintNodes()
 	{

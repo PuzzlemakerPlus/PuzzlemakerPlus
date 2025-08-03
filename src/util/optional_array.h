@@ -20,8 +20,16 @@ namespace PMP
                 m_Inner(val)
             {}
 
-            bool has_value() {
+            const bool has_value() const {
                 return m_IsFilled;
+            }
+
+            const std::array<T, S>& valueRead() const {
+                if (has_value()) {
+                    return m_Inner;
+                } else {
+                    throw std::bad_optional_access();
+                }
             }
 
             std::array<T, S>& value() {
@@ -31,6 +39,7 @@ namespace PMP
                     throw std::bad_optional_access();
                 }
             }
+            
             //Returns array and initializes it if it's empty
             std::array<T,S>& value_initialize() {
                 if (!m_IsFilled) {

@@ -59,16 +59,16 @@ namespace PMP
 		void DestroyChildrenForNode( NodeID parentID );
 
 		// Find the smallest node that includes the give coordinate
-		NodeID SearchNodeWithCoord(QVector3D coord, NodeID parentID=0);
+		const NodeID SearchNodeWithCoord(QVector3D coord, NodeID parentID=0) const;
 		// Expand the tree until the coordinate is enclosed by a node of given size
 		NodeID SubdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size);
-		bool IsOutOOB(QVector3D coord);
-		bool IsNodeActive(NodeID node) {return m_nodeMap[node].m_active;};
+		const bool IsOutOOB(QVector3D coord) const;
+		const bool IsNodeActive(NodeID node) const {return m_nodeMap.at(node).m_active;};
 		void SetNodeActive(NodeID node, bool active);
-		bool NodeHasChild(NodeID node) {return m_nodeMap[node].m_childIDs.has_value();};
+		const bool NodeHasChild(NodeID node) const {return m_nodeMap.at(node).m_childIDs.has_value();};
 		const unsigned int GetRootNodeSize() {return m_rootNodeWorldSize;};
 		const int GetRootNodeSizeInt() {return static_cast<int>(m_rootNodeWorldSize);};
-		const std::map<NodeID, TestChamberNode>& GetNodeMap() {return m_nodeMap;};
+		const std::map<NodeID, TestChamberNode>& GetNodeMap() const {return m_nodeMap;};
 
 		// Debug
 		void PrintNodes();

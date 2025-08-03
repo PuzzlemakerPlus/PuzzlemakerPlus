@@ -30,26 +30,13 @@ namespace PMP
 
                 QVector3D neighborCoord = center + offset;
 
-                bool isVisible = false;
-                if (testChamber.IsOutOOB(neighborCoord)) {
-                    isVisible = true;
-                } else {
+                bool isVisible = testChamber.IsOutOOB(neighborCoord); //if coordinate behind this surface is OOB, this surface should be drawn
+                if (!isVisible) { // the coordinate behind this surface is in bound
                     NodeID neighborId = testChamber.SearchNodeWithCoord(neighborCoord);
-                    if (!testChamber.IsNodeActive(neighborId)) {
-                        isVisible = true;
-                    }
+                    isVisible = !testChamber.IsNodeActive(neighborId); // check if the node behind this surface is inactive
                 }
-                //PrintVector3D(center);
-                //std::cout << " OFFSET: ";
-                //PrintVector3D(offset);
-                
-                if (isVisible) {
-                    quads.push_back(generateQuadAt(center, side, node.m_size));
-                    //std::cout << "Drawn\n";
-                }
-                else {
-                    //std::cout << "NOT DRAWN\n";
-                }
+
+                if (isVisible) quads.push_back(generateQuadAt(center, side, node.m_size));
             }
         }
         std::cout << "Generated " << quads.size() << " Quads" << std::endl;

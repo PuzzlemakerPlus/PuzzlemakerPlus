@@ -7,11 +7,11 @@ namespace PMP
     class TestChamberQuads
     {
         public:
-            TestChamberQuads(TestChamber& tc) : testChamber(tc) {};
+            TestChamberQuads(const TestChamber& tc) : testChamber(tc) {};
             void generateQuads();
             const std::vector<Quad>& GetQuads() {return quads;};
         private:
-            TestChamber& testChamber;
+            const TestChamber& testChamber;
             std::vector<Quad> quads;
     };
 }

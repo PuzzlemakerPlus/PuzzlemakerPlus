@@ -36,7 +36,7 @@ namespace PMP
 		m_wallShader.link();
 	}
 
-	void Viewport::loadTestChamberMesh(TestChamber& tc)
+	void Viewport::loadTestChamberMesh(const TestChamber& tc)
 	{
 		this->makeCurrent();
 		m_VAO.create();
