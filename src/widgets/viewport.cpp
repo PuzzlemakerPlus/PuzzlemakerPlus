@@ -1,67 +1,13 @@
 // viewport.cpp
 // Implements the main editor viewport as an extension of QOpenGLWidget
-
 #include <QMouseEvent>
 #include <QWheelEvent>
+#include <qvectornd.h>
 
 #include "viewport.h"
-
+#include "../util/3d/mesh.h"
 namespace PMP
 {
-	// FIXME: remove
-	static GLfloat const tempVertices[] = {
-		// bottom
-		0.0f,   0.0f,   0.0f,   0.0f, 0.0f, 1.0f,
-		128.0f, 0.0f,   0.0f,   0.0f, 0.0f, 1.0f,
-		128.0f, 128.0f, 0.0f,   0.0f, 0.0f, 1.0f,
-		0.0f,   128.0f, 0.0f,   0.0f, 0.0f, 1.0f,
-		// south
-		128.0f, 0.0f,   0.0f,   0.0f, 1.0f, 0.0f,
-		0.0f,   0.0f,   0.0f,   0.0f, 1.0f, 0.0f,
-		0.0f,   0.0f,   128.0f, 0.0f, 1.0f, 0.0f,
-		128.0f, 0.0f,   128.0f, 0.0f, 1.0f, 0.0f,
-		// east
-		128.0f, 128.0f, 0.0f,   -1.0f, 0.0f, 0.0f,
-		128.0f, 0.0f,   0.0f,   -1.0f, 0.0f, 0.0f,
-		128.0f, 0.0f,   128.0f, -1.0f, 0.0f, 0.0f,
-		128.0f, 128.0f, 128.0f, -1.0f, 0.0f, 0.0f,
-		// north
-		0.0f,   128.0f, 0.0f,   0.0f, -1.0f, 0.0f,
-		128.0f, 128.0f, 0.0f,   0.0f, -1.0f, 0.0f,
-		128.0f, 128.0f, 128.0f, 0.0f, -1.0f, 0.0f,
-		0.0f,   128.0f, 128.0f, 0.0f, -1.0f, 0.0f,
-		// west
-		0.0f,   0.0f,   0.0f,   1.0f, 0.0f, 0.0f,
-		0.0f,   128.0f, 0.0f,   1.0f, 0.0f, 0.0f,
-		0.0f,   128.0f, 128.0f, 1.0f, 0.0f, 0.0f,
-		0.0f,   0.0f,   128.0f, 1.0f, 0.0f, 0.0f,
-		// top
-		128.0f, 0.0f,   128.0f, 0.0f, 0.0f, -1.0f,
-		0.0f,   0.0f,   128.0f, 0.0f, 0.0f, -1.0f,
-		0.0f,   128.0f, 128.0f, 0.0f, 0.0f, -1.0f,
-		128.0f, 128.0f, 128.0f, 0.0f, 0.0f, -1.0f,
-	};
-	static GLint const tempIndices[] = {
-		// bottom
-		0, 1, 2,
-		0, 2, 3,
-		// south
-		4, 5, 6,
-		4, 6, 7,
-		// east
-		8, 9,  10,
-		8, 10, 11,
-		// north
-		12, 13, 14,
-		12, 14, 15,
-		// west
-		16, 17, 18,
-		16, 18, 19,
-		// top
-		20, 21, 22,
-		20, 22, 23,
-	};
-
 	void Viewport::initializeGL()
 	{
 		initializeOpenGLFunctions();
@@ -92,13 +38,47 @@ namespace PMP
 
 		m_vertexBuffer.create();
 		m_vertexBuffer.bind();
+
+		std::vector<GLfloat> vertexBufferData;
+		std::vector<GLint> indexBufferData;
+		std::array<Quad, 6> quads = {
+			generateCubeFace(WALLSIDE::POS_X, 128.0f),
+			generateCubeFace(WALLSIDE::NEG_X, 128.0f),
+			generateCubeFace(WALLSIDE::POS_Y, 128.0f),
+			generateCubeFace(WALLSIDE::NEG_Y, 128.0f),
+			generateCubeFace(WALLSIDE::POS_Z, 128.0f),
+			generateCubeFace(WALLSIDE::NEG_Z, 128.0f),
+		};
+		unsigned int vertexOffset = 0;
+
+		for (const auto& quad : quads) {
+			// Add vertices
+			//vertexBufferData.insert(vertexBufferData.end(), quad.verts.begin(), quad.verts.end());
+			for (const auto& v : quad.verts) {
+				vertexBufferData.push_back(v.Position.x());
+				vertexBufferData.push_back(v.Position.y());
+				vertexBufferData.push_back(v.Position.z());
+
+				vertexBufferData.push_back(v.Normal.x());
+				vertexBufferData.push_back(v.Normal.y());
+				vertexBufferData.push_back(v.Normal.z());
+			}
+
+			// Add indices (adjusted)
+			for (unsigned int idx : quad.indices) {
+				indexBufferData.push_back(idx + vertexOffset);
+			}
+
+			vertexOffset += static_cast<unsigned int>(quad.verts.size());
+		}
+
 		// Disabling for now until we are more certain it's what we want - Kelsey
 		//m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
-		m_vertexBuffer.allocate(tempVertices, sizeof(tempVertices)); // todo
+		m_vertexBuffer.allocate(vertexBufferData.data(), vertexBufferData.size() * sizeof(Vertex)); // todo
 
 		m_indexBuffer.create();
 		m_indexBuffer.bind();
-		m_indexBuffer.allocate(tempIndices, sizeof(tempIndices));
+		m_indexBuffer.allocate(indexBufferData.data(), indexBufferData.size() * sizeof(unsigned int));
 
 		int vertexPosLocation = m_wallShader.attributeLocation("aPos");
 		m_wallShader.enableAttributeArray(vertexPosLocation);
@@ -142,7 +122,7 @@ namespace PMP
 
 		m_VAO.bind();
 
-		glDrawElements(GL_TRIANGLES, sizeof(tempIndices) / sizeof(GLint), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0); //Because you need 36 indices (6 per face) to draw a cube
 
 		m_VAO.release();
 		m_wallShader.release();

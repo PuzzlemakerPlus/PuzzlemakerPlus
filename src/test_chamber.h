@@ -12,6 +12,7 @@ namespace PMP
 	// In case we need to change this data type later
 	using NodeID = unsigned int;
 	using SurfaceID = unsigned int;
+	using SurfaceType = unsigned int; // Surface type 0 is air
 
 	// DO NOT USE THIS DIRECTLY, this is just used to initialize the value in the test chamber class
 	const float defaultRootNodeSize = 8192.0f;
@@ -48,9 +49,6 @@ namespace PMP
 		OCTRANT m_oct;
 
 		// since a node represents a 3d space, we need to know how its 6 sides are defined to draw the 3d space
-		std::array<SurfaceID, 6> m_surfaces;
-
-		
 	};
 
 	class TestChamber

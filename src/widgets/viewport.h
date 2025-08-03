@@ -15,6 +15,7 @@
 #include <QVector3D>
 #include <QQuaternion>
 
+
 namespace PMP
 {
 	const float cameraDistDefault = 512.0f;
@@ -73,6 +74,7 @@ namespace PMP
 		QOpenGLBuffer m_indexBuffer{QOpenGLBuffer::Type::IndexBuffer};
 
 		QOpenGLVertexArrayObject m_VAO;
+		
 
 #ifndef NDEBUG
 		QOpenGLDebugLogger m_debugLogger;

@@ -2,6 +2,8 @@ CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
 CMakeScripts
+CPackConfig.cmake
+CPackSourceConfig.cmake
 Testing
 Makefile
 cmake_install.cmake
