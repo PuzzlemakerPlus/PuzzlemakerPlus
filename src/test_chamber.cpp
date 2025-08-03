@@ -1,14 +1,16 @@
 // octree_test.cpp
 // Implements the class that represents the test chamber itself and the octree nodes
 #include "test_chamber.h"
+#include "util/3d/ray.h"
 
-#include <cassert>
 #include <array>
-#include <qvectornd.h>
-#include <stdexcept>
 #include <string>
 #include <vector>
+#include <cassert>
 #include <iostream>
+#include <optional>
+#include <stdexcept>
+#include <qvectornd.h>
 
 namespace PMP
 {
@@ -172,6 +174,27 @@ namespace PMP
 			CreateChildrenForNode(parentID);
 		}
 		return SubdivideNodeToCoord(coord,  m_nodeMap[parentID].m_childIDs.value()[i], size);
+	}
+
+	std::optional<NodeID> TestChamber::RayCast(QVector3D origin, QVector3D dir, QVector3D& out, NodeID parentID) const
+	{
+		const TestChamberNode& node = m_nodeMap.at(parentID);
+
+		if (!IsNodeActive(parentID))
+			return std::nullopt;
+
+		if (!RayIntersectsAABB(origin, dir, node.m_center, node.m_size))
+			return std::nullopt;
+
+		if (!NodeHasChild(parentID))
+			return parentID; // This leaf is hit
+
+		for (NodeID childID : node.m_childIDs.valueRead()) {
+			if (auto hit = RayCast(origin, dir, out, childID))
+				return hit; // Return first child hit (or collect all if needed)
+		}
+
+		return std::nullopt;
 	}
 
 	// Is the given coordinate out of bounds?

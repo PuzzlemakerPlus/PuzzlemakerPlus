@@ -2,5 +2,9 @@
     <qresource prefix="/">
         <file>shaders/chamber_surface.vert</file>
         <file>shaders/chamber_surface.frag</file>
+        <file>shaders/dot.vert</file>
+        <file>shaders/dot.frag</file>
+        <file>shaders/line.vert</file>
+        <file>shaders/line.frag</file>
     </qresource>
 </RCC>

@@ -66,6 +66,7 @@ namespace PMP
 		unsigned int GetRootNodeSize() const {return m_rootNodeWorldSize;};
 		int GetRootNodeSizeInt() const {return static_cast<int>(m_rootNodeWorldSize);};
 		const std::map<NodeID, TestChamberNode>& GetNodeMap() const {return m_nodeMap;};
+		std::optional<NodeID> RayCast(QVector3D origin, QVector3D dir, QVector3D& out, NodeID parentID = 0) const;
 
 		// Expand the tree until the coordinate is enclosed by a node of given size
 		NodeID SubdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size);
