@@ -87,6 +87,12 @@ set_target_properties(octtreetest
     PROPERTIES AUTOGEN_BUILD_DIR
     "${CMAKE_CURRENT_SOURCE_DIR}/bin/autogen/octtreetest")
 add_test(NAME OctTreeTest COMMAND octtreetest)
+target_link_libraries(octtreetest PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Widgets
+        Qt6::OpenGLWidgets
+)
 
 qt_add_executable(importmodeltest ${CMAKE_CURRENT_SOURCE_DIR}/tests/import_model.cpp
     src/widgets/viewport.h
