@@ -15,6 +15,8 @@ int main(int argc, char* argv[])
     format.setDepthBufferSize(24);
     format.setStencilBufferSize(8);
     format.setVersion(3,2);
+    format.setSwapInterval(0);
+    format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
     format.setProfile(QSurfaceFormat::CoreProfile);
 #ifndef NDEBUG
     format.setOption(QSurfaceFormat::DebugContext);

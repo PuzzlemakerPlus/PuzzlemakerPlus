@@ -15,6 +15,7 @@ namespace PMP
 	// In case we need to change this data type later
 	using NodeID = unsigned int;
 
+	
 	// DO NOT USE THIS DIRECTLY, this is just used to initialize the value in the test chamber class
 	const unsigned int defaultRootNodeSize = 8192;
 
@@ -27,6 +28,13 @@ namespace PMP
 		WALLSIDE side;
 		NodeID parentNode;
 	};
+
+	struct RayHitResult {
+        NodeID nodeID;
+		ChamberSurface surface;
+        QVector3D hitPoint;
+    };
+
 
 	class TestChamberNode
 	{
@@ -70,16 +78,19 @@ namespace PMP
 		// Recursive
 		void DestroyChildrenForNode( NodeID parentID );
 
-		// Find the smallest node that includes the give coordinate
-		const NodeID SearchNodeWithCoord(QVector3D coord, NodeID parentID=0) const;
-		bool IsOutOOB(QVector3D coord) const;
-		bool IsSurface (WALLSIDE side, NodeID node) const;
-		WALLSIDE GetHitWall(NodeID node, QVector3D hit, QVector3D center, float size, float epsilon=0.1f) const;
-		bool IsNodeActive(NodeID node) const {return m_nodeMap.at(node).m_active;};
-		bool NodeHasChild(NodeID node) const {return m_nodeMap.at(node).m_childIDs.has_value();};
 		unsigned int GetRootNodeSize() const {return m_rootNodeWorldSize;};
 		int GetRootNodeSizeInt() const {return static_cast<int>(m_rootNodeWorldSize);};
 		const std::map<NodeID, TestChamberNode>& GetNodeMap() const {return m_nodeMap;};
+		std::array<QVector3D, 4> GetChamberSurfaceCorners(const ChamberSurface& surface);
+		WALLSIDE GetHitWall(NodeID node, QVector3D hit, QVector3D center, float size, float epsilon=0.1f) const;
+
+		bool IsOutOOB(QVector3D coord) const;
+		bool IsSurface (WALLSIDE side, NodeID node) const;
+		bool IsNodeActive(NodeID node) const {return m_nodeMap.at(node).m_active;};
+		bool NodeHasChild(NodeID node) const {return m_nodeMap.at(node).m_childIDs.has_value();};
+
+		// Find the smallest node that includes the give coordinate
+		const NodeID SearchNodeWithCoord(QVector3D coord, NodeID parentID=0) const;
 		std::optional<RayHitResult> RayCast(Ray ray) const;
 
 		// Expand the tree until the coordinate is enclosed by a node of given size

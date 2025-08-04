@@ -3,6 +3,7 @@
 #include <qevent.h>
 #include <qvectornd.h>
 #include <qtimer.h>
+#include <vector>
 #ifndef PMP_VIEWPORT_H
 #pragma once
 
@@ -27,6 +28,13 @@ namespace PMP
 	const float cameraDistMin = 256.0f;
 	const float cameraDistMax = 10000.0f;
 
+	struct LineVertex{
+		QVector3D pos;
+		QVector3D col = {1.0f,0.1f,0.1f};
+		LineVertex(QVector3D position) : pos(position) {}
+		LineVertex(QVector3D position, QVector3D color) : pos(position), col(color) {}
+	};
+
 	class Viewport : public QOpenGLWidget, protected QOpenGLFunctions_3_2_Core
 	{
 	public:
@@ -47,7 +55,7 @@ namespace PMP
 		{ }
 
 		void loadDots(std::vector<QVector3D> vertices);
-		void loadLines(std::vector<QVector3D> vertices);
+		void loadLines(std::vector<LineVertex> vertices);
 		void loadLines(Ray ray, float length=20000.0f);
 		void loadTestChamberMesh();
 		
@@ -121,7 +129,9 @@ namespace PMP
 		GLsizei m_lineVertCount = 0;
 
 		TestChamber* m_testChamber = nullptr;
-
+		
+		std::vector<LineVertex> m_surfaceSelection;
+		std::optional<NodeID> m_nodeSelection;
 #ifndef NDEBUG
 		QOpenGLDebugLogger m_debugLogger;
 #endif

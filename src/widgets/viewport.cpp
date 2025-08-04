@@ -9,6 +9,7 @@
 #include <qvectornd.h>
 #include <qmatrix4x4.h>
 #include <qnamespace.h>
+#include <iostream>
 
 #include "viewport.h"
 #include "../util/3d/mesh.h"
@@ -36,11 +37,9 @@ namespace PMP
 		glClearColor( 0.803, 0.815, 0.807, 1.0f );
 		loadShaders();
 		createVAOs();
-		loadDots({QVector3D(128.0f,128.0f,128.0f)}); //Need to call these to create VAOS
-		loadLines(std::vector<QVector3D>()); //Need to call these to create VAOS
 
 		connect(m_frameTimer, &QTimer::timeout, this, &Viewport::onFrameUpdate);
-		m_frameTimer->start(16); // ~60 FPS
+		m_frameTimer->start(10); // ~100 FPS
 	}
 
 	void Viewport::loadShaders()
@@ -103,7 +102,7 @@ namespace PMP
 		this->doneCurrent();
 	}
 	// needs at least 2 verts to form a line
-	void Viewport::loadLines(std::vector<QVector3D> vertices)
+	void Viewport::loadLines(std::vector<LineVertex> vertices)
 	{
 		m_lineVertCount = vertices.size();
 
@@ -111,11 +110,15 @@ namespace PMP
 		m_lineVAO.bind();
 		m_lineVBO.create();
 		m_lineVBO.bind();
-		m_lineVBO.allocate(vertices.data(), vertices.size() * sizeof(QVector3D));
+		m_lineVBO.allocate(vertices.data(), vertices.size() * sizeof(LineVertex));
 
 		int posLoc = m_lineShader.attributeLocation("aPos");
 		m_lineShader.enableAttributeArray(posLoc);
-		m_lineShader.setAttributeBuffer(posLoc, GL_FLOAT, 0, 3, sizeof(QVector3D));
+		m_lineShader.setAttributeBuffer(posLoc, GL_FLOAT, 0, 3, sizeof(LineVertex));
+
+		int vertexColorLocation = m_lineShader.attributeLocation("aColor");
+		m_lineShader.enableAttributeArray(vertexColorLocation);
+		m_lineShader.setAttributeBuffer(vertexColorLocation, GL_FLOAT, sizeof(QVector3D), 3, sizeof(LineVertex));
 
 		m_lineVAO.release();
 		m_lineVBO.release();
@@ -123,8 +126,10 @@ namespace PMP
 	}
 	void Viewport::loadLines(Ray ray, float length)
 	{
-		std::vector<QVector3D> vertices = {ray.origin, ray.origin + ray.direction * length};
-		loadLines(vertices);
+		std::vector<LineVertex> extended = m_surfaceSelection;
+		extended.push_back({ray.origin, {1.0f,0.1f,0.1f}});
+		extended.push_back({ray.origin + ray.direction * length, {0.1f,0.1f,1.0f}});
+		loadLines(extended);
 	}
 	// Generate Test Chamber Mesh
 	void Viewport::loadTestChamberMesh()
@@ -186,14 +191,16 @@ namespace PMP
 	void Viewport::drawLines(QMatrix4x4 view)
 	{
 		if(m_lineVertCount == 0) return;
+		glEnable(GL_POLYGON_OFFSET_LINE);
+		glPolygonOffset(-1000.0f, -1000.0f);
 		m_lineShader.bind();
 		m_lineShader.setUniformValue("u_view", view);
 		m_lineShader.setUniformValue("u_proj", m_projection);
-		m_lineShader.setUniformValue("u_color", QVector3D(1.0f, 0.0f, 0.0f));
 		m_lineVAO.bind();
 		glDrawArrays(GL_LINES, 0, m_lineVertCount);
 		m_lineVAO.release();
 		m_lineShader.release();
+		glDisable(GL_POLYGON_OFFSET_LINE);
 	}
 	void Viewport::drawTestChamber(QMatrix4x4 view)
 	{
@@ -274,14 +281,47 @@ namespace PMP
 		if (event->key() == Qt::Key_Q)
 		{
 			Ray ray = ScreenPosToWorldRay(this->mapFromGlobal(QCursor::pos()));
-			loadLines(ray);
 			if(m_testChamber)
 			{
 				std::optional<RayHitResult> cast = m_testChamber->RayCast(ray);
 				if(cast.has_value())
 				{
+					m_surfaceSelection.clear();
+					const auto& points = m_testChamber->GetChamberSurfaceCorners(cast->surface);
+					m_surfaceSelection.push_back(LineVertex(points[0],QVector3D(0.1f,0.1f,0.1f)));
+					m_surfaceSelection.push_back(LineVertex(points[1],QVector3D(0.1f,0.1f,0.1f)));
+					m_surfaceSelection.push_back(LineVertex(points[1],QVector3D(0.1f,0.1f,0.1f)));
+					m_surfaceSelection.push_back(LineVertex(points[2],QVector3D(0.1f,0.1f,0.1f)));
+					m_surfaceSelection.push_back(LineVertex(points[2],QVector3D(0.1f,0.1f,0.1f)));
+					m_surfaceSelection.push_back(LineVertex(points[3],QVector3D(0.1f,0.1f,0.1f)));
+					m_surfaceSelection.push_back(LineVertex(points[3],QVector3D(0.1f,0.1f,0.1f)));
+					m_surfaceSelection.push_back(LineVertex(points[0],QVector3D(0.1f,0.1f,0.1f)));
+
+					//m_surfaceSelection.push_back(LineVertex(m_surfaceSelection[1]));
 					loadDots({cast->hitPoint});
+					m_nodeSelection = cast->nodeID;
 				}
+			}
+			loadLines(ray);
+		}
+		if (event->key() == Qt::Key_Equal)
+		{
+			std::cout <<"Disabling Node"<<std::endl;
+			if(m_nodeSelection.has_value())
+			{
+				m_testChamber->SetNodeActive(m_nodeSelection.value(), false);
+				m_testChamber->GenerateSurfaces();
+				loadTestChamberMesh();
+			}
+		}
+		if (event->key() == Qt::Key_Minus)
+		{
+			std::cout <<"Enabling Node"<<std::endl;
+			if(m_nodeSelection.has_value())
+			{
+				m_testChamber->SetNodeActive(m_nodeSelection.value(), true);
+				m_testChamber->GenerateSurfaces();
+				loadTestChamberMesh();
 			}
 		}
 		update();

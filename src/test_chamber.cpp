@@ -14,6 +14,11 @@
 
 namespace PMP
 {
+	QVector3D GetWallFaceCenter(QVector3D center, unsigned int size, QVector3D normal)
+	{
+		return center + size/2 * -normal;
+	}
+
 	// TestChamber function implementations
 	// ==============================================
 	// TODO: This has been modified to use PMP::OptionalArray, but since it's unused it's currently untested. <- Added ctest for this 
@@ -176,6 +181,25 @@ namespace PMP
 		return SubdivideNodeToCoord(coord,  m_nodeMap[parentID].m_childIDs.value()[i], size);
 	}
 
+	std::array<QVector3D, 4> TestChamber::GetChamberSurfaceCorners(const ChamberSurface& surface)
+	{
+		const TestChamberNode& node = m_nodeMap.at(surface.parentNode);
+		float halfSize = node.m_size / 2.0f;
+
+		QVector3D normal = GetWallNormal(surface.side);
+		QVector3D center = GetWallFaceCenter(node.m_center, node.m_size, normal);
+		QVector3D up     = GetWallUp(surface.side);
+		QVector3D right  = QVector3D::crossProduct(normal, up);
+
+		// Quad corners: counter-clockwise
+		QVector3D p0 = center + (-right - up) * halfSize;  // bottom-left
+		QVector3D p1 = center + ( right - up) * halfSize;  // bottom-right
+		QVector3D p2 = center + ( right + up) * halfSize;  // top-right
+		QVector3D p3 = center + (-right + up) * halfSize;  // top-left
+
+		return {p0, p1, p2, p3};
+	}
+
 	//Given a wallside of a node, should this wall be drawn
 	bool TestChamber::IsSurface(WALLSIDE side, NodeID node) const
     {
@@ -205,11 +229,6 @@ namespace PMP
     }
 
 	
-	QVector3D GetWallFaceCenter(QVector3D center, unsigned int size, QVector3D normal)
-	{
-		return center + size/2 * -normal;
-	}
-
 	std::optional<RayHitResult> TestChamber::RayCast(Ray ray) const
 	{
 		float closestT = std::numeric_limits<float>::infinity();
@@ -240,7 +259,7 @@ namespace PMP
 				if (tTemp > 0.0f && tTemp < closestT)
 				{
 					closestT = tTemp;
-					closestHit = RayHitResult{surface.parentNode,hitPosTemp};
+					closestHit = RayHitResult{surface.parentNode,surface, hitPosTemp};
 				}
 			}
 		}
@@ -254,7 +273,6 @@ namespace PMP
 		return std::abs(coord.x()) > halfSize || std::abs(coord.y()) > halfSize || std::abs(coord.z()) > halfSize;
 	}
 
-	
 	const NodeID TestChamber::SearchNodeWithCoord(QVector3D coord, NodeID parentID) const
 	{
 		if(IsOutOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
@@ -276,13 +294,14 @@ namespace PMP
 		}
 	}
 
-	// Based on the node structure, generate quads
+	// Based on the node structure, generate surfaces
 	void TestChamber::GenerateSurfaces()
     {
-        std::cout << "generating Surfaces for test chamber "<< std::endl;
+		m_surfaces.clear();
+        //std::cout << "Generating Surfaces for test chamber "<< std::endl;
         for (const auto& [id, node] : GetNodeMap()) {
             if (!IsNodeActive(id) || NodeHasChild(id)) continue;
-            std::cout << "Generating Surfaces for Node " << id << std::endl;
+            //std::cout << "Generating Surfaces for Node " << id << std::endl;
             const QVector3D& center = node.m_center;
             
             for (int i = 0; i < 6; ++i) {
