@@ -61,6 +61,9 @@ qt_add_executable(PuzzlemakerPlus
         src/test_chamber.cpp
         src/test_chamber.h
 
+        src/selection.h
+        src/selection.cpp
+
         # Resources
         res/resources.qrc
 )
@@ -104,12 +107,16 @@ target_link_libraries(octtreetest PRIVATE
 qt_add_executable(importmodeltest ${CMAKE_CURRENT_SOURCE_DIR}/tests/import_model.cpp
     src/widgets/viewport.h
     src/widgets/viewport.cpp
+    
     src/util/3d/mesh.cpp
     src/util/3d/mesh.h
     src/util/3d/ray.cpp
     src/util/3d/ray.h
+
     src/test_chamber.cpp
-    src/test_chamber.h)
+    src/test_chamber.h
+    src/selection.h
+    src/selection.cpp)
 set_target_properties(importmodeltest
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY
     "${CMAKE_CURRENT_SOURCE_DIR}/bin")

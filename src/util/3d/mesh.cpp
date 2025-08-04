@@ -1,5 +1,6 @@
 
 #include "mesh.h"
+#include <qvectornd.h>
 
 
 namespace PMP
@@ -155,5 +156,21 @@ namespace PMP
 		}
         return {vertexBufferData, indexBufferData};
     }
-        
+    
+    void QuadCornersToLineWireframe(int start, const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color)
+    {
+        for (int i = start; i < start+4; ++i)
+        {
+            out.emplace_back(corners[i], color);
+            out.emplace_back(corners[start + ((i - start + 1) % 4)], color);
+        }
+    }
+
+    void MultiQuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color)
+    {
+        for(int i=0;i < corners.size() / 4;i++)
+        {
+            QuadCornersToLineWireframe(i*4, corners, out, color);
+        }
+    }
 }

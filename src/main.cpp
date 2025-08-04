@@ -2,8 +2,10 @@
 // Defines the entry point for the application
 
 #include <QApplication>
+#include <iostream>
 #include "widgets/viewport.h"
 #include "test_chamber.h"
+#include "selection.h"
 #include "widgets/palette.h"
 
 int main(int argc, char* argv[])
@@ -25,12 +27,13 @@ int main(int argc, char* argv[])
 
     // TODO: We probably want the main viewport to be a child of a separate "base" panel
     PMP::Viewport mainViewport(nullptr);
-
+    PMP::Selector selector;
+    mainViewport.setSelector(&selector);
     mainViewport.resize(1280, 720);
     mainViewport.setWindowTitle("Puzzlemaker Plus");
 
     mainViewport.show();
-
+    
     PMP::TestChamber tc;
     tc.CreateChildrenForNode(0);
     tc.CreateChildrenForNode(6);
@@ -45,6 +48,9 @@ int main(int argc, char* argv[])
 
     tc.PrintNodesTree();
     tc.GenerateSurfaces();
+    std::cout << "Loaded Test Chamber" << std::endl;
+    
+    selector.setTestChamber(&tc);
     mainViewport.setTestChamber(&tc);
     mainViewport.loadTestChamberMesh(); //Needs to be called after mainViewport.show()
     

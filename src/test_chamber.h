@@ -82,8 +82,7 @@ namespace PMP
 		int GetRootNodeSizeInt() const {return static_cast<int>(m_rootNodeWorldSize);};
 		const std::map<NodeID, TestChamberNode>& GetNodeMap() const {return m_nodeMap;};
 		std::array<QVector3D, 4> GetChamberSurfaceCorners(const ChamberSurface& surface);
-		WALLSIDE GetHitWall(NodeID node, QVector3D hit, QVector3D center, float size, float epsilon=0.1f) const;
-
+		
 		bool IsOutOOB(QVector3D coord) const;
 		bool IsSurface (WALLSIDE side, NodeID node) const;
 		bool IsNodeActive(NodeID node) const {return m_nodeMap.at(node).m_active;};

@@ -12,6 +12,7 @@
 #include <iostream>
 
 #include "viewport.h"
+#include "../selection.h"
 #include "../util/3d/mesh.h"
 
 namespace PMP
@@ -124,12 +125,9 @@ namespace PMP
 		m_lineVBO.release();
 		this->doneCurrent();
 	}
-	void Viewport::loadLines(Ray ray, float length)
+	void Viewport::loadLines(Ray ray, float length, QVector3D colStart, QVector3D colEnd)
 	{
-		std::vector<LineVertex> extended = m_surfaceSelection;
-		extended.push_back({ray.origin, {1.0f,0.1f,0.1f}});
-		extended.push_back({ray.origin + ray.direction * length, {0.1f,0.1f,1.0f}});
-		loadLines(extended);
+		loadLines({{ray.origin, colStart}, {ray.origin + ray.direction * length, colEnd}});
 	}
 	// Generate Test Chamber Mesh
 	void Viewport::loadTestChamberMesh()
@@ -224,28 +222,7 @@ namespace PMP
 		m_wallShader.release();
 	}
 
-	Ray Viewport::ScreenPosToWorldRay(QPoint mousePos)
-	{
-		float x = (2.0f * mousePos.x()) / width() - 1.0f;
-		float y = 1.0f - (2.0f * mousePos.y()) / height();
-		float z = 1.0f; // Forward direction
 
-		QVector4D rayClip(x, y, -1.0f, 1.0f); // NDC near plane
-
-		QMatrix4x4 proj = m_projection;
-		QMatrix4x4 view;
-		getViewMatrix(view);
-		QMatrix4x4 invVP = (proj * view).inverted();
-
-		QVector4D rayEye = proj.inverted() * rayClip;
-		rayEye = QVector4D(rayEye.x(), rayEye.y(), -1.0, 0.0); // Direction in eye space
-
-		QVector3D rayWorld = (view.inverted() * rayEye).toVector3D().normalized();
-
-		QVector3D rayOrigin = (view.inverted() * QVector4D(0, 0, 0, 1)).toVector3D();
-
-		return Ray{rayOrigin, rayWorld}; // Define your Ray struct as needed
-	}
 
 
 // QT Functions
@@ -270,6 +247,8 @@ namespace PMP
 		m_projection.setToIdentity();
 		// Source near clip plane value, might change later
 		m_projection.perspective(m_fov, aspect, 7.0f, 32767.0f);
+		// Selector needs to be aware of the viewport size.
+		m_selector->setViewPortDim(width, height);
 	}
 
 	void Viewport::keyPressEvent(QKeyEvent* event)
@@ -280,47 +259,29 @@ namespace PMP
 		}
 		if (event->key() == Qt::Key_Q)
 		{
-			Ray ray = ScreenPosToWorldRay(this->mapFromGlobal(QCursor::pos()));
-			if(m_testChamber)
-			{
-				std::optional<RayHitResult> cast = m_testChamber->RayCast(ray);
-				if(cast.has_value())
-				{
-					m_surfaceSelection.clear();
-					const auto& points = m_testChamber->GetChamberSurfaceCorners(cast->surface);
-					m_surfaceSelection.push_back(LineVertex(points[0],QVector3D(0.1f,0.1f,0.1f)));
-					m_surfaceSelection.push_back(LineVertex(points[1],QVector3D(0.1f,0.1f,0.1f)));
-					m_surfaceSelection.push_back(LineVertex(points[1],QVector3D(0.1f,0.1f,0.1f)));
-					m_surfaceSelection.push_back(LineVertex(points[2],QVector3D(0.1f,0.1f,0.1f)));
-					m_surfaceSelection.push_back(LineVertex(points[2],QVector3D(0.1f,0.1f,0.1f)));
-					m_surfaceSelection.push_back(LineVertex(points[3],QVector3D(0.1f,0.1f,0.1f)));
-					m_surfaceSelection.push_back(LineVertex(points[3],QVector3D(0.1f,0.1f,0.1f)));
-					m_surfaceSelection.push_back(LineVertex(points[0],QVector3D(0.1f,0.1f,0.1f)));
-
-					//m_surfaceSelection.push_back(LineVertex(m_surfaceSelection[1]));
-					loadDots({cast->hitPoint});
-					m_nodeSelection = cast->nodeID;
-				}
-			}
-			loadLines(ray);
+			
 		}
 		if (event->key() == Qt::Key_Equal)
 		{
 			std::cout <<"Disabling Node"<<std::endl;
-			if(m_nodeSelection.has_value())
+			std::optional<NodeID> val = m_selector->getNodeSelection();
+			if(val.has_value())
 			{
-				m_testChamber->SetNodeActive(m_nodeSelection.value(), false);
+				m_testChamber->SetNodeActive(val.value(), false);
 				m_testChamber->GenerateSurfaces();
+				m_selector->clearSurfaces();
 				loadTestChamberMesh();
 			}
 		}
 		if (event->key() == Qt::Key_Minus)
 		{
 			std::cout <<"Enabling Node"<<std::endl;
-			if(m_nodeSelection.has_value())
+			std::optional<NodeID> val = m_selector->getNodeSelection();
+			if(val.has_value())
 			{
-				m_testChamber->SetNodeActive(m_nodeSelection.value(), true);
+				m_testChamber->SetNodeActive(val.value(), true);
 				m_testChamber->GenerateSurfaces();
+				m_selector->clearSurfaces();
 				loadTestChamberMesh();
 			}
 		}
@@ -328,16 +289,35 @@ namespace PMP
 	}
 	void Viewport::mousePressEvent(QMouseEvent* event)
 	{
+		QMatrix4x4 viewMatrix;
+		getViewMatrix(viewMatrix);
+		std::optional<RayHitResult> rayCastChamber = m_testChamber->RayCast(ScreenPosToWorldRay(width(),height(),this->mapFromGlobal(QCursor::pos()), m_projection, viewMatrix));
+
 		if ( event->button() == Qt::MouseButton::RightButton )
 		{
-			m_isPanning = true;
+			if(rayCastChamber.has_value())
+			{
+				// Right click on surface/object
+			}
+			else {
+				m_isPanning = true;
+			}
+			m_lastMouseClickPos = QVector2D(event->position());
 			event->accept();
 		}
 		else if ( event->button() == Qt::MouseButton::LeftButton ||
 				  event->button() == Qt::MouseButton::MiddleButton )
 		{
-			m_isOrbiting = true;
-			
+			if(rayCastChamber.has_value())
+			{
+				//Start dragging
+				m_isDragging = true;
+			}
+			else {
+				//Orbit if mouse click outside test chamber
+				m_isOrbiting = true;
+			}
+			m_lastMouseClickPos = QVector2D(event->position());
 			event->accept();
 		}
 
@@ -353,7 +333,29 @@ namespace PMP
 		else if ( event->button() == Qt::MouseButton::LeftButton ||
 				  event->button() == Qt::MouseButton::MiddleButton )
 		{
-			m_isOrbiting = false;
+			if(m_isOrbiting)
+			{
+				m_isOrbiting = false;
+			}
+			if(m_isPanning)
+			{
+				m_isDragging = false;
+			}
+			// Surface Selection
+			QVector2D newPos = QVector2D(event->position());
+			if((newPos - m_lastMouseClickPos).length()<1)
+			{
+				//Selection
+				QMatrix4x4 viewMatrix;
+				getViewMatrix(viewMatrix);
+				m_selector->clickSelectSurface(this->mapFromGlobal(QCursor::pos()), m_projection, viewMatrix);
+				std::vector<QVector3D> corners;
+				m_selector->getSelectionSurfaceCorners(corners);
+				std::vector<LineVertex> lines;
+				MultiQuadCornersToLineWireframe(corners,lines);
+
+				loadLines(lines);
+			}
 			event->accept();
 		}
 	}
@@ -388,7 +390,7 @@ namespace PMP
 			else if ( m_cameraAngles.x() < -180.0f )
 				m_cameraAngles.setX(-180.0f);
 
-			m_OrbitVelocity = deltaOrbitAngle;
+			m_orbitVelocity = deltaOrbitAngle;
 			m_shouldOrbitInertia = true;
 			updateGraphics = true;
 		}
@@ -409,7 +411,7 @@ namespace PMP
 		m_lastMousePos = currentMouseGlobal;
 		
 		if (m_shouldOrbitInertia && !m_isOrbiting) {
-			m_cameraAngles += m_OrbitVelocity;
+			m_cameraAngles += m_orbitVelocity;
 
 			// Clamp again
 			if (m_cameraAngles.x() > 0.0f)
@@ -418,11 +420,11 @@ namespace PMP
 				m_cameraAngles.setX(-180.0f);
 
 			// Dampen inertia
-			m_OrbitVelocity *= 0.9f;
+			m_orbitVelocity *= 0.9f;
 
 			// Stop when very slow
-			if (m_OrbitVelocity.lengthSquared() < 0.0001f) {
-				m_OrbitVelocity = QVector3D(0, 0, 0);
+			if (m_orbitVelocity.lengthSquared() < 0.0001f) {
+				m_orbitVelocity = QVector3D(0, 0, 0);
 				m_shouldOrbitInertia = false;
 			}
 			updateGraphics = true;

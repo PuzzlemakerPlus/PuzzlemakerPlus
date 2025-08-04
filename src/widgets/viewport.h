@@ -21,6 +21,7 @@
 
 #include "../test_chamber.h"
 #include "../util/3d/ray.h"
+#include "../selection.h"
 
 namespace PMP
 {
@@ -28,12 +29,6 @@ namespace PMP
 	const float cameraDistMin = 256.0f;
 	const float cameraDistMax = 10000.0f;
 
-	struct LineVertex{
-		QVector3D pos;
-		QVector3D col = {1.0f,0.1f,0.1f};
-		LineVertex(QVector3D position) : pos(position) {}
-		LineVertex(QVector3D position, QVector3D color) : pos(position), col(color) {}
-	};
 
 	class Viewport : public QOpenGLWidget, protected QOpenGLFunctions_3_2_Core
 	{
@@ -56,7 +51,8 @@ namespace PMP
 
 		void loadDots(std::vector<QVector3D> vertices);
 		void loadLines(std::vector<LineVertex> vertices);
-		void loadLines(Ray ray, float length=20000.0f);
+		//Load a single ray to draw
+		void loadLines(Ray ray, float length=20000.0f, QVector3D colStart=QVector3D(1.0f,0.0f,0.0f), QVector3D colEnd=QVector3D(0.0f,0.0f,1.0f));
 		void loadTestChamberMesh();
 		
 		void setFog(bool enable) {m_fog = enable;};
@@ -64,9 +60,11 @@ namespace PMP
 		void setFogEnd(float x) {m_fogEnd = x;};
 		void setFogColor(QVector3D col) {m_fogCol = col;};
 
-		Ray ScreenPosToWorldRay(QPoint mousePos);
-
 		void setTestChamber(TestChamber* tc) {m_testChamber = tc;};
+		void setSelector(Selector* s){m_selector = s;m_selector->setViewPortDim(width(), height());};
+
+		QMatrix4x4 getProjectionMatrix() {return m_projection;};
+		void getViewMatrix(QMatrix4x4& out);
 		
 	protected:
 		void createVAOs();
@@ -81,36 +79,46 @@ namespace PMP
 		void mouseReleaseEvent(QMouseEvent* event) override;
 		void wheelEvent(QWheelEvent* event) override;
 
-		void getViewMatrix(QMatrix4x4& out);
 		void drawDots(QMatrix4x4 view);
 		void drawLines(QMatrix4x4 view);
 		void drawTestChamber(QMatrix4x4 view);
 
 	private:
+		TestChamber* m_testChamber = nullptr;
+		Selector* m_selector = nullptr;
+
 		// Camera transformation matrices
 		// (Chamber geometry won't use a model matrix, item model matrices will be stored in the item class)
 		QMatrix4x4 m_projection;
 		float m_fov;
-		
 		QVector3D m_cameraTarget;
 		// Not making this a quaternion for now because I don't have a good understanding of them yet
 		// and it doesn't really seem to be necessary (camera only rotates around yaw/pitch) - Kelsey
 		QVector3D m_cameraAngles;
 		float m_cameraDistance;
 		
+		//Mouse based control
 		bool m_isOrbiting;
-		bool m_shouldOrbitInertia;
-		QVector3D m_OrbitVelocity;
 		bool m_isPanning;
+		bool m_isDragging;
+
+		bool m_shouldOrbitInertia;
 		QVector2D m_lastMousePos;
+		QVector2D m_lastMouseClickPos;
+		QVector2D m_dragStartPos;
+		QVector2D m_dragEndPos;
+		QVector3D m_orbitVelocity;
 		
+		//Timer for onFrameUpdate()
 		QTimer* m_frameTimer = new QTimer(this);
-		
+
+		// Fog control
 		bool m_fog = false;
 		float m_fogStart = 2500.0f;
 		float m_fogEnd = 25000.0f;
 		QVector3D m_fogCol = {0.1,0.13,0.2};
-		
+
+		// Graphics objects
 		// TODO: These will probably be moved elsewhere - Kelsey
 		QOpenGLShaderProgram m_wallShader;
 		QOpenGLVertexArrayObject m_chamberVAO;
@@ -128,10 +136,7 @@ namespace PMP
 		QOpenGLBuffer m_lineVBO{QOpenGLBuffer::Type::VertexBuffer};
 		GLsizei m_lineVertCount = 0;
 
-		TestChamber* m_testChamber = nullptr;
-		
-		std::vector<LineVertex> m_surfaceSelection;
-		std::optional<NodeID> m_nodeSelection;
+
 #ifndef NDEBUG
 		QOpenGLDebugLogger m_debugLogger;
 #endif

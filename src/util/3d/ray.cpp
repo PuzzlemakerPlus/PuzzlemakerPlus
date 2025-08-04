@@ -1,6 +1,28 @@
 
+#include <qmatrix4x4.h>
 #include "ray.h"
+
 namespace PMP {
+    Ray ScreenPosToWorldRay(int width, int height, QPoint mousePos, QMatrix4x4 projectionMatrix, QMatrix4x4 viewMatrix)
+	{
+		float x = (2.0f * mousePos.x()) / width - 1.0f;
+		float y = 1.0f - (2.0f * mousePos.y()) / height;
+		float z = 1.0f; // Forward direction
+
+		QVector4D rayClip(x, y, -1.0f, 1.0f); // NDC near plane
+
+		QMatrix4x4 invVP = (projectionMatrix * viewMatrix).inverted();
+
+		QVector4D rayEye = projectionMatrix.inverted() * rayClip;
+		rayEye = QVector4D(rayEye.x(), rayEye.y(), -1.0, 0.0); // Direction in eye space
+
+		QVector3D rayWorld = (viewMatrix.inverted() * rayEye).toVector3D().normalized();
+
+		QVector3D rayOrigin = (viewMatrix.inverted() * QVector4D(0, 0, 0, 1)).toVector3D();
+
+		return Ray{rayOrigin, rayWorld}; // Define your Ray struct as needed
+	}
+
     bool RayIntersectsTriangle(const Ray& ray,
                            const QVector3D& v0,
                            const QVector3D& v1,

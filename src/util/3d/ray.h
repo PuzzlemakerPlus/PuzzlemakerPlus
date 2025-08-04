@@ -7,6 +7,7 @@ namespace PMP
         QVector3D direction;
     };
 
+    Ray ScreenPosToWorldRay(int width, int height, QPoint mousePos, QMatrix4x4 projectionMatrix, QMatrix4x4 viewMatrix);
     bool RayIntersectsTriangle(const Ray& ray,const QVector3D& v0,const QVector3D& v1,const QVector3D& v2,float& t,QVector3D& hitPos,float epsilon = 1e-6f);
     bool RayIntersectsQuad(const Ray& ray, const QVector3D& p0, const QVector3D& p1, const QVector3D& p2, const QVector3D& p3, float& t, QVector3D& hitPos);
     bool RayIntersectsAABB(Ray ray, QVector3D center, float size, float& tHit);
