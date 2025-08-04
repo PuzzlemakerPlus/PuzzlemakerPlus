@@ -17,7 +17,8 @@ namespace PMP
 		POS_Y,
 		NEG_Y,
 		POS_Z,
-		NEG_Z
+		NEG_Z,
+        NONE
 	};
 
     struct Vertex {
@@ -34,6 +35,10 @@ namespace PMP
         std::vector<GLfloat> vertices;
         std::vector<GLint> indices;
     };
+
+    QVector3D GetWallNormal(WALLSIDE side);
+    QVector3D GetWallUp(WALLSIDE side);
+    bool WallFacesDirection(WALLSIDE side, const QVector3D& dir);
 
     Quad generateCubeFace(WALLSIDE side, float size=128.0f);
     Quad generateQuadAt(QVector3D center, WALLSIDE side, float size);

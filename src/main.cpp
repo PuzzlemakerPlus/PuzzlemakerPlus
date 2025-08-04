@@ -42,7 +42,9 @@ int main(int argc, char* argv[])
     tc.SetNodeActive(29, false);
 
     tc.PrintNodesTree();
-    mainViewport.loadTestChamberMesh(tc); //Needs to be called after mainViewport.show()
+    tc.GenerateSurfaces();
+    mainViewport.setTestChamber(&tc);
+    mainViewport.loadTestChamberMesh(); //Needs to be called after mainViewport.show()
     
 
     //creates all the buttons for the palette Right now most of the data for each element is junk for demo

@@ -1,8 +1,7 @@
 // octree_test.cpp
 // Implements the class that represents the test chamber itself and the octree nodes
 #include "test_chamber.h"
-#include "util/3d/ray.h"
-
+#include "util/3d/mesh.h"
 #include <array>
 #include <string>
 #include <vector>
@@ -11,6 +10,7 @@
 #include <optional>
 #include <stdexcept>
 #include <qvectornd.h>
+#include "util/3d/mesh.h"
 
 namespace PMP
 {
@@ -176,27 +176,77 @@ namespace PMP
 		return SubdivideNodeToCoord(coord,  m_nodeMap[parentID].m_childIDs.value()[i], size);
 	}
 
-	std::optional<NodeID> TestChamber::RayCast(QVector3D origin, QVector3D dir, QVector3D& out, NodeID parentID) const
+	//Given a wallside of a node, should this wall be drawn
+	bool TestChamber::IsSurface(WALLSIDE side, NodeID node) const
+    {
+		const QVector3D center = m_nodeMap.at(node).m_center;
+        const float halfSize = m_nodeMap.at(node).m_size / 2.0f;
+        const float epsilon = 0.4f;
+        QVector3D offset;
+
+        switch (side) {
+            case POS_X: offset = {+halfSize + epsilon, 0, 0}; break;
+            case NEG_X: offset = {-halfSize - epsilon, 0, 0}; break;
+            case POS_Y: offset = {0, +halfSize + epsilon, 0}; break;
+            case NEG_Y: offset = {0, -halfSize - epsilon, 0}; break;
+            case POS_Z: offset = {0, 0, +halfSize + epsilon}; break;
+            case NEG_Z: offset = {0, 0, -halfSize - epsilon}; break;
+            case NONE: throw std::runtime_error("Invalid WALLSIDE");
+        }
+
+        QVector3D neighborCoord = center + offset;
+
+        bool isVisible = IsOutOOB(neighborCoord); //if coordinate behind this surface is OOB, this surface should be drawn
+        if (!isVisible) { // the coordinate behind this surface is in bound
+            NodeID neighborId = SearchNodeWithCoord(neighborCoord);
+            isVisible = !IsNodeActive(neighborId); // check if the node behind this surface is inactive
+        }
+		return isVisible;
+    }
+
+	
+	QVector3D GetWallFaceCenter(QVector3D center, unsigned int size, QVector3D normal)
 	{
-		const TestChamberNode& node = m_nodeMap.at(parentID);
-
-		if (!IsNodeActive(parentID))
-			return std::nullopt;
-
-		if (!RayIntersectsAABB(origin, dir, node.m_center, node.m_size))
-			return std::nullopt;
-
-		if (!NodeHasChild(parentID))
-			return parentID; // This leaf is hit
-
-		for (NodeID childID : node.m_childIDs.valueRead()) {
-			if (auto hit = RayCast(origin, dir, out, childID))
-				return hit; // Return first child hit (or collect all if needed)
-		}
-
-		return std::nullopt;
+		return center + size/2 * -normal;
 	}
 
+	std::optional<RayHitResult> TestChamber::RayCast(Ray ray) const
+	{
+		float closestT = std::numeric_limits<float>::infinity();
+		std::optional<RayHitResult> closestHit;
+
+		for (const ChamberSurface& surface : m_surfaces)
+		{
+			if(!WallFacesDirection(surface.side,ray.direction)) continue;
+			const TestChamberNode& node = m_nodeMap.at(surface.parentNode);
+
+			// Wall geometry
+			QVector3D normal = GetWallNormal(surface.side);
+			QVector3D center = GetWallFaceCenter(node.m_center, node.m_size, normal);
+			QVector3D up = GetWallUp(surface.side);
+			QVector3D right = QVector3D::crossProduct(normal, up);
+			float halfSize = node.m_size / 2.0f;
+
+			QVector3D p0 = center + (-right - up) * halfSize;
+			QVector3D p1 = center + ( right - up) * halfSize;
+			QVector3D p2 = center + ( right + up) * halfSize;
+			QVector3D p3 = center + (-right + up) * halfSize;
+
+			float tTemp;
+			QVector3D hitPosTemp;
+
+			if (RayIntersectsQuad(ray, p0, p1, p2, p3, tTemp, hitPosTemp))
+			{
+				if (tTemp > 0.0f && tTemp < closestT)
+				{
+					closestT = tTemp;
+					closestHit = RayHitResult{surface.parentNode,hitPosTemp};
+				}
+			}
+		}
+
+		return closestHit;
+	}
 	// Is the given coordinate out of bounds?
 	bool TestChamber::IsOutOOB(QVector3D coord) const
 	{
@@ -204,6 +254,7 @@ namespace PMP
 		return std::abs(coord.x()) > halfSize || std::abs(coord.y()) > halfSize || std::abs(coord.z()) > halfSize;
 	}
 
+	
 	const NodeID TestChamber::SearchNodeWithCoord(QVector3D coord, NodeID parentID) const
 	{
 		if(IsOutOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
@@ -212,6 +263,38 @@ namespace PMP
 		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_size, m_nodeMap.at(parentID).m_center);
 		return SearchNodeWithCoord(coord,  m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
 	}
+
+	// Based on generated surfaces, generate quads for rendering
+	// This is to separate rendering logic with octree logic (Octree does not need to know vertices of individual tris)
+	void TestChamber::GenerateQuads(std::vector<Quad>& out) const
+	{
+		if(m_surfaces.size() == 0) throw std::runtime_error("Attempted to generate quads for test chamber with no surface. Forgot to call GenerateSurfaces()?");
+		for(const auto& surf : m_surfaces)
+		{
+			const NodeID nodeID = surf.parentNode;
+			out.push_back(generateQuadAt(m_nodeMap.at(nodeID).m_center, surf.side, m_nodeMap.at(nodeID).m_size));
+		}
+	}
+
+	// Based on the node structure, generate quads
+	void TestChamber::GenerateSurfaces()
+    {
+        std::cout << "generating Surfaces for test chamber "<< std::endl;
+        for (const auto& [id, node] : GetNodeMap()) {
+            if (!IsNodeActive(id) || NodeHasChild(id)) continue;
+            std::cout << "Generating Surfaces for Node " << id << std::endl;
+            const QVector3D& center = node.m_center;
+            
+            for (int i = 0; i < 6; ++i) {
+                WALLSIDE side = static_cast<WALLSIDE>(i);
+                if(IsSurface(side,id))
+                {
+					m_surfaces.push_back({side,id});
+                }
+            }
+        }
+        std::cout << "Generated " << m_surfaces.size() << " Surfaces" << std::endl;
+    }
 	void TestChamber::PrintNodes()
 	{
 		std::cout << "TestChamber has " << m_nodeMap.size() << " Node(s)\n";
@@ -224,7 +307,6 @@ namespace PMP
 			}
     	}
 	}
-
 	const char* printVector3D(QVector3D in)
 	{
 		static char buffer[64];

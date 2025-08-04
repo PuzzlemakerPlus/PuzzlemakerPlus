@@ -4,6 +4,34 @@
 
 namespace PMP
 {
+    QVector3D GetWallNormal(WALLSIDE side)
+    {
+        switch (side) {
+            case POS_X:   return QVector3D(-1,  0,  0);
+            case NEG_X:  return QVector3D( 1,  0,  0);
+            case POS_Y: return QVector3D( 0, -1,  0);
+            case NEG_Y:    return QVector3D( 0,  1,  0);
+            case POS_Z:   return QVector3D( 0,  0, -1);
+            case NEG_Z:  return QVector3D( 0,  0,  1);
+            default: return QVector3D(0, 0, 0); // default fallback
+        }
+    }
+    QVector3D GetWallUp(WALLSIDE side) {
+        switch (side) {
+            case POS_X: return QVector3D(0, 1, 0); // +Y is up on +X face
+            case NEG_X: return QVector3D(0, 1, 0); // same for -X face
+            case POS_Y: return QVector3D(0, 0, 1); // +Z is out, so up is -Z
+            case NEG_Y: return QVector3D(0, 0, 1);  // -Z is out, up is +Z
+            case POS_Z: return QVector3D(0, 1, 0); // +Y is up on +Z face
+            case NEG_Z: return QVector3D(0, 1, 0); // +Y is up on -Z face
+            default: return QVector3D(0, 0, 0); // default fallback
+        }
+    }
+    bool WallFacesDirection(WALLSIDE side, const QVector3D& dir) 
+    {
+        QVector3D normal = GetWallNormal(side);
+        return QVector3D::dotProduct(normal, dir) < 0.0f;
+    }
 	Quad generateCubeFace(WALLSIDE side, float size) {
         const QVector3D p0(0.0f, 0.0f, 0.0f);
         const QVector3D p1(size, 0.0f, 0.0f);
@@ -15,32 +43,26 @@ namespace PMP
         const QVector3D p7(0.0f, size, size);
 
         std::array<QVector3D, 4> quad;
-        QVector3D normal;
+        QVector3D normal = GetWallNormal(side);
 
         switch (side) {
             case WALLSIDE::NEG_Z: // Bottom
                 quad = { p0, p1, p2, p3 };
-                normal = QVector3D(0.0f, 0.0f, 1.0f);
                 break;
             case WALLSIDE::NEG_Y: // South
                 quad = { p1, p0, p4, p5 };
-                normal = QVector3D(0.0f, 1.0f, 0.0f);
                 break;
             case WALLSIDE::POS_X: // East
                 quad = { p2, p1, p5, p6 };
-                normal = QVector3D(-1.0f, 0.0f, 0.0f);
                 break;
             case WALLSIDE::POS_Y: // North
                 quad = { p3, p2, p6, p7 };
-                normal = QVector3D(0.0f, -1.0f, 0.0f);
                 break;
             case WALLSIDE::NEG_X: // West
                 quad = { p0, p3, p7, p4 };
-                normal = QVector3D(1.0f, 0.0f, 0.0f);
                 break;
             case WALLSIDE::POS_Z: // Top
                 quad = { p5, p4, p7, p6 };
-                normal = QVector3D(0.0f, 0.0f, -1.0f);
                 break;
             default:
                 throw std::out_of_range("Invalid side index");

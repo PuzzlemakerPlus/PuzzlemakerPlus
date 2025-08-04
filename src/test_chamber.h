@@ -6,6 +6,8 @@
 #include <map>
 #include <optional>
 #include <qvectornd.h>
+#include "util/3d/mesh.h"
+#include "util/3d/ray.h"
 #include "util/optional_array.h"
 
 namespace PMP
@@ -15,6 +17,16 @@ namespace PMP
 
 	// DO NOT USE THIS DIRECTLY, this is just used to initialize the value in the test chamber class
 	const unsigned int defaultRootNodeSize = 8192;
+
+	//THE PLANKS OF TOMORROW
+	//Represents a physical wall of a node
+	//TestChamber stores surfaces that will be used for creating quads, performing raycasts etc
+	//Differentiated from rendered quads
+	struct ChamberSurface 
+	{
+		WALLSIDE side;
+		NodeID parentNode;
+	};
 
 	class TestChamberNode
 	{
@@ -61,16 +73,21 @@ namespace PMP
 		// Find the smallest node that includes the give coordinate
 		const NodeID SearchNodeWithCoord(QVector3D coord, NodeID parentID=0) const;
 		bool IsOutOOB(QVector3D coord) const;
+		bool IsSurface (WALLSIDE side, NodeID node) const;
+		WALLSIDE GetHitWall(NodeID node, QVector3D hit, QVector3D center, float size, float epsilon=0.1f) const;
 		bool IsNodeActive(NodeID node) const {return m_nodeMap.at(node).m_active;};
 		bool NodeHasChild(NodeID node) const {return m_nodeMap.at(node).m_childIDs.has_value();};
 		unsigned int GetRootNodeSize() const {return m_rootNodeWorldSize;};
 		int GetRootNodeSizeInt() const {return static_cast<int>(m_rootNodeWorldSize);};
 		const std::map<NodeID, TestChamberNode>& GetNodeMap() const {return m_nodeMap;};
-		std::optional<NodeID> RayCast(QVector3D origin, QVector3D dir, QVector3D& out, NodeID parentID = 0) const;
+		std::optional<RayHitResult> RayCast(Ray ray) const;
 
 		// Expand the tree until the coordinate is enclosed by a node of given size
 		NodeID SubdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size);
 		void SetNodeActive(NodeID node, bool active);
+
+		void GenerateSurfaces();
+		void GenerateQuads(std::vector<Quad>& out) const;
 
 		// Debug
 		void PrintNodes();
@@ -95,6 +112,7 @@ namespace PMP
 
 		// Size of the root node in hammer units - this is effectively the internal max map size
 		unsigned int m_rootNodeWorldSize;
+		std::vector<ChamberSurface> m_surfaces;
 	};
 }
 

@@ -1,18 +1,18 @@
 // viewport.cpp
 // Implements the main editor viewport as an extension of QOpenGLWidget
 #pragma once
+#include <stdexcept>
+#include <vector>
 #include <GL/gl.h>
 #include <QMouseEvent>
 #include <QWheelEvent>
+#include <qvectornd.h>
 #include <qmatrix4x4.h>
 #include <qnamespace.h>
-#include <qvectornd.h>
+
 #include "viewport.h"
 #include "../util/3d/mesh.h"
-#include "../util/3d/ray.h"
-#include <iostream>
 
-#include "../test_chamber_quads.h"
 namespace PMP
 {
 	void Viewport::initializeGL()
@@ -35,12 +35,12 @@ namespace PMP
 		// Puzzlemaker background color
 		glClearColor( 0.803, 0.815, 0.807, 1.0f );
 		loadShaders();
+		createVAOs();
+		loadDots({QVector3D(128.0f,128.0f,128.0f)}); //Need to call these to create VAOS
+		loadLines(std::vector<QVector3D>()); //Need to call these to create VAOS
 
 		connect(m_frameTimer, &QTimer::timeout, this, &Viewport::onFrameUpdate);
 		m_frameTimer->start(16); // ~60 FPS
-
-		loadDots({QVector3D(128.0f,128.0f,128.0f)}); //Need to call these to create VAOS
-		loadLines({}); //Need to call these to create VAOS
 	}
 
 	void Viewport::loadShaders()
@@ -76,15 +76,19 @@ namespace PMP
 		m_lineShader.link()
 #endif
 	}
+	void Viewport::createVAOs()
+	{
+		m_dotVAO.create();
+		m_lineVAO.create();
+		m_chamberVAO.create();
+	}
 
 	// needs a list of points to draw
 	void Viewport::loadDots(std::vector<QVector3D> vertices)
 	{
 		m_dotCount = vertices.size();
 		this->makeCurrent();
-		m_dotVAO.create();
 		m_dotVAO.bind();
-
 		m_dotVBO.create();
 		m_dotVBO.bind();
 		m_dotVBO.allocate(vertices.data(),vertices.size() * sizeof(QVector3D));
@@ -102,10 +106,9 @@ namespace PMP
 	void Viewport::loadLines(std::vector<QVector3D> vertices)
 	{
 		m_lineVertCount = vertices.size();
-		this->makeCurrent();
-		m_lineVAO.create();
-		m_lineVAO.bind();
 
+		this->makeCurrent();
+		m_lineVAO.bind();
 		m_lineVBO.create();
 		m_lineVBO.bind();
 		m_lineVBO.allocate(vertices.data(), vertices.size() * sizeof(QVector3D));
@@ -118,28 +121,31 @@ namespace PMP
 		m_lineVBO.release();
 		this->doneCurrent();
 	}
-	// Generate Test Chamber Mesh
-	void Viewport::loadTestChamberMesh(const TestChamber& tc)
+	void Viewport::loadLines(Ray ray, float length)
 	{
-		this->makeCurrent();
-		m_VAO.create();
-		m_VAO.bind();
-
-		m_vertexBuffer.create();
-		m_vertexBuffer.bind();
-
-		TestChamberQuads tcq = TestChamberQuads(tc);
+		std::vector<QVector3D> vertices = {ray.origin, ray.origin + ray.direction * length};
+		loadLines(vertices);
+	}
+	// Generate Test Chamber Mesh
+	void Viewport::loadTestChamberMesh()
+	{
+		if(!m_testChamber) throw std::runtime_error("Can not load test chamber mesh without setting test chamber");
 		
-		tcq.generateQuads();
-		Mesh mesh = CreateMesh(tcq.GetQuads());
+		std::vector<Quad> quads;
+		m_testChamber->GenerateQuads(quads);
+		Mesh mesh = CreateMesh(quads);
 
+		this->makeCurrent();
+		m_chamberVAO.bind();
+		m_chamberVBO.create();
+		m_chamberVBO.bind();
 		// Disabling for now until we are more certain it's what we want - Kelsey
-		//m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
-		m_vertexBuffer.allocate(mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex)); // todo
+		//m_chamberVBO.setUsagePattern(QOpenGLBuffer::StaticDraw);
+		m_chamberVBO.allocate(mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex)); // todo
 
-		m_indexBuffer.create();
-		m_indexBuffer.bind();
-		m_indexBuffer.allocate(mesh.indices.data(), mesh.indices.size() * sizeof(unsigned int));
+		m_chamberIBO.create();
+		m_chamberIBO.bind();
+		m_chamberIBO.allocate(mesh.indices.data(), mesh.indices.size() * sizeof(unsigned int));
 		m_indicesCount = mesh.indices.size();
 
 		int vertexPosLocation = m_wallShader.attributeLocation("aPos");
@@ -151,10 +157,10 @@ namespace PMP
 		m_wallShader.setAttributeBuffer(vertexNormalLocation, GL_FLOAT, 3 * sizeof(GLfloat), 3, 6 * sizeof(GLfloat));
 
 		// must release VAO before index/vertex buffers, otherwise they get unbound from the VAO too!
-		m_VAO.release();
+		m_chamberVAO.release();
 
-		m_indexBuffer.release();
-		m_vertexBuffer.release();
+		m_chamberIBO.release();
+		m_chamberVBO.release();
 		this->doneCurrent();
 		update();
 	}
@@ -167,6 +173,7 @@ namespace PMP
 	}
 	void Viewport::drawDots(QMatrix4x4 view)
 	{
+		if(m_dotCount == 0) return;
 		m_dotShader.bind();
 		m_dotShader.setUniformValue("u_view", view);
 		m_dotShader.setUniformValue("u_proj", m_projection);
@@ -178,6 +185,7 @@ namespace PMP
 	}
 	void Viewport::drawLines(QMatrix4x4 view)
 	{
+		if(m_lineVertCount == 0) return;
 		m_lineShader.bind();
 		m_lineShader.setUniformValue("u_view", view);
 		m_lineShader.setUniformValue("u_proj", m_projection);
@@ -189,6 +197,7 @@ namespace PMP
 	}
 	void Viewport::drawTestChamber(QMatrix4x4 view)
 	{
+		if(m_indicesCount == 0) return;
 		m_wallShader.bind();
 		m_wallShader.setUniformValue("u_view", view);
 		m_wallShader.setUniformValue("u_proj", m_projection);
@@ -202,11 +211,35 @@ namespace PMP
 		}
 		m_wallShader.setUniformValue("u_fogEnd", m_fogEnd);
 
-		m_VAO.bind();
+		m_chamberVAO.bind();
 		glDrawElements(GL_TRIANGLES, m_indicesCount, GL_UNSIGNED_INT, 0); 
-		m_VAO.release();
+		m_chamberVAO.release();
 		m_wallShader.release();
 	}
+
+	Ray Viewport::ScreenPosToWorldRay(QPoint mousePos)
+	{
+		float x = (2.0f * mousePos.x()) / width() - 1.0f;
+		float y = 1.0f - (2.0f * mousePos.y()) / height();
+		float z = 1.0f; // Forward direction
+
+		QVector4D rayClip(x, y, -1.0f, 1.0f); // NDC near plane
+
+		QMatrix4x4 proj = m_projection;
+		QMatrix4x4 view;
+		getViewMatrix(view);
+		QMatrix4x4 invVP = (proj * view).inverted();
+
+		QVector4D rayEye = proj.inverted() * rayClip;
+		rayEye = QVector4D(rayEye.x(), rayEye.y(), -1.0, 0.0); // Direction in eye space
+
+		QVector3D rayWorld = (view.inverted() * rayEye).toVector3D().normalized();
+
+		QVector3D rayOrigin = (view.inverted() * QVector4D(0, 0, 0, 1)).toVector3D();
+
+		return Ray{rayOrigin, rayWorld}; // Define your Ray struct as needed
+	}
+
 
 // QT Functions
 	void Viewport::paintGL()
@@ -238,6 +271,19 @@ namespace PMP
 		{
 			m_fog = !m_fog;
 		}
+		if (event->key() == Qt::Key_Q)
+		{
+			Ray ray = ScreenPosToWorldRay(this->mapFromGlobal(QCursor::pos()));
+			loadLines(ray);
+			if(m_testChamber)
+			{
+				std::optional<RayHitResult> cast = m_testChamber->RayCast(ray);
+				if(cast.has_value())
+				{
+					loadDots({cast->hitPoint});
+				}
+			}
+		}
 		update();
 	}
 	void Viewport::mousePressEvent(QMouseEvent* event)
@@ -251,6 +297,7 @@ namespace PMP
 				  event->button() == Qt::MouseButton::MiddleButton )
 		{
 			m_isOrbiting = true;
+			
 			event->accept();
 		}
 

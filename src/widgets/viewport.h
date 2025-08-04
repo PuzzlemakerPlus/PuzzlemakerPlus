@@ -19,6 +19,7 @@
 #include <QQuaternion>
 
 #include "../test_chamber.h"
+#include "../util/3d/ray.h"
 
 namespace PMP
 {
@@ -47,14 +48,20 @@ namespace PMP
 
 		void loadDots(std::vector<QVector3D> vertices);
 		void loadLines(std::vector<QVector3D> vertices);
-		void loadTestChamberMesh(const TestChamber& tc);
+		void loadLines(Ray ray, float length=20000.0f);
+		void loadTestChamberMesh();
 		
 		void setFog(bool enable) {m_fog = enable;};
 		void setFogStart(float x) {m_fogStart = x;};
 		void setFogEnd(float x) {m_fogEnd = x;};
 		void setFogColor(QVector3D col) {m_fogCol = col;};
+
+		Ray ScreenPosToWorldRay(QPoint mousePos);
+
+		void setTestChamber(TestChamber* tc) {m_testChamber = tc;};
 		
 	protected:
+		void createVAOs();
 		void loadShaders();
 		void paintGL() override;
 		void resizeGL( int width, int height ) override;
@@ -98,20 +105,22 @@ namespace PMP
 		
 		// TODO: These will probably be moved elsewhere - Kelsey
 		QOpenGLShaderProgram m_wallShader;
-		QOpenGLVertexArrayObject m_VAO;
-		QOpenGLBuffer m_vertexBuffer{QOpenGLBuffer::Type::VertexBuffer};
-		QOpenGLBuffer m_indexBuffer{QOpenGLBuffer::Type::IndexBuffer};
-		GLsizei m_indicesCount;
+		QOpenGLVertexArrayObject m_chamberVAO;
+		QOpenGLBuffer m_chamberVBO{QOpenGLBuffer::Type::VertexBuffer};
+		QOpenGLBuffer m_chamberIBO{QOpenGLBuffer::Type::IndexBuffer};
+		GLsizei m_indicesCount = 0;
 		
 		QOpenGLShaderProgram m_dotShader;
 		QOpenGLVertexArrayObject m_dotVAO;
 		QOpenGLBuffer m_dotVBO{QOpenGLBuffer::Type::VertexBuffer};
-		GLsizei m_dotCount;
+		GLsizei m_dotCount = 0;
 		
 		QOpenGLShaderProgram m_lineShader;
 		QOpenGLVertexArrayObject m_lineVAO;
 		QOpenGLBuffer m_lineVBO{QOpenGLBuffer::Type::VertexBuffer};
-		GLsizei m_lineVertCount;
+		GLsizei m_lineVertCount = 0;
+
+		TestChamber* m_testChamber = nullptr;
 
 #ifndef NDEBUG
 		QOpenGLDebugLogger m_debugLogger;
