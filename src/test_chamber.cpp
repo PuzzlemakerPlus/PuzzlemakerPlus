@@ -2,6 +2,7 @@
 // Implements the class that represents the test chamber itself and the octree nodes
 #include "test_chamber.h"
 #include "util/3d/mesh.h"
+
 #include <array>
 #include <string>
 #include <vector>
@@ -10,7 +11,7 @@
 #include <optional>
 #include <stdexcept>
 #include <qvectornd.h>
-#include "util/3d/mesh.h"
+#include <unordered_set>
 
 namespace PMP
 {
