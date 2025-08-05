@@ -157,7 +157,7 @@ namespace PMP
         return {vertexBufferData, indexBufferData};
     }
     
-    void QuadCornersToLineWireframe(int start, const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color)
+    void QuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color, int start)
     {
         for (int i = start; i < start+4; ++i)
         {
@@ -170,7 +170,7 @@ namespace PMP
     {
         for(int i=0;i < corners.size() / 4;i++)
         {
-            QuadCornersToLineWireframe(i*4, corners, out, color);
+            QuadCornersToLineWireframe(corners, out, color, i*4);
         }
     }
 }

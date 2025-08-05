@@ -25,7 +25,7 @@ namespace PMP
 	//Differentiated from rendered quads
 	struct ChamberSurface 
 	{
-		WALLSIDE side;
+		WALLSIDE side = WALLSIDE::NONE;
 		NodeID parentNode;
 	};
 
@@ -80,7 +80,7 @@ namespace PMP
 
 		unsigned int GetRootNodeSize() const {return m_rootNodeWorldSize;};
 		int GetRootNodeSizeInt() const {return static_cast<int>(m_rootNodeWorldSize);};
-		const std::map<NodeID, TestChamberNode>& GetNodeMap() const {return m_nodeMap;};
+		const std::unordered_map<NodeID, TestChamberNode>& GetNodeMap() const {return m_nodeMap;};
 		std::array<QVector3D, 4> GetChamberSurfaceCorners(const ChamberSurface& surface);
 		
 		bool IsOutOOB(QVector3D coord) const;
@@ -114,7 +114,7 @@ namespace PMP
 		
 		void _PrintNodesTree(std::map<NodeID, std::vector<NodeID>>& children, NodeID id, std::string prefix, bool isLast);
 
-		std::map<NodeID, TestChamberNode> m_nodeMap;
+		std::unordered_map<NodeID, TestChamberNode> m_nodeMap;
 		NodeID m_rootNode;
 
 		// FIXME: needs logic to reuse old IDs so this doesn't overflow and break everything
@@ -122,7 +122,7 @@ namespace PMP
 
 		// Size of the root node in hammer units - this is effectively the internal max map size
 		unsigned int m_rootNodeWorldSize;
-		std::vector<ChamberSurface> m_surfaces;
+		std::unordered_map<NodeID, std::array<ChamberSurface, 6>> m_surfaceMap;
 	};
 }
 

@@ -53,6 +53,6 @@ namespace PMP
     Mesh CreateMesh(std::vector<Vertex> vertices, std::vector<unsigned int> indexBuffer);
     Mesh CreateMesh(std::vector<Quad> quads);
 
-    void QuadCornersToLineWireframe(int start, const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color=QVector3D(1.0f,1.0f,1.0f));
-    void MultiQuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color=QVector3D(1.0f,1.0f,1.0f));
+    void QuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color=QVector3D(0.0f,0.0f,0.0f), int start = 0);
+    void MultiQuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color=QVector3D(0.0f,0.0f,0.0f));
 }

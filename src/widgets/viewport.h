@@ -27,7 +27,7 @@ namespace PMP
 {
 	const float cameraDistDefault = 512.0f;
 	const float cameraDistMin = 256.0f;
-	const float cameraDistMax = 10000.0f;
+	const float cameraDistMax = 14000.0f;
 
 
 	class Viewport : public QOpenGLWidget, protected QOpenGLFunctions_3_2_Core

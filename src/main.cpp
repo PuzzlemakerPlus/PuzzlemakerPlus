@@ -22,6 +22,7 @@ int main(int argc, char* argv[])
     format.setProfile(QSurfaceFormat::CoreProfile);
 #ifndef NDEBUG
     format.setOption(QSurfaceFormat::DebugContext);
+    
 #endif
     QSurfaceFormat::setDefaultFormat( format );
 

@@ -25,6 +25,8 @@ namespace PMP
         void dragSelectStart(QPoint start, QMatrix4x4 projection, QMatrix4x4 view);
         void dragSelectEnd(QPoint end, QMatrix4x4 projection, QMatrix4x4 view);
 
+        void moveSelection(const ChamberSurface& selection, QVector3D direction);
+
         // Testchamber to make selection from
         void setTestChamber(TestChamber* tc) {m_testChamber = tc;};
         void setViewPortDim(int width, int height) {m_viewPortWidth = width; m_viewPortHeight = height;};

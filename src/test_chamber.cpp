@@ -121,27 +121,28 @@ namespace PMP
 			m_nodeMap.emplace(newID, TestChamberNode(center, size));
 	}
 
-	void TestChamber::FindFreeIDs(std::array<NodeID,8>& out)
+	// TRADE OFFER:
+	// I 
+	// GET O(1) ACCESS TO NODES
+	// YOU
+	// GET O(n^2) SEARCH TIME TO FINDING FREE ID
+	void TestChamber::FindFreeIDs(std::array<NodeID, 8>& out)
 	{
-		for ( int i = 0; i < 8; ++i )
-		{
-			NodeID minId = 0;
-			for (const auto& [nodeId, node] : m_nodeMap) {
-				if(minId == nodeId)
-				{
-					minId = nodeId + 1;
-				}
-				for(int j = 0; j <= i;++j)
-				{
-					if(minId == out[j])
-					{
-						minId = out[j] + 1;
-					}
-				}
-			}
-			out[i] = minId;
+		std::unordered_set<NodeID> used;
+
+		for (const auto& [id, _] : m_nodeMap)
+			used.insert(id);
+
+		NodeID next = 0;
+		for (int i = 0; i < 8; ++i) {
+			while (used.count(next))
+				++next;
+			out[i] = next;
+			used.insert(next);
+			++next;
 		}
 	}
+
 	std::array<QVector3D, 6> GetOuterFaceCoords(const unsigned int nodeSize, const QVector3D nodeCenter, float epsilon = 0.5f)
 	{
 		float halfSize = nodeSize / 2.0f + epsilon;
@@ -234,32 +235,36 @@ namespace PMP
 		float closestT = std::numeric_limits<float>::infinity();
 		std::optional<RayHitResult> closestHit;
 
-		for (const ChamberSurface& surface : m_surfaces)
+		for (const auto& [_, surfaces] : m_surfaceMap)
 		{
-			if(!WallFacesDirection(surface.side,ray.direction)) continue;
-			const TestChamberNode& node = m_nodeMap.at(surface.parentNode);
-
-			// Wall geometry
-			QVector3D normal = GetWallNormal(surface.side);
-			QVector3D center = GetWallFaceCenter(node.m_center, node.m_size, normal);
-			QVector3D up = GetWallUp(surface.side);
-			QVector3D right = QVector3D::crossProduct(normal, up);
-			float halfSize = node.m_size / 2.0f;
-
-			QVector3D p0 = center + (-right - up) * halfSize;
-			QVector3D p1 = center + ( right - up) * halfSize;
-			QVector3D p2 = center + ( right + up) * halfSize;
-			QVector3D p3 = center + (-right + up) * halfSize;
-
-			float tTemp;
-			QVector3D hitPosTemp;
-
-			if (RayIntersectsQuad(ray, p0, p1, p2, p3, tTemp, hitPosTemp))
+			for(const auto& surface : surfaces)
 			{
-				if (tTemp > 0.0f && tTemp < closestT)
+				if(surface.side == WALLSIDE::NONE) continue;
+				if(!WallFacesDirection(surface.side,ray.direction)) continue;
+				const TestChamberNode& node = m_nodeMap.at(surface.parentNode);
+
+				// Wall geometry
+				QVector3D normal = GetWallNormal(surface.side);
+				QVector3D center = GetWallFaceCenter(node.m_center, node.m_size, normal);
+				QVector3D up = GetWallUp(surface.side);
+				QVector3D right = QVector3D::crossProduct(normal, up);
+				float halfSize = node.m_size / 2.0f;
+
+				QVector3D p0 = center + (-right - up) * halfSize;
+				QVector3D p1 = center + ( right - up) * halfSize;
+				QVector3D p2 = center + ( right + up) * halfSize;
+				QVector3D p3 = center + (-right + up) * halfSize;
+
+				float tTemp;
+				QVector3D hitPosTemp;
+
+				if (RayIntersectsQuad(ray, p0, p1, p2, p3, tTemp, hitPosTemp))
 				{
-					closestT = tTemp;
-					closestHit = RayHitResult{surface.parentNode,surface, hitPosTemp};
+					if (tTemp > 0.0f && tTemp < closestT)
+					{
+						closestT = tTemp;
+						closestHit = RayHitResult{surface.parentNode,surface, hitPosTemp};
+					}
 				}
 			}
 		}
@@ -286,33 +291,38 @@ namespace PMP
 	// This is to separate rendering logic with octree logic (Octree does not need to know vertices of individual tris)
 	void TestChamber::GenerateQuads(std::vector<Quad>& out) const
 	{
-		if(m_surfaces.size() == 0) throw std::runtime_error("Attempted to generate quads for test chamber with no surface. Forgot to call GenerateSurfaces()?");
-		for(const auto& surf : m_surfaces)
+		if(m_surfaceMap.size() == 0) throw std::runtime_error("Attempted to generate quads for test chamber with no surface. Forgot to call GenerateSurfaces()?");
+		for (const auto& [_, surfaces] : m_surfaceMap)
 		{
-			const NodeID nodeID = surf.parentNode;
-			out.push_back(generateQuadAt(m_nodeMap.at(nodeID).m_center, surf.side, m_nodeMap.at(nodeID).m_size));
+			for(const auto& surface : surfaces)
+			{
+				if(surface.side == WALLSIDE::NONE) continue;
+				const NodeID nodeID = surface.parentNode;
+				out.push_back(generateQuadAt(m_nodeMap.at(nodeID).m_center, surface.side, m_nodeMap.at(nodeID).m_size));
+			}
 		}
 	}
 
 	// Based on the node structure, generate surfaces
 	void TestChamber::GenerateSurfaces()
     {
-		m_surfaces.clear();
+		m_surfaceMap.clear();
         //std::cout << "Generating Surfaces for test chamber "<< std::endl;
         for (const auto& [id, node] : GetNodeMap()) {
             if (!IsNodeActive(id) || NodeHasChild(id)) continue;
             //std::cout << "Generating Surfaces for Node " << id << std::endl;
             const QVector3D& center = node.m_center;
             
+			std::array<ChamberSurface, 6>& walls = m_surfaceMap[id];
             for (int i = 0; i < 6; ++i) {
                 WALLSIDE side = static_cast<WALLSIDE>(i);
                 if(IsSurface(side,id))
                 {
-					m_surfaces.push_back({side,id});
+					walls[i] = {side,id};
                 }
             }
         }
-        std::cout << "Generated " << m_surfaces.size() << " Surfaces" << std::endl;
+        std::cout << "Generated " << m_surfaceMap.size() << " Surfaces" << std::endl;
     }
 	void TestChamber::PrintNodes()
 	{

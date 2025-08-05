@@ -222,9 +222,6 @@ namespace PMP
 		m_wallShader.release();
 	}
 
-
-
-
 // QT Functions
 	void Viewport::paintGL()
 	{
@@ -249,6 +246,7 @@ namespace PMP
 		m_projection.perspective(m_fov, aspect, 7.0f, 32767.0f);
 		// Selector needs to be aware of the viewport size.
 		m_selector->setViewPortDim(width, height);
+		
 	}
 
 	void Viewport::keyPressEvent(QKeyEvent* event)
@@ -257,19 +255,26 @@ namespace PMP
 		{
 			m_fog = !m_fog;
 		}
-		if (event->key() == Qt::Key_Q)
-		{
-			
-		}
 		if (event->key() == Qt::Key_Equal)
 		{
 			std::cout <<"Disabling Node"<<std::endl;
-			std::optional<NodeID> val = m_selector->getNodeSelection();
-			if(val.has_value())
+			std::optional<NodeID> nodeSel = m_selector->getNodeSelection();
+			if(nodeSel.has_value())
 			{
-				m_testChamber->SetNodeActive(val.value(), false);
+				ChamberSurface tmp = m_selector->getSurfaceSelection().value(); //It is guaranteed that this optional has a value at this point because node selection comes with surface selection
+				QVector3D selectionMoveDir = GetWallNormal(tmp.side);
+				const TestChamberNode& selectedNode = m_testChamber->GetNodeMap().at(nodeSel.value());
+				float dist = selectedNode.m_size;
+				QVector3D center = selectedNode.m_center;
+				QVector3D wallpos = center + selectionMoveDir * dist * 0.51f;
+				
+				m_testChamber->SetNodeActive(nodeSel.value(), false);
 				m_testChamber->GenerateSurfaces();
 				m_selector->clearSurfaces();
+
+				m_testChamber->SearchNodeWithCoord(wallpos);
+				// Need to access surface from node
+				// Need to change the surface storage to be Map where key is nodeID
 				loadTestChamberMesh();
 			}
 		}
@@ -291,7 +296,12 @@ namespace PMP
 	{
 		QMatrix4x4 viewMatrix;
 		getViewMatrix(viewMatrix);
-		std::optional<RayHitResult> rayCastChamber = m_testChamber->RayCast(ScreenPosToWorldRay(width(),height(),this->mapFromGlobal(QCursor::pos()), m_projection, viewMatrix));
+		std::optional<RayHitResult> rayCastChamber = m_testChamber->RayCast(
+			ScreenPosToWorldRay(
+				width(),
+				height(),
+				this->mapFromGlobal(QCursor::pos()), 
+				m_projection, viewMatrix));
 
 		if ( event->button() == Qt::MouseButton::RightButton )
 		{
@@ -327,7 +337,10 @@ namespace PMP
 	{
 		if ( event->button() == Qt::MouseButton::RightButton )
 		{
-			m_isPanning = false;
+			if(m_isPanning)
+			{
+				m_isPanning = false;
+			}
 			event->accept();
 		}
 		else if ( event->button() == Qt::MouseButton::LeftButton ||
@@ -358,18 +371,20 @@ namespace PMP
 			}
 			event->accept();
 		}
+		update();
 	}
 	void Viewport::wheelEvent( QWheelEvent* event )
 	{
+		float prev_dist = m_cameraDistance;
 		m_cameraDistance -= event->angleDelta().y() / 2.0f; // todo make this customizable
 
 		if ( m_cameraDistance < cameraDistMin )
 			m_cameraDistance = cameraDistMin;
 		else if ( m_cameraDistance > cameraDistMax )
 			m_cameraDistance = cameraDistMax;
-
+		
+		if(prev_dist - m_cameraDistance != 0) update();
 		event->accept();
-		update();
 	}
 
 	// This function gets called every 16ms
