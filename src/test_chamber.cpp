@@ -24,8 +24,7 @@ namespace PMP
 	// TODO: This has been modified to use PMP::OptionalArray, but since it's unused it's currently untested. <- Added ctest for this 
 
 	TestChamber::TestChamber() :
-		m_rootNodeWorldSize(defaultRootNodeSize),
-		m_nextNodeId(0)
+		m_rootNodeWorldSize(defaultRootNodeSize)
 	{
 		// Create the root node
 		// Currently, this will always be node ID 0, but explicitly storing it seems like a good idea
@@ -34,12 +33,8 @@ namespace PMP
 	}
 
 	// Given a coordinate, compare against the parent coordinate to find the order at which the child node is placed in the child array
-	unsigned int getChildOrder(QVector3D coord, unsigned int parentSize, QVector3D parentCenter)
+	unsigned int getChildOrder(QVector3D coord, QVector3D parentCenter)
 	{
-		if (parentSize % 4 != 0)
-			throw std::runtime_error("Parent node size must be divisible by 4");
-
-		int offset = parentSize / 4;
 		QVector3D delta = coord - parentCenter;
 
 		// Determine sign bits: 0 for negative, 1 for positive
@@ -125,7 +120,7 @@ namespace PMP
 	// I 
 	// GET O(1) ACCESS TO NODES
 	// YOU
-	// GET O(n^2) SEARCH TIME TO FINDING FREE ID
+	// GET O(8 * n^2) SEARCH TIME TO FINDING FREE ID
 	void TestChamber::FindFreeIDs(std::array<NodeID, 8>& out)
 	{
 		std::unordered_set<NodeID> used;
@@ -174,7 +169,7 @@ namespace PMP
 		if(IsOutOOB(coord)) return parentID;
 		if(m_nodeMap[parentID].m_size < size) throw std::runtime_error("Something went wrong trying to subdivide node");
 		if(m_nodeMap[parentID].m_size == size) return parentID;
-		unsigned int i = getChildOrder(coord, m_nodeMap[parentID].m_size, m_nodeMap[parentID].m_center);
+		unsigned int i = getChildOrder(coord, m_nodeMap[parentID].m_center);
 		if(!m_nodeMap[parentID].m_childIDs.has_value())
 		{
 			CreateChildrenForNode(parentID);
@@ -283,7 +278,7 @@ namespace PMP
 		if(IsOutOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
 		if(!m_nodeMap.at(parentID).m_childIDs.has_value()) return parentID; //found
 
-		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_size, m_nodeMap.at(parentID).m_center);
+		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
 		return SearchNodeWithCoord(coord,  m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
 	}
 

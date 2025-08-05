@@ -20,6 +20,16 @@ namespace PMP
             out.insert(out.end(), corners.begin(), corners.end());
         }
     }
+    void Selector::setSelection(ChamberSurface surface, int index)
+    {
+        if(index < m_surfaceSelection.size())
+        {
+            m_surfaceSelection[index] = surface;
+        }
+        else{
+            m_surfaceSelection.push_back(surface);
+        }
+    };
     void Selector::clickSelectSurface(QPoint point, QMatrix4x4 projection, QMatrix4x4 view)
     {
         Ray ray = ScreenPosToWorldRay(m_viewPortWidth,m_viewPortHeight, point, projection, view);
@@ -30,8 +40,6 @@ namespace PMP
             {
                 m_surfaceSelection.clear();
                 m_surfaceSelection.push_back(cast->surface);
-                m_nodeSelection.clear();
-                m_nodeSelection.push_back(cast->nodeID);
             }
         }
     }

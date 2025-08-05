@@ -1,5 +1,6 @@
 // test_chamber.h
 // Declares the class that represents the test chamber itself and the octree nodes
+#include <unordered_map>
 #ifndef PMP_TEST_CHAMBER_H
 #pragma once
 
@@ -81,6 +82,7 @@ namespace PMP
 		unsigned int GetRootNodeSize() const {return m_rootNodeWorldSize;};
 		int GetRootNodeSizeInt() const {return static_cast<int>(m_rootNodeWorldSize);};
 		const std::unordered_map<NodeID, TestChamberNode>& GetNodeMap() const {return m_nodeMap;};
+		ChamberSurface GetSurface(NodeID node, WALLSIDE side){return m_surfaceMap[node][static_cast<int>(side)];};
 		std::array<QVector3D, 4> GetChamberSurfaceCorners(const ChamberSurface& surface);
 		
 		bool IsOutOOB(QVector3D coord) const;
@@ -111,17 +113,13 @@ namespace PMP
 		// std::nullopt for the parent ID means it's the root node
 		// - not making this a default value so it is a deliberate programming choice
 		void CreateOctreeNode(NodeID newID, std::optional<NodeID> parentID, QVector3D center, unsigned int size);
-		
 		void _PrintNodesTree(std::map<NodeID, std::vector<NodeID>>& children, NodeID id, std::string prefix, bool isLast);
 
-		std::unordered_map<NodeID, TestChamberNode> m_nodeMap;
-		NodeID m_rootNode;
-
-		// FIXME: needs logic to reuse old IDs so this doesn't overflow and break everything
-		NodeID m_nextNodeId;
-
 		// Size of the root node in hammer units - this is effectively the internal max map size
+		NodeID m_rootNode;
 		unsigned int m_rootNodeWorldSize;
+		
+		std::unordered_map<NodeID, TestChamberNode> m_nodeMap;
 		std::unordered_map<NodeID, std::array<ChamberSurface, 6>> m_surfaceMap;
 	};
 }

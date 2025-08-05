@@ -266,28 +266,54 @@ namespace PMP
 				const TestChamberNode& selectedNode = m_testChamber->GetNodeMap().at(nodeSel.value());
 				float dist = selectedNode.m_size;
 				QVector3D center = selectedNode.m_center;
-				QVector3D wallpos = center + selectionMoveDir * dist * 0.51f;
+				QVector3D wallpos = center + selectionMoveDir * dist * 0.51f; //Find the "forward" surface
 				
 				m_testChamber->SetNodeActive(nodeSel.value(), false);
 				m_testChamber->GenerateSurfaces();
 				m_selector->clearSurfaces();
-
-				m_testChamber->SearchNodeWithCoord(wallpos);
-				// Need to access surface from node
-				// Need to change the surface storage to be Map where key is nodeID
+				if(!m_testChamber->IsOutOOB(wallpos))
+				{
+					const NodeID node = m_testChamber->SearchNodeWithCoord(wallpos);
+					ChamberSurface surf = m_testChamber->GetSurface(node, tmp.side);
+					m_selector->setSelection(surf);
+				}
 				loadTestChamberMesh();
+				std::vector<QVector3D> corners;
+				m_selector->getSelectionSurfaceCorners(corners);
+				std::vector<LineVertex> lines;
+				MultiQuadCornersToLineWireframe(corners,lines);
+				loadLines(lines);
 			}
 		}
 		if (event->key() == Qt::Key_Minus)
 		{
 			std::cout <<"Enabling Node"<<std::endl;
-			std::optional<NodeID> val = m_selector->getNodeSelection();
-			if(val.has_value())
+			std::optional<NodeID> nodeSel = m_selector->getNodeSelection();
+			if(nodeSel.has_value())
 			{
-				m_testChamber->SetNodeActive(val.value(), true);
-				m_testChamber->GenerateSurfaces();
-				m_selector->clearSurfaces();
+				ChamberSurface tmp = m_selector->getSurfaceSelection().value(); //It is guaranteed that this optional has a value at this point because node selection comes with surface selection
+				QVector3D selectionMoveDir = GetWallNormal(tmp.side);
+				const TestChamberNode& selectedNode = m_testChamber->GetNodeMap().at(nodeSel.value());
+				float dist = selectedNode.m_size;
+				QVector3D center = selectedNode.m_center;
+				QVector3D wallpos = center - selectionMoveDir * dist * 0.51f; //Find the "backward" surface
+				if(!m_testChamber->IsOutOOB(wallpos))
+				{
+					const NodeID node = m_testChamber->SearchNodeWithCoord(wallpos);
+
+					m_testChamber->SetNodeActive(node, true);
+					m_testChamber->GenerateSurfaces();
+					m_selector->clearSurfaces();
+
+					ChamberSurface surf = m_testChamber->GetSurface(node, tmp.side);
+					m_selector->setSelection(surf);
+				}
 				loadTestChamberMesh();
+				std::vector<QVector3D> corners;
+				m_selector->getSelectionSurfaceCorners(corners);
+				std::vector<LineVertex> lines;
+				MultiQuadCornersToLineWireframe(corners,lines);
+				loadLines(lines);
 			}
 		}
 		update();
@@ -362,11 +388,11 @@ namespace PMP
 				QMatrix4x4 viewMatrix;
 				getViewMatrix(viewMatrix);
 				m_selector->clickSelectSurface(this->mapFromGlobal(QCursor::pos()), m_projection, viewMatrix);
+
 				std::vector<QVector3D> corners;
 				m_selector->getSelectionSurfaceCorners(corners);
 				std::vector<LineVertex> lines;
 				MultiQuadCornersToLineWireframe(corners,lines);
-
 				loadLines(lines);
 			}
 			event->accept();
