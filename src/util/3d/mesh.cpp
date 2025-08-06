@@ -1,6 +1,7 @@
 
 #include "mesh.h"
 #include <qvectornd.h>
+#include <stdexcept>
 
 
 namespace PMP
@@ -159,6 +160,31 @@ namespace PMP
         return {vertexBufferData, indexBufferData};
     }
     
+    void generateWireframeGrid3D(int subdivisions, const QVector3D& A, const QVector3D& B,const QVector3D& C, const QVector3D& D, std::vector<LineVertex>& out, const QVector3D& color)
+    {
+        for (int i = 0; i <= subdivisions; ++i) {
+            float t = static_cast<float>(i) / subdivisions;
+
+            // Horizontal line (left to right)
+            QVector3D left  = Lerp(A, D, t);
+            QVector3D right = Lerp(B, C, t);
+            out.emplace_back(left, color);
+            out.emplace_back(right, color);
+
+            // Vertical line (top to bottom)
+            QVector3D top    = Lerp(A, B, t);
+            QVector3D bottom = Lerp(D, C, t);
+            out.emplace_back(top, color);
+            out.emplace_back(bottom, color);
+        }
+    }
+
+    void QuadCornersToSubdividedLineWireframes(int subdivisions, const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color, int start)
+    {
+        if(corners.size() != 4) throw std::runtime_error("Subdividing multiple quads is not supported yet");
+        generateWireframeGrid3D(subdivisions, corners.at(0),corners.at(1), corners.at(2), corners.at(3), out, color);
+    }
+
     void QuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color, int start)
     {
         for (int i = start; i < start+4; ++i)
@@ -176,22 +202,4 @@ namespace PMP
         }
     }
 
-    void generateWireframeGrid3D(int subdivisions, const QVector3D& A, const QVector3D& B,const QVector3D& C, const QVector3D& D, std::vector<LineVertex>& out)
-    {
-        for (int i = 0; i <= subdivisions; ++i) {
-            float t = static_cast<float>(i) / subdivisions;
-
-            // Horizontal line (left to right)
-            QVector3D left  = Lerp(A, D, t);
-            QVector3D right = Lerp(B, C, t);
-            out.push_back(left);
-            out.push_back(right);
-
-            // Vertical line (top to bottom)
-            QVector3D top    = Lerp(A, B, t);
-            QVector3D bottom = Lerp(D, C, t);
-            out.push_back(top);
-            out.push_back(bottom);
-        }
-    }
 }

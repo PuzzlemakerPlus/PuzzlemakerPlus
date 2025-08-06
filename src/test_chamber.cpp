@@ -372,7 +372,12 @@ namespace PMP
 			QVector3D wallpos = center - selectionMoveDir * dist * 0.51f; //Find the "backward" surface
 			if(!IsOutOOB(wallpos)) // The new position is in bound
 			{
-				const NodeID node = SearchNodeWithCoord(wallpos);
+				NodeID node = SearchNodeWithCoord(wallpos);
+				if(GetNodeMap().at(node).m_size != selectedNode.m_size)
+				{
+					// Subdivide this node to match the size of the neighboring node
+					node = SubdivideNodeToCoord(wallpos, 0, selectedNode.m_size); // Retarget the node to the newly subdivided node
+				}
 				if(SetNodeActive(node, true)) // node state was changed (without this check, the node can recede already disabled node and fail to find selection face)
 				{
 					std::cout <<"Receding Surface"<<std::endl;
