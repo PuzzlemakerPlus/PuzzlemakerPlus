@@ -1,5 +1,6 @@
 #include "selection.h"
 #include "util/3d/ray.h"
+#include "test_chamber.h"
 #include <qvectornd.h>
 
 namespace PMP

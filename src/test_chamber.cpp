@@ -1,7 +1,8 @@
 // octree_test.cpp
 // Implements the class that represents the test chamber itself and the octree nodes
 #include "test_chamber.h"
-#include "util/3d/mesh.h"
+#include "util/3d/mesh.h" 
+#include "selection.h"
 
 #include <array>
 #include <string>
@@ -154,15 +155,20 @@ namespace PMP
 	}
 
 
-	void TestChamber::SetNodeActive(NodeID node, bool active) 
+	int TestChamber::SetNodeActive(NodeID node, bool active) 
 	{
-		m_nodeMap[node].m_active = active;
-		// Also need to make sure all adjacent nodes have matching size.
-		std::array<QVector3D, 6> outerCoords = GetOuterFaceCoords(m_nodeMap[node].m_size, m_nodeMap[node].m_center);
-		for(const auto& coord : outerCoords)
+		if(m_nodeMap[node].m_active != active)
 		{
-			SubdivideNodeToCoord(coord, 0, m_nodeMap[node].m_size);
+			m_nodeMap[node].m_active = active;
+			// Also need to make sure all adjacent nodes have matching size.
+			std::array<QVector3D, 6> outerCoords = GetOuterFaceCoords(m_nodeMap[node].m_size, m_nodeMap[node].m_center);
+			for(const auto& coord : outerCoords)
+			{
+				SubdivideNodeToCoord(coord, 0, m_nodeMap[node].m_size);
+			}
+			return 1; // State of the node has changed
 		}
+		return 0; // State of the node has not changed
 	}
 
 	NodeID TestChamber::SubdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size)
@@ -320,6 +326,76 @@ namespace PMP
         }
         std::cout << "Generated " << m_surfaceMap.size() << " Surfaces" << std::endl;
     }
+
+	// Extrude selected surface
+	int TestChamber::ExtrudeSurface(Selector* selector)
+	{
+
+		std::optional<NodeID> nodeSel = selector->getNodeSelection();
+		if(nodeSel.has_value())
+		{
+			ChamberSurface tmp = selector->getSurfaceSelection().value(); //It is guaranteed that this optional has a value at this point because node selection comes with surface selection
+			QVector3D selectionMoveDir = GetWallNormal(tmp.side);
+			const TestChamberNode& selectedNode = m_nodeMap.at(nodeSel.value());
+			float dist = selectedNode.m_size;
+			QVector3D center = selectedNode.m_center;
+			QVector3D wallpos = center + selectionMoveDir * dist * 0.51f; //Find the "forward" surface
+			if(SetNodeActive(nodeSel.value(), false)) // node state was changed (without this check, the node can extrude already enabled node and fail to find selection face)
+			{
+				std::cout <<"Extruding Surface"<<std::endl;
+				GenerateSurfaces();
+				selector->clearSurfaces();
+				if(!IsOutOOB(wallpos))
+				{
+					//Reselect if the position is inbounds
+					const NodeID node = SearchNodeWithCoord(wallpos);
+					ChamberSurface surf = GetSurface(node, tmp.side);
+					selector->setSelection(surf);
+				}
+				return 1; // Extruded surface successfully
+			}
+		}
+		return 0; // Failed to extrude surface
+	}
+
+	// Recede selected surface
+	int TestChamber::RecedeSurface(Selector* selector)
+	{
+		std::optional<NodeID> nodeSel = selector->getNodeSelection();
+		if(nodeSel.has_value())
+		{
+			ChamberSurface tmp = selector->getSurfaceSelection().value(); //It is guaranteed that this optional has a value at this point because node selection comes with surface selection
+			QVector3D selectionMoveDir = GetWallNormal(tmp.side);
+			const TestChamberNode& selectedNode = GetNodeMap().at(nodeSel.value());
+			float dist = selectedNode.m_size;
+			QVector3D center = selectedNode.m_center;
+			QVector3D wallpos = center - selectionMoveDir * dist * 0.51f; //Find the "backward" surface
+			if(!IsOutOOB(wallpos)) // The new position is in bound
+			{
+				const NodeID node = SearchNodeWithCoord(wallpos);
+				if(SetNodeActive(node, true)) // node state was changed (without this check, the node can recede already disabled node and fail to find selection face)
+				{
+					std::cout <<"Receding Surface"<<std::endl;
+					GenerateSurfaces();
+					selector->clearSurfaces();
+					ChamberSurface surf = GetSurface(node, tmp.side);
+					selector->setSelection(surf);
+				}
+			}
+			return 1; // Receded surface successfully
+		}
+		return 0; // Failed to recede surface
+	}
+
+
+
+
+
+
+
+
+
+
 	void TestChamber::PrintNodes()
 	{
 		std::cout << "TestChamber has " << m_nodeMap.size() << " Node(s)\n";

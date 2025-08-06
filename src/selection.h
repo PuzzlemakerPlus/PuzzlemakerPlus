@@ -1,12 +1,16 @@
 #pragma once
-#include "test_chamber.h"
+#include <vector>
+#include <qpoint.h>
 #include <optional>
 #include <qmatrix4x4.h>
-#include <qpoint.h>
-#include <vector>
+
+#include "util/3d/mesh.h"
+#include "test_chamber_types.h"
 
 namespace PMP
 {
+    class TestChamber;
+
     class Selector
     {
         public:

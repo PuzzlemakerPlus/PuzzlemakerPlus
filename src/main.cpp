@@ -3,15 +3,16 @@
 
 #include <QApplication>
 #include <iostream>
-#include "widgets/viewport.h"
-#include "test_chamber.h"
+#include "undo.h"
 #include "selection.h"
+#include "test_chamber.h"
+#include "widgets/viewport.h"
 #include "widgets/palette.h"
 
 int main(int argc, char* argv[])
 {
+    PMP::UndoStack::instance(); //Initialize Undostack singleton before anything else
     QApplication a(argc, argv);
-
     // Configure OpenGL format
     QSurfaceFormat format;
     format.setDepthBufferSize(24);

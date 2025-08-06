@@ -5,6 +5,13 @@
 
 namespace PMP
 {
+    QVector3D Lerp(const QVector3D& a, const QVector3D& b, float t) {return a + t * (b - a);}
+
+    bool WallFacesDirection(WALLSIDE side, const QVector3D& dir) 
+    {
+        QVector3D normal = GetWallNormal(side);
+        return QVector3D::dotProduct(normal, dir) < 0.0f;
+    }
     QVector3D GetWallNormal(WALLSIDE side)
     {
         switch (side) {
@@ -27,11 +34,6 @@ namespace PMP
             case NEG_Z: return QVector3D(0, 1, 0); // +Y is up on -Z face
             default: return QVector3D(0, 0, 0); // default fallback
         }
-    }
-    bool WallFacesDirection(WALLSIDE side, const QVector3D& dir) 
-    {
-        QVector3D normal = GetWallNormal(side);
-        return QVector3D::dotProduct(normal, dir) < 0.0f;
     }
 	Quad generateCubeFace(WALLSIDE side, float size) {
         const QVector3D p0(0.0f, 0.0f, 0.0f);
@@ -171,6 +173,25 @@ namespace PMP
         for(int i=0;i < corners.size() / 4;i++)
         {
             QuadCornersToLineWireframe(corners, out, color, i*4);
+        }
+    }
+
+    void generateWireframeGrid3D(int subdivisions, const QVector3D& A, const QVector3D& B,const QVector3D& C, const QVector3D& D, std::vector<LineVertex>& out)
+    {
+        for (int i = 0; i <= subdivisions; ++i) {
+            float t = static_cast<float>(i) / subdivisions;
+
+            // Horizontal line (left to right)
+            QVector3D left  = Lerp(A, D, t);
+            QVector3D right = Lerp(B, C, t);
+            out.push_back(left);
+            out.push_back(right);
+
+            // Vertical line (top to bottom)
+            QVector3D top    = Lerp(A, B, t);
+            QVector3D bottom = Lerp(D, C, t);
+            out.push_back(top);
+            out.push_back(bottom);
         }
     }
 }

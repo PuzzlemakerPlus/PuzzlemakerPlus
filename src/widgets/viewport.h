@@ -53,6 +53,7 @@ namespace PMP
 		void loadLines(std::vector<LineVertex> vertices);
 		//Load a single ray to draw
 		void loadLines(Ray ray, float length=20000.0f, QVector3D colStart=QVector3D(1.0f,0.0f,0.0f), QVector3D colEnd=QVector3D(0.0f,0.0f,1.0f));
+		void loadSelectionLines();
 		void loadTestChamberMesh();
 		
 		void setFog(bool enable) {m_fog = enable;};

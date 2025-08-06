@@ -42,10 +42,12 @@ namespace PMP
 		LineVertex(QVector3D position) : pos(position) {}
 		LineVertex(QVector3D position, QVector3D color) : pos(position), col(color) {}
 	};
+    
+    bool WallFacesDirection(WALLSIDE side, const QVector3D& dir);
 
+    QVector3D Lerp(const QVector3D& a, const QVector3D& b, float t);
     QVector3D GetWallNormal(WALLSIDE side);
     QVector3D GetWallUp(WALLSIDE side);
-    bool WallFacesDirection(WALLSIDE side, const QVector3D& dir);
 
     Quad generateCubeFace(WALLSIDE side, float size=128.0f);
     Quad generateQuadAt(QVector3D center, WALLSIDE side, float size);
