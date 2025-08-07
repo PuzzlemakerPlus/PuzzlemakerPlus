@@ -29,6 +29,7 @@ cmake-build-debug
 # Visual Studio
 .vs
 .vcxproj
+.vcxproj.filters
 .sln
 out
 # I think this is VS specific...
