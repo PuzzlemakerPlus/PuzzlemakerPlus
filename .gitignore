@@ -28,6 +28,8 @@ cmake-build-debug
 
 # Visual Studio
 .vs
+.vcxproj
+.sln
 out
 # I think this is VS specific...
 CMakeSettings.json
