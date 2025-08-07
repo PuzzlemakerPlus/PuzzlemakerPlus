@@ -186,7 +186,7 @@ namespace PMP
 			 std::cout << "OpenGL context is available." << std::endl;
 		}
 
-		//m_chamberVAO.bind();
+		m_chamberVAO.bind();
 		qDebug() << "Creating m_chamberVBO";
 		m_chamberVBO.bind();
 		qDebug() << "Creating m_chamberIBO";
@@ -272,9 +272,9 @@ namespace PMP
 		m_chamberVAO.bind();
 		glDrawElements(GL_TRIANGLES, m_indicesCount, GL_UNSIGNED_INT, 0);
 		GLenum err;
-		//while ((err = glGetError()) != GL_NO_ERROR) {
-		//	qDebug() << "OpenGL error: " << QString::number(err, 16);
-		//}
+		while ((err = glGetError()) != GL_NO_ERROR) {
+			qDebug() << "OpenGL error: " << QString::number(err, 16);
+		}
 		m_chamberVAO.release();
 		m_wallShader.release();
 	}
