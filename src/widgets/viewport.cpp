@@ -81,10 +81,10 @@ namespace PMP
 	{
 		std::cout << "Creating OpenGL Objects" << std::endl;
 		Q_ASSERT(QOpenGLContext::currentContext());
-		//m_chamberVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-		//m_chamberIBO = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
-		//m_dotVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-		//m_lineVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+		m_chamberVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+		m_chamberIBO = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+		m_dotVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+		m_lineVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
 		m_dotVAO.create();
 		m_dotVBO.create();
 		m_lineVAO.create();
