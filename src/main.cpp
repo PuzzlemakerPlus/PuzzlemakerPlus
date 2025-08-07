@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
     QApplication a(argc, argv);
     // Configure OpenGL format
     QSurfaceFormat format;
-    QSurfaceFormat::setDefaultFormat(format);
+    //QSurfaceFormat::setDefaultFormat(format);
     format.setDepthBufferSize(24);
     format.setStencilBufferSize(8);
     format.setVersion(3,3);
@@ -23,11 +23,12 @@ int main(int argc, char* argv[])
     format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
     format.setProfile(QSurfaceFormat::CoreProfile);
 #ifndef NDEBUG
-    format.setOption(QSurfaceFormat::DebugContext, true);
-    
-#endif
+    format.setOption(QSurfaceFormat::DebugContext);
+#else
     format.setOption(QSurfaceFormat::DebugContext, false);
-    //QSurfaceFormat::setDefaultFormat( format );
+#endif
+    
+    QSurfaceFormat::setDefaultFormat( format );
 
     // TODO: We probably want the main viewport to be a child of a separate "base" panel
     PMP::Viewport mainViewport(nullptr);

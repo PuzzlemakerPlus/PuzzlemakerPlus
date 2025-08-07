@@ -152,6 +152,7 @@ namespace PMP
 	void Viewport::loadSelectionLines()
 	{
 		std::vector<QVector3D> corners;
+		Q_ASSERT(m_selector);
 		m_selector->getSelectionSurfaceCorners(corners);
 		std::vector<LineVertex> lines;
 		MultiQuadCornersToLineWireframe(corners,lines);
@@ -162,6 +163,7 @@ namespace PMP
 	void Viewport::loadTestChamberMesh()
 	{
 		std::cout << "Loading test chamber mesh..." << std::endl;
+		Q_ASSERT(m_testChamber);
 		if(!m_testChamber) throw std::runtime_error("Can not load test chamber mesh without setting test chamber");
 		
 		std::vector<Quad> quads;
@@ -270,9 +272,9 @@ namespace PMP
 		m_chamberVAO.bind();
 		glDrawElements(GL_TRIANGLES, m_indicesCount, GL_UNSIGNED_INT, 0);
 		GLenum err;
-		while ((err = glGetError()) != GL_NO_ERROR) {
-			qDebug() << "OpenGL error: " << QString::number(err, 16);
-		}
+		//while ((err = glGetError()) != GL_NO_ERROR) {
+		//	qDebug() << "OpenGL error: " << QString::number(err, 16);
+		//}
 		m_chamberVAO.release();
 		m_wallShader.release();
 	}
@@ -300,6 +302,7 @@ namespace PMP
 		m_projection.setToIdentity();
 		// Source near clip plane value, might change later
 		m_projection.perspective(m_fov, aspect, 7.0f, 32767.0f);
+		Q_ASSERT(m_selector);
 		// Selector needs to be aware of the viewport size.
 		m_selector->setViewPortDim(width, height);
 		
@@ -307,6 +310,8 @@ namespace PMP
 
 	void Viewport::keyPressEvent(QKeyEvent* event)
 	{
+		Q_ASSERT(m_selector);
+		Q_ASSERT(m_testChamber);
 		if (event->key() == Qt::Key_F)
 		{
 			m_fog = !m_fog;
@@ -336,6 +341,7 @@ namespace PMP
 		
 		QMatrix4x4 viewMatrix;
 		getViewMatrix(viewMatrix);
+		Q_ASSERT(m_testChamber);
 		std::optional<RayHitResult> rayCastChamber = m_testChamber->RayCast(
 			ScreenPosToWorldRay(
 				width(),
@@ -402,6 +408,7 @@ namespace PMP
 				//Selection
 				QMatrix4x4 viewMatrix;
 				getViewMatrix(viewMatrix);
+				Q_ASSERT(m_selector);
 				m_selector->clickSelectSurface(this->mapFromGlobal(QCursor::pos()), m_projection, viewMatrix);
 
 				std::vector<QVector3D> corners;
