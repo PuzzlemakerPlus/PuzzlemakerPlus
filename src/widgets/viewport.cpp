@@ -93,6 +93,13 @@ namespace PMP
 		m_chamberVAO.create();
 		m_chamberVBO.create();
 		m_chamberIBO.create();
+
+		const std::string_view verStr = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+		const std::string_view vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
+		const std::string_view renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+		qDebug() << "Version: " << verStr;
+		qDebug() << "Adapter: " << renderer;
+		qDebug() << "Vendor: " << vendor;
 	}
 
 	// needs a list of points to draw
@@ -177,16 +184,16 @@ namespace PMP
 			 std::cout << "OpenGL context is available." << std::endl;
 		}
 
-		m_chamberVAO.bind();
-		std::cout << "Creating m_chamberVBO" << std::endl;
+		//m_chamberVAO.bind();
+		qDebug() << "Creating m_chamberVBO";
 		m_chamberVBO.bind();
-		std::cout << "Creating m_chamberIBO" << std::endl;
+		qDebug() << "Creating m_chamberIBO";
 		m_chamberIBO.bind();
 
 		// Disabling for now until we are more certain it's what we want - Kelsey
 		//m_chamberVBO.setUsagePattern(QOpenGLBuffer::StaticDraw);
 		// I think this is correct
-		m_chamberVBO.setUsagePattern(QOpenGLBuffer::DynamicDraw);
+		//m_chamberVBO.setUsagePattern(QOpenGLBuffer::DynamicDraw);
 		qDebug() << "Allocating m_chamberVBO";
 		m_chamberVBO.allocate(mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex)); // segfault here makse no sense
 
@@ -273,6 +280,7 @@ namespace PMP
 // QT Functions
 	void Viewport::paintGL()
 	{
+		
 		// Very temporary rendering code
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 		glEnable( GL_DEPTH_TEST );
@@ -325,6 +333,7 @@ namespace PMP
 	}
 	void Viewport::mousePressEvent(QMouseEvent* event)
 	{
+		
 		QMatrix4x4 viewMatrix;
 		getViewMatrix(viewMatrix);
 		std::optional<RayHitResult> rayCastChamber = m_testChamber->RayCast(
@@ -349,6 +358,7 @@ namespace PMP
 		else if ( event->button() == Qt::MouseButton::LeftButton ||
 				  event->button() == Qt::MouseButton::MiddleButton )
 		{
+			loadTestChamberMesh(); //Needs to be called after mainViewport.show()
 			if(rayCastChamber.has_value())
 			{
 				//Start dragging

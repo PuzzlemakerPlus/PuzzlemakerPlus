@@ -8,7 +8,7 @@
 #pragma once
 
 #include <QOpenGLWidget>
-#include <QOpenGLFunctions_3_2_Core>
+#include <QOpenGLFunctions_3_3_Core>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
 #include <QOpenGLTexture>
@@ -30,12 +30,12 @@ namespace PMP
 	const float cameraDistMax = 14000.0f;
 
 
-	class Viewport : public QOpenGLWidget, protected QOpenGLFunctions_3_2_Core
+	class Viewport : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core
 	{
 	public:
 		Viewport(QWidget *parent) : 
 			QOpenGLWidget(parent), 
-			QOpenGLFunctions_3_2_Core(),
+			QOpenGLFunctions_3_3_Core(),
 #ifndef NDEBUG
 			m_debugLogger(this),
 #endif
@@ -46,7 +46,9 @@ namespace PMP
 			m_cameraDistance(cameraDistDefault),
 			m_isOrbiting(false),
 			m_isPanning(false),
-			m_lastMousePos(0.0f, 0.0f)
+			m_lastMousePos(0.0f, 0.0f),
+			m_isDragging(false),
+			m_shouldOrbitInertia(false)
 		{ 
 			connect(m_frameTimer, &QTimer::timeout, this, &Viewport::onFrameUpdate);
 			m_frameTimer->start(10); // ~100 FPS

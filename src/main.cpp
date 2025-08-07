@@ -15,17 +15,19 @@ int main(int argc, char* argv[])
     QApplication a(argc, argv);
     // Configure OpenGL format
     QSurfaceFormat format;
+    QSurfaceFormat::setDefaultFormat(format);
     format.setDepthBufferSize(24);
     format.setStencilBufferSize(8);
-    format.setVersion(3,2);
+    format.setVersion(3,3);
     format.setSwapInterval(0);
     format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
     format.setProfile(QSurfaceFormat::CoreProfile);
 #ifndef NDEBUG
-    format.setOption(QSurfaceFormat::DebugContext);
+    format.setOption(QSurfaceFormat::DebugContext, true);
     
 #endif
-    QSurfaceFormat::setDefaultFormat( format );
+    format.setOption(QSurfaceFormat::DebugContext, false);
+    //QSurfaceFormat::setDefaultFormat( format );
 
     // TODO: We probably want the main viewport to be a child of a separate "base" panel
     PMP::Viewport mainViewport(nullptr);
@@ -54,7 +56,7 @@ int main(int argc, char* argv[])
     
     selector.setTestChamber(&tc);
     mainViewport.setTestChamber(&tc);
-    mainViewport.loadTestChamberMesh(); //Needs to be called after mainViewport.show()
+    
     
 
     //creates all the buttons for the palette Right now most of the data for each element is junk for demo
