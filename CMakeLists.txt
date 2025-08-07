@@ -143,3 +143,23 @@ target_link_libraries(importmodeltest PRIVATE
         Qt6::Widgets
         Qt6::OpenGLWidgets
 )
+
+function(windeployqt target)
+
+    if (WIN32)
+
+        # POST_BUILD step
+        # - after build, we have a bin/lib for analyzing qt dependencies
+        # - we run windeployqt on target and deploy Qt libs
+        add_custom_command(TARGET ${target} POST_BUILD
+                COMMAND "${_qt_bin_dir}/windeployqt6.exe"
+                --verbose 1
+                $<IF:$<CONFIG:Debug>,--debug,--release>
+                \"$<TARGET_FILE:${target}>\"
+                COMMENT "Deploying Qt libraries using windeployqt for compilation target '${target}' ..."
+                )
+
+    endif ()
+
+endfunction()
+windeployqt(PuzzlemakerPlus)

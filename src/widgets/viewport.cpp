@@ -3,7 +3,7 @@
 #pragma once
 #include <stdexcept>
 #include <vector>
-#include <GL/gl.h>
+//#include <GL/gl.h> 
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <qvectornd.h>

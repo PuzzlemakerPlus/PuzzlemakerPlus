@@ -28,9 +28,12 @@ cmake-build-debug
 
 # Visual Studio
 .vs
-.vcxproj
-.vcxproj.filters
-.sln
+*.vcxproj
+*.vcxproj.user
+*.vcxproj.filters
+*.sln
+*.dir
+x64
 out
 # I think this is VS specific...
 CMakeSettings.json

@@ -11,7 +11,7 @@ if(NOT Qt6_DIR)
     if(WIN32)
         # Windows: check user's home Qt installation
         file(GLOB QT6_CMAKE_PATHS
-            "C:/Qt/6*/mingw_64/lib/cmake/Qt6"
+            "C:/Qt/6*/msvc*/lib/cmake/Qt6"
         )
 
         list(LENGTH QT6_CMAKE_PATHS _qt_path_count)
@@ -19,6 +19,9 @@ if(NOT Qt6_DIR)
             list(GET QT6_CMAKE_PATHS 0 Qt6_DIR)
             message(STATUS "Auto-detected Qt6_DIR (Windows): ${Qt6_DIR}")
             set(Qt6_DIR "${Qt6_DIR}" CACHE PATH "Qt6 config path")
+        else(
+            message(WARNING "Could not find MSVC-compatible Qt6 in C:/Qt/6*/msvc*/. Please install Qt6 for MSVC using the Qt Online Installer.")
+        )
         endif()
     elseif(UNIX)
         # Linux: try user home path
