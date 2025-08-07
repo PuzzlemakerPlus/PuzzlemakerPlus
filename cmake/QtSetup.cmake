@@ -4,6 +4,7 @@ message(STATUS "Setting up Qt6")
 # Let user override with environment variable
 if(DEFINED ENV{Qt6_DIR})
     set(Qt6_DIR $ENV{Qt6_DIR} CACHE PATH "Qt6 config path from env")
+    
 endif()
 
 # Only try to auto-detect if Qt6_DIR not already set
@@ -23,6 +24,7 @@ if(NOT Qt6_DIR)
             message(WARNING "Could not find MSVC-compatible Qt6 in C:/Qt/6*/msvc*/. Please install Qt6 for MSVC using the Qt Online Installer.")
         )
         endif()
+        string(REPLACE "/lib/cmake/Qt6" "/bin" qt_bin_path "${Qt6_DIR}") # for accessing windeployqt6.exe
     elseif(UNIX)
         # Linux: try user home path
         set(QT_POSSIBLE_HOME "$ENV{HOME}/Qt")

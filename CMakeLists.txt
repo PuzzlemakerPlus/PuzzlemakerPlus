@@ -6,14 +6,15 @@ project(PuzzlemakerPlus)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Qt Resources support
 set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOGEN_SOURCE_GROUP "")
 
 enable_testing()
-
 
 find_package(Qt6 COMPONENTS 
             Core 
@@ -143,7 +144,7 @@ target_link_libraries(importmodeltest PRIVATE
         Qt6::Widgets
         Qt6::OpenGLWidgets
 )
-
+message("windeployqt6.exe at ${qt_bin_path}/windeployqt6.exe")
 function(windeployqt target)
 
     if (WIN32)
@@ -152,7 +153,7 @@ function(windeployqt target)
         # - after build, we have a bin/lib for analyzing qt dependencies
         # - we run windeployqt on target and deploy Qt libs
         add_custom_command(TARGET ${target} POST_BUILD
-                COMMAND "${_qt_bin_dir}/windeployqt6.exe"
+                COMMAND "${qt_bin_path}/windeployqt6.exe"
                 --verbose 1
                 $<IF:$<CONFIG:Debug>,--debug,--release>
                 \"$<TARGET_FILE:${target}>\"
