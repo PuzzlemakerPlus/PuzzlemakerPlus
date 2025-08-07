@@ -47,7 +47,10 @@ namespace PMP
 			m_isOrbiting(false),
 			m_isPanning(false),
 			m_lastMousePos(0.0f, 0.0f)
-		{ }
+		{ 
+			connect(m_frameTimer, &QTimer::timeout, this, &Viewport::onFrameUpdate);
+			m_frameTimer->start(10); // ~100 FPS
+		}
 
 		void loadDots(std::vector<QVector3D> vertices);
 		void loadLines(std::vector<LineVertex> vertices);
@@ -68,7 +71,7 @@ namespace PMP
 		void getViewMatrix(QMatrix4x4& out);
 		
 	protected:
-		void createVAOs();
+		void createGraphicsObjects();
 		void loadShaders();
 		void paintGL() override;
 		void resizeGL( int width, int height ) override;
@@ -123,18 +126,18 @@ namespace PMP
 		// TODO: These will probably be moved elsewhere - Kelsey
 		QOpenGLShaderProgram m_wallShader;
 		QOpenGLVertexArrayObject m_chamberVAO;
-		QOpenGLBuffer m_chamberVBO{QOpenGLBuffer::Type::VertexBuffer};
-		QOpenGLBuffer m_chamberIBO{QOpenGLBuffer::Type::IndexBuffer};
+		QOpenGLBuffer m_chamberVBO;
+		QOpenGLBuffer m_chamberIBO;
 		GLsizei m_indicesCount = 0;
 		
 		QOpenGLShaderProgram m_dotShader;
 		QOpenGLVertexArrayObject m_dotVAO;
-		QOpenGLBuffer m_dotVBO{QOpenGLBuffer::Type::VertexBuffer};
+		QOpenGLBuffer m_dotVBO;
 		GLsizei m_dotCount = 0;
 		
 		QOpenGLShaderProgram m_lineShader;
 		QOpenGLVertexArrayObject m_lineVAO;
-		QOpenGLBuffer m_lineVBO{QOpenGLBuffer::Type::VertexBuffer};
+		QOpenGLBuffer m_lineVBO;
 		GLsizei m_lineVertCount = 0;
 
 

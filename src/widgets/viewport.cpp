@@ -3,12 +3,13 @@
 #pragma once
 #include <stdexcept>
 #include <vector>
-//#include <GL/gl.h> 
+//#include <GL/gl.h> //
+#include <qmatrix4x4.h>
+#include <qnamespace.h>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <qvectornd.h>
-#include <qmatrix4x4.h>
-#include <qnamespace.h>
+#include <QThread>
 #include <iostream>
 
 #include "viewport.h"
@@ -20,7 +21,6 @@ namespace PMP
 	void Viewport::initializeGL()
 	{
 		initializeOpenGLFunctions();
-
 #ifndef NDEBUG
 		if ( m_debugLogger.initialize() )
 		{
@@ -28,6 +28,7 @@ namespace PMP
 						qDebug() << debugMessage;
 					});
 			m_debugLogger.startLogging();
+			m_debugLogger.enableMessages();
 		}
 		else
 		{
@@ -37,10 +38,10 @@ namespace PMP
 		// Puzzlemaker background color
 		glClearColor( 0.803, 0.815, 0.807, 1.0f );
 		loadShaders();
-		createVAOs();
+		createGraphicsObjects();
 
-		connect(m_frameTimer, &QTimer::timeout, this, &Viewport::onFrameUpdate);
-		m_frameTimer->start(10); // ~100 FPS
+		
+		std::cout << "ViewportGL initialized." << std::endl;
 	}
 
 	void Viewport::loadShaders()
@@ -53,7 +54,7 @@ namespace PMP
 			return;
 		}
 #else
-		m_wallShader.link()
+		m_wallShader.link();
 #endif
 		m_dotShader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/dot.vert");
 		m_dotShader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/dot.frag");
@@ -73,14 +74,25 @@ namespace PMP
 			return;
 		}
 #else
-		m_lineShader.link()
+		m_lineShader.link();
 #endif
 	}
-	void Viewport::createVAOs()
+	void Viewport::createGraphicsObjects()
 	{
+		std::cout << "Creating OpenGL Objects" << std::endl;
+		Q_ASSERT(QOpenGLContext::currentContext());
+		//m_chamberVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+		//m_chamberIBO = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+		//m_dotVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+		//m_lineVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
 		m_dotVAO.create();
+		m_dotVBO.create();
 		m_lineVAO.create();
+		m_lineVBO.create();
+
 		m_chamberVAO.create();
+		m_chamberVBO.create();
+		m_chamberIBO.create();
 	}
 
 	// needs a list of points to draw
@@ -89,7 +101,7 @@ namespace PMP
 		m_dotCount = vertices.size();
 		this->makeCurrent();
 		m_dotVAO.bind();
-		m_dotVBO.create();
+
 		m_dotVBO.bind();
 		m_dotVBO.allocate(vertices.data(),vertices.size() * sizeof(QVector3D));
 
@@ -109,7 +121,7 @@ namespace PMP
 
 		this->makeCurrent();
 		m_lineVAO.bind();
-		m_lineVBO.create();
+
 		m_lineVBO.bind();
 		m_lineVBO.allocate(vertices.data(), vertices.size() * sizeof(LineVertex));
 
@@ -142,24 +154,45 @@ namespace PMP
 	// Generate Test Chamber Mesh
 	void Viewport::loadTestChamberMesh()
 	{
+		std::cout << "Loading test chamber mesh..." << std::endl;
 		if(!m_testChamber) throw std::runtime_error("Can not load test chamber mesh without setting test chamber");
 		
 		std::vector<Quad> quads;
 		m_testChamber->GenerateQuads(quads);
 		Mesh mesh = CreateMesh(quads);
+		if (mesh.vertices.empty() || mesh.indices.empty()) throw std::runtime_error("Mesh has no vertices or indices to allocate");
 
+		if (!QOpenGLContext::currentContext()) {
+			std::cout << "No OpenGL context! As expected" << std::endl;
+		}
+		else {
+			std::cout << "OpenGL context is available." << std::endl;
+		}
 		this->makeCurrent();
+		if (!QOpenGLContext::currentContext()) {
+			std::cout << "No OpenGL context! Can't safely check isCreated." << std::endl;
+			return;
+		}
+		else {
+			 std::cout << "OpenGL context is available." << std::endl;
+		}
+
 		m_chamberVAO.bind();
-		m_chamberVBO.create();
+		std::cout << "Creating m_chamberVBO" << std::endl;
 		m_chamberVBO.bind();
+		std::cout << "Creating m_chamberIBO" << std::endl;
+		m_chamberIBO.bind();
+
 		// Disabling for now until we are more certain it's what we want - Kelsey
 		//m_chamberVBO.setUsagePattern(QOpenGLBuffer::StaticDraw);
-		m_chamberVBO.allocate(mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex)); // todo
+		// I think this is correct
+		m_chamberVBO.setUsagePattern(QOpenGLBuffer::DynamicDraw);
+		qDebug() << "Allocating m_chamberVBO";
+		m_chamberVBO.allocate(mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex)); // segfault here makse no sense
 
-		m_chamberIBO.create();
-		m_chamberIBO.bind();
+		qDebug() << "Allocating m_chamberIBO";
 		m_chamberIBO.allocate(mesh.indices.data(), mesh.indices.size() * sizeof(unsigned int));
-		m_indicesCount = mesh.indices.size();
+		
 
 		int vertexPosLocation = m_wallShader.attributeLocation("aPos");
 		m_wallShader.enableAttributeArray(vertexPosLocation);
@@ -172,9 +205,10 @@ namespace PMP
 		// must release VAO before index/vertex buffers, otherwise they get unbound from the VAO too!
 		m_chamberVAO.release();
 
-		m_chamberIBO.release();
-		m_chamberVBO.release();
+		m_chamberVBO.release(); // not necessary?
+		m_chamberIBO.release(); // not necessary?
 		this->doneCurrent();
+		m_indicesCount = mesh.indices.size();
 		update();
 	}
 	void Viewport::getViewMatrix(QMatrix4x4& out)
@@ -227,7 +261,11 @@ namespace PMP
 		m_wallShader.setUniformValue("u_fogEnd", m_fogEnd);
 
 		m_chamberVAO.bind();
-		glDrawElements(GL_TRIANGLES, m_indicesCount, GL_UNSIGNED_INT, 0); 
+		glDrawElements(GL_TRIANGLES, m_indicesCount, GL_UNSIGNED_INT, 0);
+		GLenum err;
+		while ((err = glGetError()) != GL_NO_ERROR) {
+			qDebug() << "OpenGL error: " << QString::number(err, 16);
+		}
 		m_chamberVAO.release();
 		m_wallShader.release();
 	}

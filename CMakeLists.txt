@@ -144,6 +144,9 @@ target_link_libraries(importmodeltest PRIVATE
         Qt6::Widgets
         Qt6::OpenGLWidgets
 )
+
+set_property(TARGET PuzzlemakerPlus PROPERTY VS_DEBUGGER_COMMAND "$<TARGET_FILE:PuzzlemakerPlus>")
+
 message("windeployqt6.exe at ${qt_bin_path}/windeployqt6.exe")
 function(windeployqt target)
 
