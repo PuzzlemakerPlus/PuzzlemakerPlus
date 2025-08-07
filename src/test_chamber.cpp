@@ -265,7 +265,7 @@ namespace PMP
 					if (tTemp > 0.0f && tTemp < closestT)
 					{
 						closestT = tTemp;
-						closestHit = RayHitResult{surface.parentNode,surface, hitPosTemp};
+						closestHit = RayHitResult{surface.parentNode, hitPosTemp, surface};
 					}
 				}
 			}
@@ -320,7 +320,7 @@ namespace PMP
                 WALLSIDE side = static_cast<WALLSIDE>(i);
                 if(IsSurface(side,id))
                 {
-					walls[i] = {side,id};
+					walls[i] = {id,side};
                 }
             }
         }
