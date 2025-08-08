@@ -1,6 +1,5 @@
 // test_chamber.h
 // Declares the class that represents the test chamber itself and the octree nodes
-#ifndef PMP_TEST_CHAMBER_H
 #pragma once
 
 #include <map>
@@ -77,5 +76,3 @@ namespace PMP
 	};
 
 }
-
-#endif // !PMP_TEST_CHAMBER_H

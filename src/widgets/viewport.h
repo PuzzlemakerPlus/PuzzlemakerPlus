@@ -1,11 +1,11 @@
 // viewport.h
 // Declares the main editor viewport as an extension of QOpenGLWidget
+#pragma once
+
 #include <qevent.h>
 #include <qvectornd.h>
 #include <qtimer.h>
 #include <vector>
-#ifndef PMP_VIEWPORT_H
-#pragma once
 
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions_3_3_Core>
@@ -148,7 +148,3 @@ namespace PMP
 #endif
 	};
 }
-
-
-
-#endif // !PMP_VIEWPORT_H

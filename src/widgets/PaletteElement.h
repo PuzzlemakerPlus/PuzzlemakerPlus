@@ -2,8 +2,7 @@
 // Created by hannah on 13/04/25.
 //
 
-#ifndef PUZZLEMAKERPLUS_PALETTEELEMENT_H
-#define PUZZLEMAKERPLUS_PALETTEELEMENT_H
+#pragma once
 
 #include <QAbstractButton>
 
@@ -24,4 +23,3 @@ namespace PMP {
         int id{};
     };
 }
-#endif //PUZZLEMAKERPLUS_PALETTEELEMENT_H

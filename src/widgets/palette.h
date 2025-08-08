@@ -1,10 +1,7 @@
 //
 // Created by hannah on 13/04/25.
 //
-
-#ifndef PUZZLEMAKERPLUS_PALETTE_H
-#define PUZZLEMAKERPLUS_PALETTE_H
-
+#pragma once
 
 #include "PaletteElement.h"
 
@@ -28,5 +25,3 @@ namespace PMP {
 
     };
 }
-
-#endif //PUZZLEMAKERPLUS_PALETTE_H
