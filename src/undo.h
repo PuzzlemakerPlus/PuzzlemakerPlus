@@ -8,8 +8,8 @@ namespace PMP
     {
         public:
         virtual ~Undoable() {}
-        virtual void redo() = 0;
         virtual void undo() = 0;
+        virtual void redo() = 0;
     };
     // Singleton stack for keeping track of all actions
     class UndoStack
@@ -18,6 +18,7 @@ namespace PMP
         static UndoStack& instance();
         void addAction(std::unique_ptr<Undoable> action);
         void undo();
+        void redo();
         private:
         UndoStack() = default;
         UndoStack(const UndoStack&) = delete;
