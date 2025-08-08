@@ -187,19 +187,19 @@ namespace PMP
 		}
 
 		m_chamberVAO.bind();
-		qDebug() << "Creating m_chamberVBO";
+		//qDebug() << "Creating m_chamberVBO";
 		m_chamberVBO.bind();
-		qDebug() << "Creating m_chamberIBO";
+		//qDebug() << "Creating m_chamberIBO";
 		m_chamberIBO.bind();
 
 		// Disabling for now until we are more certain it's what we want - Kelsey
 		//m_chamberVBO.setUsagePattern(QOpenGLBuffer::StaticDraw);
 		// I think this is correct
 		//m_chamberVBO.setUsagePattern(QOpenGLBuffer::DynamicDraw);
-		qDebug() << "Allocating m_chamberVBO";
+		//qDebug() << "Allocating m_chamberVBO";
 		m_chamberVBO.allocate(mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex)); // segfault here makse no sense
 
-		qDebug() << "Allocating m_chamberIBO";
+		//qDebug() << "Allocating m_chamberIBO";
 		m_chamberIBO.allocate(mesh.indices.data(), mesh.indices.size() * sizeof(unsigned int));
 		
 
@@ -325,7 +325,7 @@ namespace PMP
 				loadSelectionLines();
 			}
 		}
-		if (event->key() == Qt::Key_Minus)
+		else if (event->key() == Qt::Key_Minus)
 		{
 			if(m_testChamber->RecedeSurface(m_selector))
 			{
@@ -364,7 +364,7 @@ namespace PMP
 		else if ( event->button() == Qt::MouseButton::LeftButton ||
 				  event->button() == Qt::MouseButton::MiddleButton )
 		{
-			loadTestChamberMesh(); //Needs to be called after mainViewport.show()
+			//Needs to be called after mainViewport.show()
 			if(rayCastChamber.has_value())
 			{
 				//Start dragging

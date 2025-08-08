@@ -1,6 +1,7 @@
 // octree_test.cpp
 // Implements the class that represents the test chamber itself and the octree nodes
 #include "test_chamber.h"
+#include "test_chamber_types.h"
 #include "util/3d/mesh.h" 
 #include "selection.h"
 
@@ -171,6 +172,14 @@ namespace PMP
 		return 0; // State of the node has not changed
 	}
 
+	std::optional<ChamberSurface> TestChamber::GetSurface(NodeID node, WALLSIDE side)
+	{
+		ChamberSurface surf = m_surfaceMap[node][static_cast<int>(side)];
+		if(surf.side == WALLSIDE::NONE) return std::nullopt;
+		return std::optional<ChamberSurface>(surf);
+	};
+
+
 	NodeID TestChamber::SubdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size)
 	{
 		if(IsOutOOB(coord)) return parentID;
@@ -332,64 +341,84 @@ namespace PMP
 	{
 
 		std::optional<NodeID> nodeSel = selector->getNodeSelection();
-		if(nodeSel.has_value())
+		if(!nodeSel.has_value()) return 0; // Failed to extrude surface (No selection)
+		
+		qDebug() << "Selection ID: " << nodeSel.value();
+		ChamberSurface tmp = selector->getSurfaceSelection().value(); //It is guaranteed that this optional has a value at this point because node selection comes with surface selection
+
+		QVector3D selectionMoveDir = GetWallNormal(tmp.side);
+		const TestChamberNode& selectedNode = m_nodeMap.at(nodeSel.value());
+		float dist = selectedNode.m_size;
+		QVector3D center = selectedNode.m_center;
+		
+		if(SetNodeActive(nodeSel.value(), false)) // node state was changed (without this check, the node can extrude already enabled node and fail to find selection face)
 		{
-			ChamberSurface tmp = selector->getSurfaceSelection().value(); //It is guaranteed that this optional has a value at this point because node selection comes with surface selection
-			QVector3D selectionMoveDir = GetWallNormal(tmp.side);
-			const TestChamberNode& selectedNode = m_nodeMap.at(nodeSel.value());
-			float dist = selectedNode.m_size;
-			QVector3D center = selectedNode.m_center;
-			QVector3D wallpos = center + selectionMoveDir * dist * 0.51f; //Find the "forward" surface
-			if(SetNodeActive(nodeSel.value(), false)) // node state was changed (without this check, the node can extrude already enabled node and fail to find selection face)
+			std::cout <<"Extruding Surface"<<std::endl;
+			GenerateSurfaces();
+			selector->clearSurfaces();
+			QVector3D wallpos = center + selectionMoveDir * dist; //Find the "forward" surface
+			if(!IsOutOOB(wallpos))
 			{
-				std::cout <<"Extruding Surface"<<std::endl;
-				GenerateSurfaces();
-				selector->clearSurfaces();
-				if(!IsOutOOB(wallpos))
-				{
-					//Reselect if the position is inbounds
-					const NodeID node = SearchNodeWithCoord(wallpos);
-					ChamberSurface surf = GetSurface(node, tmp.side);
-					selector->setSelection(surf);
-				}
-				return 1; // Extruded surface successfully
+				//Reselect if the position is inbounds
+				const NodeID node = SearchNodeWithCoord(wallpos);
+				std::optional<ChamberSurface> surf = GetSurface(node, tmp.side);
+				if(surf.has_value()) selector->setSelection(surf.value());
 			}
+			return 1; // Extruded surface successfully
 		}
-		return 0; // Failed to extrude surface
+		else {
+				std::cout <<"Failed to Extrude Surface"<<std::endl;
+				selector->clearSurfaces();
+				return 0;
+			}
+		
+		
 	}
 
 	// Recede selected surface
 	int TestChamber::RecedeSurface(Selector* selector)
 	{
 		std::optional<NodeID> nodeSel = selector->getNodeSelection();
-		if(nodeSel.has_value())
+		if(!nodeSel.has_value()) return 0; // Failed to recede surface (No selection)
+
+		qDebug() << "Selection ID: " << nodeSel.value();
+		ChamberSurface tmp = selector->getSurfaceSelection().value(); //It is guaranteed that this optional has a value at this point because node selection comes with surface selection
+		
+		QVector3D selectionMoveDir = GetWallNormal(tmp.side);
+		const TestChamberNode& selectedNode = GetNodeMap().at(nodeSel.value());
+		float dist = selectedNode.m_size;
+		QVector3D center = selectedNode.m_center;
+		QVector3D nodePos = center - selectionMoveDir * dist; //Find the "backward" surface
+
+		if(IsOutOOB(nodePos)) return 0;// The new position is in bound
+		
+		NodeID node = SearchNodeWithCoord(nodePos);
+		if(GetNodeMap().at(node).m_size != selectedNode.m_size)
 		{
-			ChamberSurface tmp = selector->getSurfaceSelection().value(); //It is guaranteed that this optional has a value at this point because node selection comes with surface selection
-			QVector3D selectionMoveDir = GetWallNormal(tmp.side);
-			const TestChamberNode& selectedNode = GetNodeMap().at(nodeSel.value());
-			float dist = selectedNode.m_size;
-			QVector3D center = selectedNode.m_center;
-			QVector3D wallpos = center - selectionMoveDir * dist * 0.51f; //Find the "backward" surface
-			if(!IsOutOOB(wallpos)) // The new position is in bound
-			{
-				NodeID node = SearchNodeWithCoord(wallpos);
-				if(GetNodeMap().at(node).m_size != selectedNode.m_size)
-				{
-					// Subdivide this node to match the size of the neighboring node
-					node = SubdivideNodeToCoord(wallpos, 0, selectedNode.m_size); // Retarget the node to the newly subdivided node
-				}
-				if(SetNodeActive(node, true)) // node state was changed (without this check, the node can recede already disabled node and fail to find selection face)
-				{
-					std::cout <<"Receding Surface"<<std::endl;
-					GenerateSurfaces();
-					selector->clearSurfaces();
-					ChamberSurface surf = GetSurface(node, tmp.side);
-					selector->setSelection(surf);
-				}
-			}
+			// Subdivide this node to match the size of the neighboring node
+			node = SubdivideNodeToCoord(nodePos, 0, selectedNode.m_size); // Retarget the node to the newly subdivided node
+		}
+		for(int i = 0; i < 6;i++)
+		{
+			// Check 6 directions around the expanded node to make sure they are all subdivided as well.
+			QVector3D moveDir = GetWallNormal(static_cast<WALLSIDE>(i));
+			QVector3D newpos = nodePos - moveDir * dist;
+			SubdivideNodeToCoord(newpos, 0, selectedNode.m_size);
+		}
+		if(SetNodeActive(node, true)) // node state was changed (without this check, the node can recede already disabled node and fail to find selection face)
+		{
+			std::cout <<"Receding Surface"<<std::endl;
+			GenerateSurfaces();
+			selector->clearSurfaces();
+			std::optional<ChamberSurface>  surf = GetSurface(node, tmp.side);
+			if(surf.has_value()) selector->setSelection(surf.value());
 			return 1; // Receded surface successfully
 		}
-		return 0; // Failed to recede surface
+		else {
+			std::cout <<"Failed to Recede Surface"<<std::endl;
+			selector->clearSurfaces();
+			return 0;
+		}
 	}
 
 

@@ -32,7 +32,7 @@ namespace PMP
 		unsigned int GetRootNodeSize() const {return m_rootNodeWorldSize;};
 		int GetRootNodeSizeInt() const {return static_cast<int>(m_rootNodeWorldSize);};
 		const std::unordered_map<NodeID, TestChamberNode>& GetNodeMap() const {return m_nodeMap;};
-		ChamberSurface GetSurface(NodeID node, WALLSIDE side){return m_surfaceMap[node][static_cast<int>(side)];};
+		std::optional<ChamberSurface> GetSurface(NodeID node, WALLSIDE side);
 		std::array<QVector3D, 4> GetChamberSurfaceCorners(const ChamberSurface& surface);
 		
 		bool IsOutOOB(QVector3D coord) const;

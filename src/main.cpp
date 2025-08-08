@@ -57,6 +57,7 @@ int main(int argc, char* argv[])
     
     selector.setTestChamber(&tc);
     mainViewport.setTestChamber(&tc);
+    mainViewport.loadTestChamberMesh();
     
     
 
