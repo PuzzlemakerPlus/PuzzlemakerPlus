@@ -15,6 +15,7 @@ namespace PMP
     }
     QVector3D GetWallNormal(WALLSIDE side)
     {
+		using enum WALLSIDE;
         switch (side) {
             case POS_X:   return QVector3D(-1,  0,  0);
             case NEG_X:  return QVector3D( 1,  0,  0);
@@ -26,6 +27,7 @@ namespace PMP
         }
     }
     QVector3D GetWallUp(WALLSIDE side) {
+        using enum WALLSIDE;
         switch (side) {
             case POS_X: return QVector3D(0, 1, 0); // +Y is up on +X face
             case NEG_X: return QVector3D(0, 1, 0); // same for -X face

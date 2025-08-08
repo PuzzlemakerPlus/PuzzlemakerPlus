@@ -219,7 +219,7 @@ namespace PMP
         const float halfSize = m_nodeMap.at(node).m_size / 2.0f;
         const float epsilon = 0.4f;
         QVector3D offset;
-
+		using enum WALLSIDE;
         switch (side) {
             case POS_X: offset = {+halfSize + epsilon, 0, 0}; break;
             case NEG_X: offset = {-halfSize - epsilon, 0, 0}; break;

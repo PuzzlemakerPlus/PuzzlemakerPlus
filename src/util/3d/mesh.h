@@ -11,7 +11,7 @@
 
 namespace PMP
 {
-	enum WALLSIDE {
+	enum class WALLSIDE {
 		POS_X,
 		NEG_X,
 		POS_Y,
