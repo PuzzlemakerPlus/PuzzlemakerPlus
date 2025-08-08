@@ -46,4 +46,7 @@ if(NOT Qt6_DIR)
             set(Qt6_DIR "/usr/lib/x86_64-linux-gnu/cmake/Qt6" CACHE PATH "Qt6 config path")
         endif()
     endif()
+elseif(WIN32)
+    # windows still needs this for accessing windeployqt6.exe
+    string(REPLACE "/lib/cmake/Qt6" "/bin" qt_bin_path "${Qt6_DIR}")
 endif()
