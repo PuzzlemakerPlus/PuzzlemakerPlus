@@ -61,6 +61,7 @@ qt_add_executable(PuzzlemakerPlus
 
         # This is a test chamber. Four walls, ceiling and a floor
         # ✅ Good enough for science! ❎ Not Aperture Science!
+        src/test_chamber_actions.h
         src/test_chamber_types.h
         src/test_chamber.cpp
         src/test_chamber.h
@@ -90,11 +91,14 @@ target_link_libraries(PuzzlemakerPlus PRIVATE
 )
 
 add_executable(octtreetest ${CMAKE_CURRENT_SOURCE_DIR}/tests/octtree_test.cpp
+    src/test_chamber_actions.h
     src/test_chamber_types.h
     src/test_chamber.cpp
     src/test_chamber.h
     src/selection.cpp
     src/selection.h
+    src/undo.h
+    src/undo.cpp
     src/util/3d/mesh.cpp
     src/util/3d/mesh.h
     src/util/3d/ray.cpp
@@ -118,18 +122,18 @@ qt_add_executable(importmodeltest ${CMAKE_CURRENT_SOURCE_DIR}/tests/import_model
     src/widgets/viewport.h
     src/widgets/viewport.cpp
     
+    src/test_chamber_actions.h
+    src/test_chamber_types.h
+    src/test_chamber.cpp
+    src/test_chamber.h
+    src/selection.cpp
+    src/selection.h
+    src/undo.h
+    src/undo.cpp
     src/util/3d/mesh.cpp
     src/util/3d/mesh.h
     src/util/3d/ray.cpp
     src/util/3d/ray.h
-
-    src/test_chamber_types.h
-    src/test_chamber.cpp
-    src/test_chamber.h
-    src/selection.h
-    src/selection.cpp
-    src/undo.h
-    src/undo.cpp
     )
 set_target_properties(importmodeltest
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY

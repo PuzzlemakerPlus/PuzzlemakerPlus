@@ -8,8 +8,8 @@ namespace PMP
     {
         public:
         virtual ~Undoable() {}
-        virtual void undo() = 0;
-        virtual void redo() = 0;
+        virtual int undo() = 0;
+        virtual int redo() = 0;
     };
     // Singleton stack for keeping track of all actions
     class UndoStack

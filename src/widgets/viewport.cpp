@@ -312,11 +312,21 @@ namespace PMP
 	{
 		Q_ASSERT(m_selector);
 		Q_ASSERT(m_testChamber);
-		if (event->key() == Qt::Key_F)
+		if (event->matches(QKeySequence::Undo)) {
+			UndoStack::instance().undo();
+			loadTestChamberMesh();
+			loadSelectionLines();
+		}
+		else if (event->matches(QKeySequence::Redo)) {
+			UndoStack::instance().redo();
+			loadTestChamberMesh();
+			loadSelectionLines();
+		}
+		else if (event->key() == Qt::Key_F)
 		{
 			m_fog = !m_fog;
 		}
-		if (event->key() == Qt::Key_Equal)
+		else if (event->key() == Qt::Key_Equal)
 		{
 			if(m_testChamber->ExtrudeSurface(m_selector))
 			{

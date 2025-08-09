@@ -1,11 +1,15 @@
 // octree_test.cpp
 // Implements the class that represents the test chamber itself and the octree nodes
+#include "undo.h"
+#include "selection.h"
+#include "util/3d/mesh.h" 
 #include "test_chamber.h"
 #include "test_chamber_types.h"
-#include "util/3d/mesh.h" 
-#include "selection.h"
+#include "test_chamber_actions.h"
 
 #include <array>
+#include <memory>
+#include <qdebug.h>
 #include <string>
 #include <vector>
 #include <cassert>
@@ -337,6 +341,7 @@ namespace PMP
     }
 
 	// Extrude selected surface
+	// It will add TCExtrudeAction to the global UndoStack
 	int TestChamber::ExtrudeSurface(Selector* selector)
 	{
 
@@ -344,6 +349,7 @@ namespace PMP
 		if(!nodeSel.has_value()) return 0; // Failed to extrude surface (No selection)
 		
 		qDebug() << "Selection ID: " << nodeSel.value();
+		// We purposefully save a copy here because test chamber will regenerate all the surfaces and we want to keep this information
 		ChamberSurface tmp = selector->getSurfaceSelection().value(); //It is guaranteed that this optional has a value at this point because node selection comes with surface selection
 
 		QVector3D selectionMoveDir = GetWallNormal(tmp.side);
@@ -362,9 +368,20 @@ namespace PMP
 				//Reselect if the position is inbounds
 				const NodeID node = SearchNodeWithCoord(wallpos);
 				std::optional<ChamberSurface> surf = GetSurface(node, tmp.side);
-				if(surf.has_value()) selector->setSelection(surf.value());
+				if(surf.has_value()) 
+				{
+					selector->setSelection(surf.value());
+					UndoStack::instance().addAction(std::make_unique<TCExtrudeAction>(this,selector, nodeSel.value(),node,tmp.side, tmp.side));
+				}
+				else {
+					qDebug() << "Inbound wall has no surface generated? This shouldnt happen";
+				}
+			} else {
+				//extruded but could not find new side to select
+				UndoStack::instance().addAction(std::make_unique<TCExtrudeAction>(this,selector, nodeSel.value(),0,tmp.side, WALLSIDE::NONE));
 			}
-			return 1; // Extruded surface successfully
+			
+			return 1; // Extruded surface successfully (regardless of selection)
 		}
 		else {
 				std::cout <<"Failed to Extrude Surface"<<std::endl;

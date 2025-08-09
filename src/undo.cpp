@@ -20,15 +20,14 @@ namespace PMP
         if (m_stack.size() != 0 && m_pos > 0)
         {
             --m_pos;
-            m_stack[m_pos]->undo();
+            if(!m_stack[m_pos]->undo()) m_pos++;
         }
     }
     void UndoStack::redo() 
     {
-        if (m_pos < m_stack.size() - 1)
+        if (m_pos < m_stack.size())
         {
-            m_pos++;
-            m_stack[m_pos]->redo();
+            if(m_stack[m_pos]->redo()) m_pos++;
         }
     }
 }
