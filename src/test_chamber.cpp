@@ -452,10 +452,15 @@ namespace PMP
 	void TestChamber::_PrintNodesTree(std::map<NodeID, std::vector<NodeID>>& children, NodeID id, std::string prefix, bool isLast) 
 	{
 		std::cout << prefix;
-
+#ifdef WIN32
+		if (!prefix.empty()) {
+			std::cout << (isLast ? "`-- " : "|-- ");
+		}
+#else
 		if (!prefix.empty()) {
 			std::cout << (isLast ? "└── " : "├── ");
 		}
+#endif
 
 		std::cout << "Node " << id << " at " << printVector3D(m_nodeMap[id].m_center) << " with size " << m_nodeMap[id].m_size << "\n";
 		
@@ -463,7 +468,11 @@ namespace PMP
 		const auto& childVec = children[id];
 		for (size_t i = 0; i < childVec.size(); ++i) {
 			bool last = (i == childVec.size() - 1);
+#ifdef WIN32
+			_PrintNodesTree(children, childVec[i], prefix + (isLast ? "    " : "|   "), last);
+#else
 			_PrintNodesTree(children, childVec[i], prefix + (isLast ? "    " : "│   "), last);
+#endif
 		}
 	}
 
