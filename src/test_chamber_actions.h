@@ -7,57 +7,65 @@
 
 //For handling undo and redo of actions done on test chambers
 //DO NOT store pointers of surfaces as it will be lost
-
-//In the future, it may be better to store the coordinates to the nodes instead of the node id as it can change 
+//Instead, use UniqueSurfaceIdentifier for NodeID/SurfaceID-agnostic design
 
 namespace PMP
 {
     class TCExtrudeAction : public Undoable
     {
-        public:
-        TCExtrudeAction(TestChamber* tc, Selector* sel, NodeID extrudeNode, NodeID newSelectNode, WALLSIDE extrudeSide, WALLSIDE newSelectSide) : 
-            m_testChamber(tc),
-            m_selector(sel),
-            m_extrudeNode(extrudeNode),
-            m_newSelectNode(newSelectNode),
-            m_extrudeSide(extrudeSide),
-            m_newSelectSide(newSelectSide)
-        {
+    public:
+        TCExtrudeAction(TestChamber* tc,
+                        Selector* sel,
+                        UniqueSurfaceIdentifer extrudeUSI,
+                        UniqueSurfaceIdentifer newSelectUSI)
+            : m_testChamber(tc)
+            , m_selector(sel)
+            , m_extrudeUSI(std::move(extrudeUSI))
+            , m_newSelectUSI(std::move(newSelectUSI))
+        {}
 
-        }
         int undo() override
         {
-            if(m_testChamber->SetNodeActive(m_extrudeNode, true))
-            {
+            const NodeID extrudeNode = toNode(m_extrudeUSI);
+            if (m_testChamber->SetNodeActive(extrudeNode, true)) {
                 m_testChamber->GenerateSurfaces();
-			    m_selector->clearSurfaces();
-                std::optional<ChamberSurface> surf = m_testChamber->GetSurface(m_extrudeNode, m_extrudeSide);
-                if(surf.has_value()) m_selector->setSelection(surf.value());
+                m_selector->clearSurfaces();
+
+                if (auto surf = m_testChamber->GetSurface(extrudeNode, m_extrudeUSI.side); surf.has_value())
+                    m_selector->setSelection(*surf);
+
                 return 1;
             }
             return 0;
         }
+
         int redo() override
         {
-            if(m_testChamber->SetNodeActive(m_extrudeNode, false))
-            {
+            const NodeID extrudeNode = toNode(m_extrudeUSI);
+            if (m_testChamber->SetNodeActive(extrudeNode, false)) {
                 m_testChamber->GenerateSurfaces();
-			    m_selector->clearSurfaces();
-                if(m_newSelectSide != WALLSIDE::NONE){
-                    std::optional<ChamberSurface> surf = m_testChamber->GetSurface(m_newSelectNode, m_newSelectSide);
-                    if(surf.has_value()) m_selector->setSelection(surf.value());
+                m_selector->clearSurfaces();
+
+                if (m_newSelectUSI.side != WALLSIDE::NONE) {
+                    const NodeID newSelNode = toNode(m_newSelectUSI);
+                    if (auto surf = m_testChamber->GetSurface(newSelNode, m_newSelectUSI.side); surf.has_value())
+                        m_selector->setSelection(*surf);
                 }
                 return 1;
             }
             return 0;
         }
-        private:
+
+    private:
+        NodeID toNode(const UniqueSurfaceIdentifer& usi) const
+        {
+            return m_testChamber->SearchNodeWithCoordSize(usi.nodeCord, static_cast<unsigned int>(usi.size));
+        }
+
         TestChamber* m_testChamber;
         Selector* m_selector;
-        NodeID m_extrudeNode;
-        WALLSIDE m_extrudeSide;
-        NodeID m_newSelectNode;
-        WALLSIDE m_newSelectSide;
+        UniqueSurfaceIdentifer m_extrudeUSI;
+        UniqueSurfaceIdentifer m_newSelectUSI;
     };
 
     class TCRecedeAction : Undoable

@@ -3,6 +3,7 @@
 #pragma once
 #include <stdexcept>
 #include <vector>
+#include "../undo.h"
 //#include <GL/gl.h> //
 #include <qmatrix4x4.h>
 #include <qnamespace.h>

@@ -12,13 +12,21 @@
 
 #include "util/3d/mesh.h"
 #include "util/3d/ray.h"
-#include "undo.h"
 
 namespace PMP
 {
 	// DO NOT USE THIS DIRECTLY, this is just used to initialize the value in the test chamber class
 	const unsigned int defaultRootNodeSize = 8192;
 	class Selector;
+
+	//Based on the information in this struct, it is possible to identify a surface without knowing its parentID or surfaceID
+	struct UniqueSurfaceIdentifer
+	{
+		uint size;
+		QVector3D nodeCord;
+		WALLSIDE side = WALLSIDE::NONE;
+	};
+
 	class TestChamber
 	{
 	public:
@@ -41,6 +49,8 @@ namespace PMP
 
 		// Find the smallest node that includes the give coordinate
 		const NodeID SearchNodeWithCoord(QVector3D coord, NodeID parentID=0) const;
+		// Find the node with specified size that includes the give coordinate
+		const NodeID SearchNodeWithCoordSize(QVector3D coord, unsigned int size, NodeID parentID=0) const;
 		std::optional<RayHitResult> RayCast(Ray ray) const;
 
 		// Expand the tree until the coordinate is enclosed by a node of given size
@@ -52,6 +62,8 @@ namespace PMP
 		
 		int ExtrudeSurface(Selector* selector);
 		int RecedeSurface(Selector* selector);
+
+		void makeUSI (NodeID node, UniqueSurfaceIdentifer& out, WALLSIDE side = WALLSIDE::NONE);
 
 		// Debug
 		void PrintNodes();
