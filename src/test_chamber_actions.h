@@ -11,62 +11,101 @@
 
 namespace PMP
 {
+#include <vector>
+
     class TCExtrudeAction : public Undoable
     {
     public:
+        // Multi-extrude Multi-select
         TCExtrudeAction(TestChamber* tc,
-                        Selector* sel,
-                        UniqueSurfaceIdentifer extrudeUSI,
-                        UniqueSurfaceIdentifer newSelectUSI)
+            Selector* sel,
+            std::vector<UniqueSurfaceIdentifer> extrudeUSIs,
+            std::vector<UniqueSurfaceIdentifer> newSelectUSIs)
             : m_testChamber(tc)
             , m_selector(sel)
-            , m_extrudeUSI(std::move(extrudeUSI))
-            , m_newSelectUSI(std::move(newSelectUSI))
+            , m_extrudeUSIs(std::move(extrudeUSIs))
+            , m_newSelectUSIs(std::move(newSelectUSIs))
+        {}
+
+        // Mult0=i-extrude No-select
+        TCExtrudeAction(TestChamber* tc,
+            Selector* sel,
+            std::vector<UniqueSurfaceIdentifer> extrudeUSIs)
+            : m_testChamber(tc)
+            , m_selector(sel)
+            , m_extrudeUSIs(std::move(extrudeUSIs))
+        {}
+
+        // Back-compat single-variant
+        TCExtrudeAction(TestChamber* tc,
+            Selector* sel,
+            UniqueSurfaceIdentifer extrudeUSI,
+            UniqueSurfaceIdentifer newSelectUSI)
+            : TCExtrudeAction(tc, sel,
+                std::vector<UniqueSurfaceIdentifer>{std::move(extrudeUSI)},
+                std::vector<UniqueSurfaceIdentifer>{std::move(newSelectUSI)})
         {}
 
         int undo() override
         {
-            const NodeID extrudeNode = toNode(m_extrudeUSI);
-            if (m_testChamber->SetNodeActive(extrudeNode, true)) {
-                m_testChamber->GenerateSurfaces();
-                m_selector->clearSurfaces();
-
-                if (auto surf = m_testChamber->GetSurface(extrudeNode, m_extrudeUSI.side); surf.has_value())
-                    m_selector->setSelection(*surf);
-
-                return 1;
+            bool anyChanged = false;
+            for (const auto& usi : m_extrudeUSIs) {
+                const NodeID node = toNode(usi);
+                anyChanged |= m_testChamber->SetNodeActive(node, true);
             }
-            return 0;
+
+            if (!anyChanged) return 0;
+
+            m_testChamber->GenerateSurfaces();
+            m_selector->clearSurfaces();
+
+            // Pick the last valid extruded surface to reselect
+            for (auto it = m_extrudeUSIs.rbegin(); it != m_extrudeUSIs.rend(); ++it) {
+                if (auto surf = m_testChamber->GetSurface(toNode(*it), it->side); surf.has_value()) {
+                    m_selector->setSelection(*surf); // last-one-wins
+                    break;
+                }
+            }
+            return 1;
         }
 
         int redo() override
         {
-            const NodeID extrudeNode = toNode(m_extrudeUSI);
-            if (m_testChamber->SetNodeActive(extrudeNode, false)) {
-                m_testChamber->GenerateSurfaces();
-                m_selector->clearSurfaces();
-
-                if (m_newSelectUSI.side != WALLSIDE::NONE) {
-                    const NodeID newSelNode = toNode(m_newSelectUSI);
-                    if (auto surf = m_testChamber->GetSurface(newSelNode, m_newSelectUSI.side); surf.has_value())
-                        m_selector->setSelection(*surf);
-                }
-                return 1;
+            bool anyChanged = false;
+            for (const auto& usi : m_extrudeUSIs) {
+                const NodeID node = toNode(usi);
+                anyChanged |= m_testChamber->SetNodeActive(node, false);
             }
-            return 0;
+
+            if (!anyChanged) return 0;
+
+            m_testChamber->GenerateSurfaces();
+            m_selector->clearSurfaces();
+
+            // Select the last valid requested new surface (skip NONE)
+            for (auto it = m_newSelectUSIs.rbegin(); it != m_newSelectUSIs.rend(); ++it) {
+                if (it->side == WALLSIDE::NONE) continue;
+                if (auto surf = m_testChamber->GetSurface(toNode(*it), it->side); surf.has_value()) {
+                    m_selector->setSelection(*surf); // last-one-wins
+                    break;
+                }
+            }
+            return 1;
         }
 
     private:
         NodeID toNode(const UniqueSurfaceIdentifer& usi) const
         {
-            return m_testChamber->SearchNodeWithCoordSize(usi.nodeCord, static_cast<unsigned int>(usi.size));
+            return m_testChamber->SearchNodeWithCoordSize(
+                usi.nodeCord, static_cast<unsigned int>(usi.size));
         }
 
         TestChamber* m_testChamber;
         Selector* m_selector;
-        UniqueSurfaceIdentifer m_extrudeUSI;
-        UniqueSurfaceIdentifer m_newSelectUSI;
+        std::vector<UniqueSurfaceIdentifer> m_extrudeUSIs;
+        std::vector<UniqueSurfaceIdentifer> m_newSelectUSIs;
     };
+
 
     class TCRecedeAction : Undoable
     {

@@ -58,6 +58,8 @@ qt_add_executable(PuzzlemakerPlus
         src/util/3d/mesh.h
         src/util/3d/ray.cpp
         src/util/3d/ray.h
+        src/util/debug.h
+        src/util/debug.cpp
 
         # This is a test chamber. Four walls, ceiling and a floor
         # ✅ Good enough for science! ❎ Not Aperture Science!
@@ -103,6 +105,8 @@ add_executable(octtreetest ${CMAKE_CURRENT_SOURCE_DIR}/tests/octtree_test.cpp
     src/util/3d/mesh.h
     src/util/3d/ray.cpp
     src/util/3d/ray.h
+    src/util/debug.h
+    src/util/debug.cpp
     )
 set_target_properties(octtreetest
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY
@@ -134,6 +138,8 @@ qt_add_executable(importmodeltest ${CMAKE_CURRENT_SOURCE_DIR}/tests/import_model
     src/util/3d/mesh.h
     src/util/3d/ray.cpp
     src/util/3d/ray.h
+    src/util/debug.h
+    src/util/debug.cpp
     )
 set_target_properties(importmodeltest
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY

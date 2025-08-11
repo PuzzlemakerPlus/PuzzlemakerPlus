@@ -8,6 +8,7 @@
 #include "test_chamber.h"
 #include "widgets/viewport.h"
 #include "widgets/palette.h"
+#include "util/debug.h"
 
 int main(int argc, char* argv[])
 {
@@ -32,6 +33,8 @@ int main(int argc, char* argv[])
 
     // TODO: We probably want the main viewport to be a child of a separate "base" panel
     PMP::Viewport mainViewport(nullptr);
+    // Initialize debugger singleton with the main viewport
+    PMP::Debugger::instance(&mainViewport);
     PMP::Selector selector;
     mainViewport.setSelector(&selector);
     mainViewport.resize(1280, 720);

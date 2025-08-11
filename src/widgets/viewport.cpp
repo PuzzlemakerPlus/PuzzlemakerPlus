@@ -185,7 +185,7 @@ namespace PMP
 		// Disabling for now until we are more certain it's what we want - Kelsey
 		//m_chamberVBO.setUsagePattern(QOpenGLBuffer::StaticDraw);
 		
-		m_chamberVBO.allocate(mesh.vertices.data(), mesh.vertices.size() * sizeof(GLfloat)); // segfault here makse no sense
+		m_chamberVBO.allocate(mesh.vertices.data(), mesh.vertices.size() * sizeof(GLfloat));
 		m_chamberIBO.allocate(mesh.indices.data(), mesh.indices.size() * sizeof(unsigned int));
 		
 		int vertexPosLocation = m_wallShader.attributeLocation("aPos");
@@ -300,7 +300,7 @@ namespace PMP
 		}
 		else if (event->key() == Qt::Key_Equal)
 		{
-			if(m_testChamber->ExtrudeSurface(m_selector))
+			if(m_testChamber->ExtrudeSurfaceMultiple(m_selector))
 			{
 				// Prepare to draw the new chamber and the new selection
 				loadTestChamberMesh();

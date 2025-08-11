@@ -21,6 +21,10 @@ namespace PMP
         void getSelectionNodeVerts(std::vector<Vertex>& out);
         std::optional<NodeID> getNodeSelection(int index=0) const {return m_surfaceSelection.size() <= index ? std::nullopt : std::optional<NodeID>{m_surfaceSelection.at(index).parentNode};}
         std::optional<ChamberSurface> getSurfaceSelection(int index=0) const {return m_surfaceSelection.size() <= index ? std::nullopt : std::optional<ChamberSurface>{m_surfaceSelection.at(index)};}
+        void getSurfaceSelectionMultiple(std::vector<ChamberSurface>& out) const {
+			out.clear();
+			out.insert(out.end(), m_surfaceSelection.begin(), m_surfaceSelection.end());
+		}
 
         // raycast from point to test chamber to select a single surface
         void clickSelectSurface(QPoint point, QMatrix4x4 projection, QMatrix4x4 view);
@@ -30,6 +34,7 @@ namespace PMP
         void dragSelectEnd(QPoint end, QMatrix4x4 projection, QMatrix4x4 view);
 
         void setSelection(ChamberSurface surface, int index=0);
+        void setSelectionMultiple(std::vector<ChamberSurface>& surface);
         void moveSelection(const ChamberSurface& selection, QVector3D direction);
 
         // Testchamber to make selection from

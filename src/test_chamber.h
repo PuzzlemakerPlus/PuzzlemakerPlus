@@ -40,6 +40,7 @@ namespace PMP
 		int GetRootNodeSizeInt() const {return static_cast<int>(m_rootNodeWorldSize);};
 		const std::unordered_map<NodeID, TestChamberNode>& GetNodeMap() const {return m_nodeMap;};
 		std::optional<ChamberSurface> GetSurface(NodeID node, WALLSIDE side);
+		void GetSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WALLSIDE side);
 		std::array<QVector3D, 4> GetChamberSurfaceCorners(const ChamberSurface& surface);
 		
 		bool IsOutOOB(QVector3D coord) const;
@@ -58,13 +59,14 @@ namespace PMP
 		int SetNodeActive(NodeID node, bool active);
 
 		void GenerateSurfaces();
+		int ExtrudeSurfaceMultiple(Selector* selector);
 		void GenerateQuads(std::vector<Quad>& out) const;
 		
 		int ExtrudeSurface(Selector* selector);
 		int RecedeSurface(Selector* selector);
 
 		void makeUSI (NodeID node, UniqueSurfaceIdentifer& out, WALLSIDE side = WALLSIDE::NONE);
-
+		void calculateCenterPointsSurfaceDisplacement(const std::vector<ChamberSurface>& surfs, float dist, std::vector<QVector3D>& out);
 		// Debug
 		void PrintNodes();
 		void PrintNodesTree();

@@ -2,6 +2,7 @@
 // Implements the class that represents the test chamber itself and the octree nodes
 #include "undo.h"
 #include "selection.h"
+#include "util/debug.h"
 #include "util/3d/mesh.h" 
 #include "test_chamber.h"
 #include "test_chamber_types.h"
@@ -181,8 +182,29 @@ namespace PMP
 		ChamberSurface surf = m_surfaceMap[node][static_cast<int>(side)];
 		if(surf.side == WALLSIDE::NONE) return std::nullopt;
 		return std::optional<ChamberSurface>(surf);
-	};
+	}
 
+	//Assumes out is empty during non-recursive calls
+	void TestChamber::GetSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WALLSIDE side)
+	{
+		// Node has children
+		if (m_nodeMap[node].m_childIDs.has_value())
+		{
+			qDebug() << "Node " << node << " has children, recursing into them for surface " << static_cast<int>(side);
+			// Iterate through all children and get their surfaces
+			for (const auto& childID : m_nodeMap[node].m_childIDs.valueRead())
+			{
+				GetSurfaceChildren(out, childID, side);
+			}
+		}
+		else
+		{
+			qDebug() << "Node " << node << " has no children, adding surface " << static_cast<int>(side);
+			// No children, so this node is the leaf node
+			ChamberSurface surf = m_surfaceMap[node][static_cast<int>(side)];
+			if (surf.side != WALLSIDE::NONE) out.push_back(surf);
+		}
+	}
 
 	NodeID TestChamber::SubdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size)
 	{
@@ -350,73 +372,86 @@ namespace PMP
         std::cout << "Generated " << m_surfaceMap.size() << " Surfaces" << std::endl;
     }
 
-	// Extrude selected surface
-	// It will add TCExtrudeAction to the global UndoStack
-	int TestChamber::ExtrudeSurface(Selector* selector)
+	// Given surfaces, and distance, find points that are distance * voxel away from the surface
+	// size of the voxel is determined by the size of the surface's parent node
+	// I know this description makes no sense so I suggest reading the definition
+	void TestChamber::calculateCenterPointsSurfaceDisplacement(const std::vector<ChamberSurface>& surfs, float dist, std::vector<QVector3D>& out)
 	{
-		std::optional<NodeID> nodeSel = selector->getNodeSelection();
-		if (!nodeSel.has_value()) return 0; // No selection
+		for (const auto& s : surfs) {
+			// Get the center of the surface
+			const TestChamberNode& node = m_nodeMap.at(s.parentNode);
+			QVector3D center = node.m_center;
+			float size = node.m_size;
 
-		qDebug() << "Selection ID: " << nodeSel.value();
+			// Get the normal of the surface
+			QVector3D normal = GetWallNormal(s.side);
 
-		// Keep a copy because we'll regenerate surfaces
-		ChamberSurface tmp = selector->getSurfaceSelection().value();
-
-		QVector3D selectionMoveDir = GetWallNormal(tmp.side);
-		const TestChamberNode& selectedNode = m_nodeMap.at(nodeSel.value());
-		float dist = selectedNode.m_size;
-		QVector3D center = selectedNode.m_center;
-
-		if (SetNodeActive(nodeSel.value(), false)) {
-			std::cout << "Extruding Surface" << std::endl;
-			GenerateSurfaces();
-			selector->clearSurfaces();
-
-			QVector3D wallpos = center + selectionMoveDir * dist; // forward surface
-
-			// Build USI for the surface we extruded (the one we turned off/on)
-			UniqueSurfaceIdentifer extrudeUSI;
-			extrudeUSI.size = static_cast<uint>(selectedNode.m_size);
-			extrudeUSI.nodeCord = selectedNode.m_center;
-			extrudeUSI.side = tmp.side;
-
-			if (!IsOutOOB(wallpos)) {
-				// Reselect if in bounds
-				const NodeID node = SearchNodeWithCoord(wallpos);
-				std::optional<ChamberSurface> surf = GetSurface(node, tmp.side);
-				if (surf.has_value()) {
-					selector->setSelection(surf.value());
-
-					// Build USI for the new selection face
-					const TestChamberNode& newNode = m_nodeMap.at(node);
-					UniqueSurfaceIdentifer newSelectUSI;
-					newSelectUSI.size = static_cast<uint>(newNode.m_size);
-					newSelectUSI.nodeCord = newNode.m_center;
-					newSelectUSI.side = tmp.side;
-
-					UndoStack::instance().addAction(
-						std::make_unique<TCExtrudeAction>(this, selector, extrudeUSI, newSelectUSI));
-				} else {
-					// The selection face now has multiple surfaces that is is supposed to select
-					std::cout << "Failed to find single surface to select. This node now contains child node and need to select multiple nodes now" << std::endl;
-				}
-			} else {
-				// Extruded but could not find new side to select
-				UniqueSurfaceIdentifer noneUSI{};
-				noneUSI.size = 0;
-				noneUSI.nodeCord = QVector3D(0, 0, 0);
-				noneUSI.side = WALLSIDE::NONE;
-
-				UndoStack::instance().addAction(
-					std::make_unique<TCExtrudeAction>(this, selector, extrudeUSI, noneUSI));
-			}
-
-			return 1; // success (selection may or may not be set)
-		} else {
-			std::cout << "Failed to Extrude Surface" << std::endl;
-			selector->clearSurfaces();
-			return 0;
+			// Calculate the new position
+			QVector3D newPos = center + normal * size * dist;
+			out.push_back(newPos);
 		}
+	}
+	// Extruding multiple faces
+	int TestChamber::ExtrudeSurfaceMultiple(Selector* selector)
+	{
+		std::vector<ChamberSurface> surfSel;
+		selector->getSurfaceSelectionMultiple(surfSel);
+		if (!surfSel.size()) return 0; // No selection
+
+		// For building undoable action
+		std::vector<UniqueSurfaceIdentifer> extrudeUSIs;
+		std::vector<UniqueSurfaceIdentifer> newSelectUSIs;
+
+		std::vector<WALLSIDE> extrudeSides;
+		for (const auto& s : surfSel) {
+			qDebug() << "Extruding surface with parent node ID: " << s.parentNode << " and side: " << static_cast<int>(s.side);
+			if (s.side != WALLSIDE::NONE) {
+				extrudeSides.push_back(s.side);
+				UniqueSurfaceIdentifer extrudeUSI;
+				extrudeUSI.size = m_nodeMap.at(s.parentNode).m_size;
+				extrudeUSI.nodeCord = m_nodeMap.at(s.parentNode).m_center;
+				extrudeUSI.side = s.side;
+				extrudeUSIs.push_back(extrudeUSI);
+			}
+			else throw std::runtime_error("HOW DID YOU SELECT AIR");
+		}
+		std::vector<QVector3D> centerPoints;
+		calculateCenterPointsSurfaceDisplacement(surfSel, 1.0f, centerPoints);
+		int selectionCount = 0;
+		for (int i = 0; i < surfSel.size(); i++) {
+			SetNodeActive(surfSel[i].parentNode, false);
+			selectionCount++;
+		}
+		// Extruded all surfaces.
+		// Now we need to find new surfaces to select
+		GenerateSurfaces();
+		selector->clearSurfaces();
+		
+		for (int i = 0; i < centerPoints.size(); i++)
+		{
+			if(IsOutOOB(centerPoints[i])) continue; // Skip if out of bounds
+			// Look for a node of the same size (to find all its child nodes as well)
+			const NodeID node = SearchNodeWithCoordSize(centerPoints[i], m_nodeMap[surfSel[i].parentNode].m_size);
+			std::vector<ChamberSurface> surfs;
+			GetSurfaceChildren(surfs, node, extrudeSides[i]);
+
+			if (surfs.size() == 0) continue;
+			selector->setSelectionMultiple(surfs);
+			// For each newly selectable surface, build a USI
+			for (const auto& s : surfs) {
+				UniqueSurfaceIdentifer u;
+				// Fill from the surface's owning node; adjust field names if different.
+				u.size = static_cast<uint>(m_nodeMap.at(s.parentNode).m_size);
+				u.nodeCord = m_nodeMap.at(s.parentNode).m_center;
+				u.side = s.side;
+				newSelectUSIs.push_back(u);
+			}
+		}
+		if (newSelectUSIs.size() > 0) UndoStack::instance().addAction(std::make_unique<TCExtrudeAction>(this, selector, extrudeUSIs, newSelectUSIs));
+		else UndoStack::instance().addAction(std::make_unique<TCExtrudeAction>(this, selector, extrudeUSIs));
+
+		// If any node was able to extrude, we consider success
+		return selectionCount != 0;
 	}
 
 	// Recede selected surface
