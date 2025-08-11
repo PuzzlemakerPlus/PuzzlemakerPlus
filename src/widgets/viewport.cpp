@@ -86,14 +86,22 @@ namespace PMP
 		m_chamberIBO = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
 		m_dotVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
 		m_lineVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-		m_dotVAO.create();
-		m_dotVBO.create();
-		m_lineVAO.create();
-		m_lineVBO.create();
+		bool dot_vao = m_dotVAO.create();
+		bool dot_vbo = m_dotVBO.create();
+		bool line_vao = m_lineVAO.create();
+		bool line_vbo = m_lineVBO.create();
 
-		m_chamberVAO.create();
-		m_chamberVBO.create();
-		m_chamberIBO.create();
+		bool chamber_vao = m_chamberVAO.create();
+		bool chamber_vbo = m_chamberVBO.create();
+		bool chamber_ibo = m_chamberIBO.create();
+
+		qDebug() << "dot_vao:" << dot_vao
+			<< "dot_vbo:" << dot_vbo
+			<< "line_vao:" << line_vao
+			<< "line_vbo:" << line_vbo
+			<< "chamber_vao:" << chamber_vao
+			<< "chamber_vbo:" << chamber_vbo
+			<< "chamber_ibo:" << chamber_ibo;
 
 		const std::string_view verStr = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 		const std::string_view vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
@@ -170,6 +178,14 @@ namespace PMP
 		std::vector<Quad> quads;
 		m_testChamber->GenerateQuads(quads);
 		Mesh mesh = CreateMesh(quads);
+
+		qDebug().nospace() << "Indices: [";
+		for (size_t i = 0; i < mesh.indices.size(); ++i) {
+			qDebug().nospace() << mesh.indices[i];
+			if (i + 1 < mesh.indices.size()) qDebug().nospace() << ", ";
+		}
+		qDebug() << "]";
+
 		if (mesh.vertices.empty() || mesh.indices.empty()) throw std::runtime_error("Mesh has no vertices or indices to allocate");
 
 		if (!QOpenGLContext::currentContext()) {

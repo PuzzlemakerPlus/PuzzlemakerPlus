@@ -138,7 +138,7 @@ namespace PMP
     {
         unsigned int vertexOffset = 0;
         std::vector<GLfloat> vertexBufferData;
-        std::vector<GLint> indexBufferData;
+        std::vector<GLuint> indexBufferData;
         for (const auto& quad : quads) {
 			// Add vertices
 			//vertexBufferData.insert(vertexBufferData.end(), quad.verts.begin(), quad.verts.end());

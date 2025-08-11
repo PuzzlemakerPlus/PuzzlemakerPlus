@@ -33,7 +33,7 @@ namespace PMP
 
     struct Mesh{
         std::vector<GLfloat> vertices;
-        std::vector<GLint> indices;
+        std::vector<GLuint> indices;
     };
 
 	struct LineVertex{
