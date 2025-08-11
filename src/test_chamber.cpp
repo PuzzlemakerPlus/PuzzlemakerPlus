@@ -397,7 +397,8 @@ namespace PMP
 					UndoStack::instance().addAction(
 						std::make_unique<TCExtrudeAction>(this, selector, extrudeUSI, newSelectUSI));
 				} else {
-					throw std::runtime_error("Inbound wall has no surface generated? This shouldn't happen");
+					// The selection face now has multiple surfaces that is is supposed to select
+					std::cout << "Failed to find single surface to select. This node now contains child node and need to select multiple nodes now" << std::endl;
 				}
 			} else {
 				// Extruded but could not find new side to select

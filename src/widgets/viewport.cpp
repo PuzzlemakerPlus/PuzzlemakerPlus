@@ -157,7 +157,6 @@ namespace PMP
 	{
 		loadLines({{ray.origin, colStart}, {ray.origin + ray.direction * length, colEnd}});
 	}
-
 	void Viewport::loadSelectionLines()
 	{
 		std::vector<QVector3D> corners;
@@ -171,55 +170,24 @@ namespace PMP
 	// Generate Test Chamber Mesh
 	void Viewport::loadTestChamberMesh()
 	{
-		std::cout << "Loading test chamber mesh..." << std::endl;
+		qDebug() << "Loading test chamber mesh...";
 		Q_ASSERT(m_testChamber);
 		if(!m_testChamber) throw std::runtime_error("Can not load test chamber mesh without setting test chamber");
 		
 		std::vector<Quad> quads;
 		m_testChamber->GenerateQuads(quads);
 		Mesh mesh = CreateMesh(quads);
-
-		qDebug().nospace() << "Indices: [";
-		for (size_t i = 0; i < mesh.indices.size(); ++i) {
-			qDebug().nospace() << mesh.indices[i];
-			if (i + 1 < mesh.indices.size()) qDebug().nospace() << ", ";
-		}
-		qDebug() << "]";
-
 		if (mesh.vertices.empty() || mesh.indices.empty()) throw std::runtime_error("Mesh has no vertices or indices to allocate");
-
-		if (!QOpenGLContext::currentContext()) {
-			std::cout << "No OpenGL context! As expected" << std::endl;
-		}
-		else {
-			std::cout << "OpenGL context is available." << std::endl;
-		}
 		this->makeCurrent();
-		if (!QOpenGLContext::currentContext()) {
-			std::cout << "No OpenGL context! Can't safely check isCreated." << std::endl;
-			return;
-		}
-		else {
-			 std::cout << "OpenGL context is available." << std::endl;
-		}
-
 		m_chamberVAO.bind();
-		//qDebug() << "Creating m_chamberVBO";
 		m_chamberVBO.bind();
-		//qDebug() << "Creating m_chamberIBO";
 		m_chamberIBO.bind();
-
 		// Disabling for now until we are more certain it's what we want - Kelsey
 		//m_chamberVBO.setUsagePattern(QOpenGLBuffer::StaticDraw);
-		// I think this is correct
-		//m_chamberVBO.setUsagePattern(QOpenGLBuffer::DynamicDraw);
-		//qDebug() << "Allocating m_chamberVBO";
-		m_chamberVBO.allocate(mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex)); // segfault here makse no sense
-
-		//qDebug() << "Allocating m_chamberIBO";
+		
+		m_chamberVBO.allocate(mesh.vertices.data(), mesh.vertices.size() * sizeof(GLfloat)); // segfault here makse no sense
 		m_chamberIBO.allocate(mesh.indices.data(), mesh.indices.size() * sizeof(unsigned int));
 		
-
 		int vertexPosLocation = m_wallShader.attributeLocation("aPos");
 		m_wallShader.enableAttributeArray(vertexPosLocation);
 		m_wallShader.setAttributeBuffer(vertexPosLocation, GL_FLOAT, 0, 3, 6 * sizeof(GLfloat));
@@ -228,9 +196,7 @@ namespace PMP
 		m_wallShader.enableAttributeArray(vertexNormalLocation);
 		m_wallShader.setAttributeBuffer(vertexNormalLocation, GL_FLOAT, 3 * sizeof(GLfloat), 3, 6 * sizeof(GLfloat));
 
-		// must release VAO before index/vertex buffers, otherwise they get unbound from the VAO too!
-		m_chamberVAO.release();
-
+		m_chamberVAO.release(); // must release VAO before index/vertex buffers, otherwise they get unbound from the VAO too!
 		m_chamberVBO.release(); // not necessary?
 		m_chamberIBO.release(); // not necessary?
 		this->doneCurrent();
@@ -277,21 +243,12 @@ namespace PMP
 		m_wallShader.setUniformValue("u_view", view);
 		m_wallShader.setUniformValue("u_proj", m_projection);
 		m_wallShader.setUniformValue("u_fogColor", m_fogCol);
-		if(m_fog)
-		{
-			m_wallShader.setUniformValue("u_fogStart", m_fogStart);
-		}
-		else {
-			m_wallShader.setUniformValue("u_fogStart", m_fogEnd);
-		}
+		if(m_fog) m_wallShader.setUniformValue("u_fogStart", m_fogStart);
+		else m_wallShader.setUniformValue("u_fogStart", m_fogEnd);
 		m_wallShader.setUniformValue("u_fogEnd", m_fogEnd);
 
 		m_chamberVAO.bind();
 		glDrawElements(GL_TRIANGLES, m_indicesCount, GL_UNSIGNED_INT, 0);
-		GLenum err;
-		while ((err = glGetError()) != GL_NO_ERROR) {
-			qDebug() << "OpenGL error: " << QString::number(err, 16);
-		}
 		m_chamberVAO.release();
 		m_wallShader.release();
 	}
@@ -299,8 +256,6 @@ namespace PMP
 // QT Functions
 	void Viewport::paintGL()
 	{
-		
-		// Very temporary rendering code
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 		glEnable( GL_DEPTH_TEST );
 		glEnable( GL_CULL_FACE );
@@ -311,6 +266,7 @@ namespace PMP
 		drawDots(view);
 		drawLines(view);
 		drawTestChamber(view);
+
 	}
 
 	void Viewport::resizeGL( int width, int height )
@@ -322,7 +278,6 @@ namespace PMP
 		Q_ASSERT(m_selector);
 		// Selector needs to be aware of the viewport size.
 		m_selector->setViewPortDim(width, height);
-		
 	}
 
 	void Viewport::keyPressEvent(QKeyEvent* event)

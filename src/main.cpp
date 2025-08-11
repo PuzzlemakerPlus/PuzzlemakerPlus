@@ -58,8 +58,6 @@ int main(int argc, char* argv[])
     selector.setTestChamber(&tc);
     mainViewport.setTestChamber(&tc);
     mainViewport.loadTestChamberMesh();
-    
-    
 
     //creates all the buttons for the palette Right now most of the data for each element is junk for demo
     PMP::Palette Palette(&mainViewport);
