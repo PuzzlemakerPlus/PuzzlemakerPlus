@@ -17,4 +17,17 @@ namespace PMP
         // This is safe because we check for viewport existence in instance()
         m_viewport->loadDots({ point });
     }
+    void Debugger::drawPoints(std::vector<QVector3D> points)
+    {
+        // This is safe because we check for viewport existence in instance()
+        m_viewport->loadDots(points);
+    }
+    void Debugger::addDebugPoint(QVector3D point)
+    {
+        m_debugPoints.push_back(point);
+    }
+    void Debugger::drawDebugPoints()
+    {
+        m_viewport->loadDots(m_debugPoints);
+    }
 }

@@ -15,6 +15,7 @@
 
 #include "viewport.h"
 #include "../selection.h"
+#include "../util/debug.h"
 #include "../util/3d/mesh.h"
 
 namespace PMP
@@ -300,7 +301,7 @@ namespace PMP
 		}
 		else if (event->key() == Qt::Key_Equal)
 		{
-			if(m_testChamber->ExtrudeSurfaceMultiple(m_selector))
+			if(m_testChamber->ExtrudeSurfaces(m_selector))
 			{
 				// Prepare to draw the new chamber and the new selection
 				loadTestChamberMesh();
@@ -309,7 +310,7 @@ namespace PMP
 		}
 		else if (event->key() == Qt::Key_Minus)
 		{
-			if(m_testChamber->RecedeSurface(m_selector))
+			if(m_testChamber->RecedeSurfaces(m_selector))
 			{
 				// Prepare to draw the new chamber and the new selection
 				loadTestChamberMesh();
@@ -330,7 +331,6 @@ namespace PMP
 				height(),
 				this->mapFromGlobal(QCursor::pos()), 
 				m_projection, viewMatrix));
-
 		if ( event->button() == Qt::MouseButton::RightButton )
 		{
 			if(rayCastChamber.has_value())
@@ -364,7 +364,30 @@ namespace PMP
 	}
 	void Viewport::mouseReleaseEvent(QMouseEvent* event)
 	{
-		if ( event->button() == Qt::MouseButton::RightButton )
+		QVector2D newPos = QVector2D(event->position());
+		bool mouseMoved = (newPos - m_lastMouseClickPos).length() > 1;
+		if (event->modifiers() & Qt::ShiftModifier)
+		{
+			if (event->button() == Qt::MouseButton::LeftButton)
+			{
+				//Shift left click release
+				if (!mouseMoved)
+				{
+					//Selection
+					QMatrix4x4 viewMatrix;
+					getViewMatrix(viewMatrix);
+					Q_ASSERT(m_selector);
+					m_selector->clickSelectSurfaceAdd(this->mapFromGlobal(QCursor::pos()), m_projection, viewMatrix);
+
+					std::vector<QVector3D> corners;
+					m_selector->getSelectionSurfaceCorners(corners);
+					std::vector<LineVertex> lines;
+					MultiQuadCornersToLineWireframe(corners, lines);
+					loadLines(lines);
+				}
+			}
+		}
+		else if ( event->button() == Qt::MouseButton::RightButton )
 		{
 			if(m_isPanning)
 			{
@@ -384,8 +407,7 @@ namespace PMP
 				m_isDragging = false;
 			}
 			// Surface Selection
-			QVector2D newPos = QVector2D(event->position());
-			if((newPos - m_lastMouseClickPos).length()<1)
+			if(!mouseMoved)
 			{
 				//Selection
 				QMatrix4x4 viewMatrix;

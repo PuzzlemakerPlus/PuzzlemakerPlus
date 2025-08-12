@@ -59,10 +59,10 @@ namespace PMP
 		int SetNodeActive(NodeID node, bool active);
 
 		void GenerateSurfaces();
-		int ExtrudeSurfaceMultiple(Selector* selector);
 		void GenerateQuads(std::vector<Quad>& out) const;
 		
-		int ExtrudeSurface(Selector* selector);
+		int ExtrudeSurfaces(Selector* selector);
+		int RecedeSurfaces(Selector* selector);
 		int RecedeSurface(Selector* selector);
 
 		void makeUSI (NodeID node, UniqueSurfaceIdentifer& out, WALLSIDE side = WALLSIDE::NONE);

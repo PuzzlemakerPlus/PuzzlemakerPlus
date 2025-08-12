@@ -39,8 +39,11 @@ namespace PMP
 		{
             m_surfaceSelection.push_back(sel);
 		}
-    };
-
+    }
+    void Selector::addSelection(ChamberSurface surface)
+    {
+        m_surfaceSelection.push_back(surface);
+    }
     // Select single surface with ray cast
     void Selector::clickSelectSurface(QPoint point, QMatrix4x4 projection, QMatrix4x4 view)
     {
@@ -52,6 +55,19 @@ namespace PMP
             {
                 m_surfaceSelection.clear();
                 setSelection(cast->surface, 0);
+            }
+        }
+    }
+    // Select single surface with ray cast
+    void Selector::clickSelectSurfaceAdd(QPoint point, QMatrix4x4 projection, QMatrix4x4 view)
+    {
+        Ray ray = ScreenPosToWorldRay(m_viewPortWidth, m_viewPortHeight, point, projection, view);
+        if (m_testChamber)
+        {
+            std::optional<RayHitResult> cast = m_testChamber->RayCast(ray);
+            if (cast.has_value())
+            {
+                addSelection(cast->surface);
             }
         }
     }

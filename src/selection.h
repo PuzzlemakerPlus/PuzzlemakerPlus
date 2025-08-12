@@ -28,6 +28,7 @@ namespace PMP
 
         // raycast from point to test chamber to select a single surface
         void clickSelectSurface(QPoint point, QMatrix4x4 projection, QMatrix4x4 view);
+        void clickSelectSurfaceAdd(QPoint point, QMatrix4x4 projection, QMatrix4x4 view);
         // raycast from point to test chamber to select a single node
         void clickSelectNode(QPoint point, QMatrix4x4 projection, QMatrix4x4 view);
         void dragSelectStart(QPoint start, QMatrix4x4 projection, QMatrix4x4 view);
@@ -35,7 +36,7 @@ namespace PMP
 
         void setSelection(ChamberSurface surface, int index=0);
         void setSelectionMultiple(std::vector<ChamberSurface>& surface);
-        void moveSelection(const ChamberSurface& selection, QVector3D direction);
+        void addSelection(ChamberSurface surface);
 
         // Testchamber to make selection from
         void setTestChamber(TestChamber* tc) {m_testChamber = tc;};
