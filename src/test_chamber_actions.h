@@ -43,12 +43,6 @@ namespace PMP
             std::vector<UniqueSurfaceIdentifer> extrudeUSIs)
             : TCSurfaceAction(tc, sel), m_extrudeUSIs(std::move(extrudeUSIs)){}
 
-        TCExtrudeAction(TestChamber* tc,
-            Selector* sel,
-            UniqueSurfaceIdentifer extrudeUSI,
-            UniqueSurfaceIdentifer newSelectUSI)
-            : TCExtrudeAction(tc, sel, std::vector<UniqueSurfaceIdentifer>{std::move(extrudeUSI)}, std::vector<UniqueSurfaceIdentifer>{std::move(newSelectUSI)}){}
-
         int undo() override;
         int redo() override;
 
@@ -73,10 +67,12 @@ namespace PMP
             Selector* sel,
             std::vector<UniqueSurfaceIdentifer> extrudeUSIs)
             : TCSurfaceAction(tc, sel), m_recedeUSIs(std::move(extrudeUSIs)){}
+
+        int undo() override;
+        int redo() override;
+
     private:
         std::vector<UniqueSurfaceIdentifer> m_recedeUSIs;
         std::vector<UniqueSurfaceIdentifer> m_newSelectUSIs;
-        int undo() override;
-        int redo() override;
     };
 }
