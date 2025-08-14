@@ -364,7 +364,7 @@ namespace PMP
 				case Qt::MouseButton::LeftButton: 
 				case Qt::MouseButton::MiddleButton: //End Orbiting/Dragging
 					m_isOrbiting = false;
-					if (m_isPanning) m_isDragging = false; // <- Is this correct?
+					m_isDragging = false;
 					event->accept();
 					break;
 				case Qt::MouseButton::RightButton: //End Panning
@@ -382,6 +382,8 @@ namespace PMP
 			{
 			case Qt::MouseButton::LeftButton:
 			case Qt::MouseButton::MiddleButton: //Click Select Surface
+				m_isOrbiting = false;
+				m_isDragging = false;
 				getViewMatrix(viewMatrix);
 				Q_ASSERT(m_selector);
 				// Shift click to add selection

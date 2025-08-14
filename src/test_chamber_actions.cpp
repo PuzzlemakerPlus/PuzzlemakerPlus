@@ -19,6 +19,7 @@ namespace PMP
                 m_selector->addSelection(surf.value());
             }
         }
+        qDebug() << "Undo extrude action, added " << m_extrudeUSIs.size() << " surfaces to selection.";
         return 1;
     }
     int TCExtrudeAction::redo()
@@ -40,6 +41,7 @@ namespace PMP
                 m_selector->addSelection(surf.value());
             }
         }
+        qDebug() << "Redo extrude action, added " << m_newSelectUSIs.size() << " surfaces to selection.";
         return 1;
     }
     int TCRecedeAction::undo()
@@ -60,6 +62,7 @@ namespace PMP
                 m_selector->addSelection(surf.value());
             }
         }
+        qDebug() << "Undo recede action, added " << m_recedeUSIs.size() << " surfaces to selection.";
         return 1;
     }
     int TCRecedeAction::redo()
@@ -81,6 +84,7 @@ namespace PMP
                 m_selector->addSelection(surf.value());
             }
         }
+        qDebug() << "Redo recede action, added " << m_recedeUSIs.size() << " surfaces to selection.";
         return 1;
     }
 }

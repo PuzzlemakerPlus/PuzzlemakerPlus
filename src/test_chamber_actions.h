@@ -74,7 +74,6 @@ namespace PMP
             std::vector<UniqueSurfaceIdentifer> extrudeUSIs)
             : TCSurfaceAction(tc, sel), m_recedeUSIs(std::move(extrudeUSIs)){}
     private:
-
         std::vector<UniqueSurfaceIdentifer> m_recedeUSIs;
         std::vector<UniqueSurfaceIdentifer> m_newSelectUSIs;
         int undo() override;
