@@ -475,16 +475,19 @@ namespace PMP
 		selector->clearSurfaces();
 		for (int i = 0; i < centerPoints.size(); i++)
 		{
-			std::optional<ChamberSurface>  surf = getSurface(searchNodeWithCoord(centerPoints[i]), extrudeSides[i]);
+			NodeID node = searchNodeWithCoord(centerPoints[i]);
+			std::optional<ChamberSurface> surf = getSurface(node, extrudeSides[i]);
 			if (surf.has_value())
 			{
 				// For each newly selectable surface, build a USI
 				const auto& s = surf.value();
 				selector->addSelection(s);
-				UniqueSurfaceIdentifer usi;
-				makeUSI(s.parentNode, usi, s.side);
-				newSelectUSIs.push_back(usi);
+				
 			}
+			// Recede can completely remove surfaces. Therefore we always record the newSelectUSI 
+			UniqueSurfaceIdentifer usi;
+			makeUSI(node, usi, extrudeSides[i]);
+			newSelectUSIs.push_back(usi);
 		}
 		
 		if (newSelectUSIs.size() > 0) UndoStack::instance().addAction(std::make_unique<TCRecedeAction>(this, selector, recedeUSIs, newSelectUSIs));

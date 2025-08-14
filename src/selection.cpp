@@ -50,6 +50,22 @@ namespace PMP
         if (!m_testChamber) return;
         std::optional<RayHitResult> cast = m_testChamber->rayCast(ray);
         if (!cast.has_value()) return;
-        addSelection(cast->surface);
+        if (!hasSelection(cast->surface)) addSelection(cast->surface);
+        else {
+			// If already selected, remove it from selection
+			m_surfaceSelection.erase(std::remove_if(m_surfaceSelection.begin(), m_surfaceSelection.end(),
+				[&cast](const ChamberSurface& sel) {
+					return sel.parentNode == cast->surface.parentNode && sel.side == cast->surface.side;
+				}), m_surfaceSelection.end());
+		}
+    }
+    bool Selector::hasSelection(ChamberSurface surface) const
+    {
+        for(auto const& sel : m_surfaceSelection)
+		{
+			if (sel.parentNode == surface.parentNode && sel.side == surface.side)
+				return true;
+		}
+        return false;
     }
 }

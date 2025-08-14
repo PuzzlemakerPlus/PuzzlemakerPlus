@@ -31,6 +31,7 @@ namespace PMP
         void clickSelectSurface(QPoint point, QMatrix4x4 projection, QMatrix4x4 view);
         // Add single surface to selection with ray cast
         void clickSelectSurfaceAdd(QPoint point, QMatrix4x4 projection, QMatrix4x4 view);
+        bool hasSelection(ChamberSurface surface) const;
         // For selecting multiple surfaces. Preserves previous selection
         void addSelection(ChamberSurface surface) { m_surfaceSelection.push_back(surface); }
         // For selecting multiple surfaces. Preserves previous selection
