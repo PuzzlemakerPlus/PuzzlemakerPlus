@@ -16,16 +16,16 @@ void printArray(const std::array<PMP::NodeID, N>& arr) {
 
 void addChildNodesAndPrint(PMP::TestChamber& tc, PMP::NodeID parentID)
     {
-        tc.CreateChildrenForNode(parentID);
+        tc.createChildrenOfNode(parentID);
         std::cout << "Added Children to Node " << parentID << std::endl;
-        tc.PrintNodesTree();
+        tc.printNodesTree();
     }
 
 void removeChildNodesAndPrint(PMP::TestChamber& tc, PMP::NodeID parentID)
     {
-        tc.DestroyChildrenForNode(parentID);
+        tc.destroyChildrenOfNode(parentID);
         std::cout << "Removed Children of Node " << parentID << std::endl;
-        tc.PrintNodesTree();
+        tc.printNodesTree();
     }
 
 
@@ -46,7 +46,7 @@ void RunRandomNodeSearches(PMP::TestChamber& tc, int numTests = 5)
         float y = dist(gen);
         float z = dist(gen);
 
-        PMP::NodeID id = tc.SearchNodeWithCoord({x, y, z});
+        PMP::NodeID id = tc.searchNodeWithCoord({x, y, z});
         std::cout << "Found Node that contains (" << x << "," << y << "," << z << "): " << id << std::endl;
     }
 
@@ -85,7 +85,7 @@ int main(){
 
 	addChildNodesAndPrint(tc, 54);
 
-	tc.TestChildNodeGeneration();
+	tc.testChildNodeGeneration();
 
 	RunRandomNodeSearches(tc, 100);
     return 0;

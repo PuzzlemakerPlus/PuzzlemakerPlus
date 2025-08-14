@@ -15,10 +15,9 @@ namespace PMP
     {
         public:
         Selector(){}
-        // returns 4 corners of all selected surfaces
+        // Returns 4 corners of all selected surfaces
         void getSelectionSurfaceCorners(std::vector<QVector3D>& out);
-        // returns 8 corners of all selected nodes
-        void getSelectionNodeVerts(std::vector<Vertex>& out);
+
         std::optional<NodeID> getNodeSelection(int index=0) const {return m_surfaceSelection.size() <= index ? std::nullopt : std::optional<NodeID>{m_surfaceSelection.at(index).parentNode};}
         std::optional<ChamberSurface> getSurfaceSelection(int index=0) const {return m_surfaceSelection.size() <= index ? std::nullopt : std::optional<ChamberSurface>{m_surfaceSelection.at(index)};}
         void getSurfaceSelectionMultiple(std::vector<ChamberSurface>& out) const {
@@ -26,26 +25,25 @@ namespace PMP
 			out.insert(out.end(), m_surfaceSelection.begin(), m_surfaceSelection.end());
 		}
 
-        // raycast from point to test chamber to select a single surface
+        // Select single surface with ray cast
         void clickSelectSurface(QPoint point, QMatrix4x4 projection, QMatrix4x4 view);
+        // Add single surface to selection with ray cast
         void clickSelectSurfaceAdd(QPoint point, QMatrix4x4 projection, QMatrix4x4 view);
-        // raycast from point to test chamber to select a single node
-        void clickSelectNode(QPoint point, QMatrix4x4 projection, QMatrix4x4 view);
-        void dragSelectStart(QPoint start, QMatrix4x4 projection, QMatrix4x4 view);
-        void dragSelectEnd(QPoint end, QMatrix4x4 projection, QMatrix4x4 view);
-
-        void setSelection(ChamberSurface surface, int index=0);
+        // For selecting multiple surfaces. Preserves previous selection
+        void addSelection(ChamberSurface surface) { m_surfaceSelection.push_back(surface); }
+        // Select single surface
+        void setSelectionSingle(ChamberSurface surface);
+        // Select multiple surfaces, clears previous selection
         void setSelectionMultiple(std::vector<ChamberSurface>& surface);
-        void addSelection(ChamberSurface surface);
 
         // Testchamber to make selection from
         void setTestChamber(TestChamber* tc) {m_testChamber = tc;};
         void setViewPortDim(int width, int height) {m_viewPortWidth = width; m_viewPortHeight = height;};
-        void clearSurfaces();
+        void clearSurfaces() { m_surfaceSelection.clear(); };
         private:
-        TestChamber* m_testChamber;
-        int m_viewPortWidth;
-        int m_viewPortHeight;
+        TestChamber* m_testChamber = nullptr;
+        int m_viewPortWidth = 0;
+        int m_viewPortHeight = 0;
         //m_selection
         std::vector<ChamberSurface> m_surfaceSelection;
     };

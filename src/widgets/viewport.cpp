@@ -1,22 +1,21 @@
 // viewport.cpp
 // Implements the main editor viewport as an extension of QOpenGLWidget
 #pragma once
-#include <stdexcept>
 #include <vector>
-#include "../undo.h"
-//#include <GL/gl.h> //
+#include <QThread>
+#include <iostream>
+#include <stdexcept>
 #include <qmatrix4x4.h>
 #include <qnamespace.h>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <qvectornd.h>
-#include <QThread>
-#include <iostream>
 
-#include "viewport.h"
+#include "../undo.h"
 #include "../selection.h"
 #include "../util/debug.h"
 #include "../util/3d/mesh.h"
+#include "viewport.h"
 
 namespace PMP
 {
@@ -41,8 +40,6 @@ namespace PMP
 		glClearColor( 0.803, 0.815, 0.807, 1.0f );
 		loadShaders();
 		createGraphicsObjects();
-
-		
 		std::cout << "ViewportGL initialized." << std::endl;
 	}
 
@@ -91,18 +88,9 @@ namespace PMP
 		bool dot_vbo = m_dotVBO.create();
 		bool line_vao = m_lineVAO.create();
 		bool line_vbo = m_lineVBO.create();
-
 		bool chamber_vao = m_chamberVAO.create();
 		bool chamber_vbo = m_chamberVBO.create();
 		bool chamber_ibo = m_chamberIBO.create();
-
-		qDebug() << "dot_vao:" << dot_vao
-			<< "dot_vbo:" << dot_vbo
-			<< "line_vao:" << line_vao
-			<< "line_vbo:" << line_vbo
-			<< "chamber_vao:" << chamber_vao
-			<< "chamber_vbo:" << chamber_vbo
-			<< "chamber_ibo:" << chamber_ibo;
 
 		const std::string_view verStr = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 		const std::string_view vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
@@ -131,7 +119,6 @@ namespace PMP
 
 		this->doneCurrent();
 	}
-	// needs at least 2 verts to form a line
 	void Viewport::loadLines(std::vector<LineVertex> vertices)
 	{
 		m_lineVertCount = vertices.size();
@@ -160,14 +147,13 @@ namespace PMP
 	}
 	void Viewport::loadSelectionLines()
 	{
-		std::vector<QVector3D> corners;
 		Q_ASSERT(m_selector);
+		std::vector<QVector3D> corners;
 		m_selector->getSelectionSurfaceCorners(corners);
 		std::vector<LineVertex> lines;
 		MultiQuadCornersToLineWireframe(corners,lines);
 		loadLines(lines);
 	}
-
 	// Generate Test Chamber Mesh
 	void Viewport::loadTestChamberMesh()
 	{
@@ -176,7 +162,7 @@ namespace PMP
 		if(!m_testChamber) throw std::runtime_error("Can not load test chamber mesh without setting test chamber");
 		
 		std::vector<Quad> quads;
-		m_testChamber->GenerateQuads(quads);
+		m_testChamber->generateQuads(quads);
 		Mesh mesh = CreateMesh(quads);
 		if (mesh.vertices.empty() || mesh.indices.empty()) throw std::runtime_error("Mesh has no vertices or indices to allocate");
 		this->makeCurrent();
@@ -267,161 +253,146 @@ namespace PMP
 		drawDots(view);
 		drawLines(view);
 		drawTestChamber(view);
-
 	}
 
 	void Viewport::resizeGL( int width, int height )
 	{
+		Q_ASSERT(m_selector);
 		const float aspect = (float)width / (float)(height > 0 ? height : 1);
 		m_projection.setToIdentity();
 		// Source near clip plane value, might change later
 		m_projection.perspective(m_fov, aspect, 7.0f, 32767.0f);
-		Q_ASSERT(m_selector);
 		// Selector needs to be aware of the viewport size.
 		m_selector->setViewPortDim(width, height);
+	}
+
+	void Viewport::reloadChamberMeshAndSelection()
+	{
+		loadTestChamberMesh();
+		loadSelectionLines();
 	}
 
 	void Viewport::keyPressEvent(QKeyEvent* event)
 	{
 		Q_ASSERT(m_selector);
 		Q_ASSERT(m_testChamber);
+		bool actionPerformed = false;
 		if (event->matches(QKeySequence::Undo)) {
 			UndoStack::instance().undo();
-			loadTestChamberMesh();
-			loadSelectionLines();
+			actionPerformed = true;
 		}
 		else if (event->matches(QKeySequence::Redo)) {
 			UndoStack::instance().redo();
-			loadTestChamberMesh();
-			loadSelectionLines();
+			actionPerformed = true;
 		}
-		else if (event->key() == Qt::Key_F)
-		{
-			m_fog = !m_fog;
-		}
-		else if (event->key() == Qt::Key_Equal)
-		{
-			if(m_testChamber->ExtrudeSurfaces(m_selector))
-			{
-				// Prepare to draw the new chamber and the new selection
-				loadTestChamberMesh();
-				loadSelectionLines();
+		else {
+			switch (event->key()) {
+			case Qt::Key_F:
+				m_fog = !m_fog; // toggle fog. No need to reload chamber mesh and selection
+				event->accept();
+				update();
+				break;
+			case Qt::Key_Equal: //Extrude surface
+				actionPerformed = m_testChamber->extrudeSurfaces(m_selector);
+				break;
+			case Qt::Key_Minus: //Recede surface
+				actionPerformed = m_testChamber->recedeSurfaces(m_selector);
+				break;
+			default:
+				QWidget::keyPressEvent(event);
+				break;
 			}
 		}
-		else if (event->key() == Qt::Key_Minus)
+		if (actionPerformed)
 		{
-			if(m_testChamber->RecedeSurfaces(m_selector))
-			{
-				// Prepare to draw the new chamber and the new selection
-				loadTestChamberMesh();
-				loadSelectionLines();
-			}
+			event->accept();
+			reloadChamberMeshAndSelection();
+			update();
 		}
-		update();
 	}
+
 	void Viewport::mousePressEvent(QMouseEvent* event)
 	{
-		
+		Q_ASSERT(m_testChamber);
 		QMatrix4x4 viewMatrix;
 		getViewMatrix(viewMatrix);
-		Q_ASSERT(m_testChamber);
-		std::optional<RayHitResult> rayCastChamber = m_testChamber->RayCast(
-			ScreenPosToWorldRay(
-				width(),
-				height(),
-				this->mapFromGlobal(QCursor::pos()), 
-				m_projection, viewMatrix));
-		if ( event->button() == Qt::MouseButton::RightButton )
-		{
-			if(rayCastChamber.has_value())
-			{
-				// Right click on surface/object
-			}
-			else {
-				m_isPanning = true;
-			}
-			m_lastMouseClickPos = QVector2D(event->position());
-			event->accept();
-		}
-		else if ( event->button() == Qt::MouseButton::LeftButton ||
-				  event->button() == Qt::MouseButton::MiddleButton )
-		{
-			//Needs to be called after mainViewport.show()
-			if(rayCastChamber.has_value())
-			{
-				//Start dragging
-				m_isDragging = true;
-			}
-			else {
-				//Orbit if mouse click outside test chamber
-				m_isOrbiting = true;
-			}
-			m_lastMouseClickPos = QVector2D(event->position());
-			event->accept();
-		}
+		std::optional<RayHitResult> rayCastChamber = m_testChamber->rayCast(screenPosToWorldRay(width(),height(),this->mapFromGlobal(QCursor::pos()), m_projection, viewMatrix));
 
+		switch (event->button())
+		{
+			case Qt::MouseButton::LeftButton:
+			case  Qt::MouseButton::MiddleButton:
+				//Needs to be called after mainViewport.show()
+				if (rayCastChamber.has_value())
+				{
+					//Start dragging
+					m_isDragging = true;
+				}
+				else {
+					//Orbit if mouse click outside test chamber
+					m_isOrbiting = true;
+				}
+				m_lastMouseClickPos = QVector2D(event->position());
+				event->accept();
+				break;
+			case Qt::MouseButton::RightButton:
+				if (rayCastChamber.has_value())
+				{
+					// Right click on surface/object
+				}
+				else {
+					m_isPanning = true;
+				}
+				m_lastMouseClickPos = QVector2D(event->position());
+				event->accept();
+				break;
+			default:
+				break;
+		}
 		m_lastMousePos = QVector2D(event->position());
 	}
 	void Viewport::mouseReleaseEvent(QMouseEvent* event)
 	{
 		QVector2D newPos = QVector2D(event->position());
-		bool mouseMoved = (newPos - m_lastMouseClickPos).length() > 1;
-		if (event->modifiers() & Qt::ShiftModifier)
+		// detects whether the mouse moved since last frame.
+		// used to determine click vs drag
+		// so the 'click' actions are run when the mouse is released without moving it
+		if ((newPos - m_lastMouseClickPos).length() > 1)
 		{
-			if (event->button() == Qt::MouseButton::LeftButton)
+			switch (event->button())
 			{
-				//Shift left click release
-				if (!mouseMoved)
-				{
-					//Selection
-					QMatrix4x4 viewMatrix;
-					getViewMatrix(viewMatrix);
-					Q_ASSERT(m_selector);
-					m_selector->clickSelectSurfaceAdd(this->mapFromGlobal(QCursor::pos()), m_projection, viewMatrix);
-
-					std::vector<QVector3D> corners;
-					m_selector->getSelectionSurfaceCorners(corners);
-					std::vector<LineVertex> lines;
-					MultiQuadCornersToLineWireframe(corners, lines);
-					loadLines(lines);
-				}
+				case Qt::MouseButton::LeftButton: 
+				case Qt::MouseButton::MiddleButton: //End Orbiting/Dragging
+					m_isOrbiting = false;
+					if (m_isPanning) m_isDragging = false; // <- Is this correct?
+					event->accept();
+					break;
+				case Qt::MouseButton::RightButton: //End Panning
+					m_isPanning = false;
+					event->accept();
+					break;
+				default:
+					break;
 			}
 		}
-		else if ( event->button() == Qt::MouseButton::RightButton )
+		else //Mouse did not move
 		{
-			if(m_isPanning)
+			QMatrix4x4 viewMatrix;
+			switch (event->button())
 			{
-				m_isPanning = false;
-			}
-			event->accept();
-		}
-		else if ( event->button() == Qt::MouseButton::LeftButton ||
-				  event->button() == Qt::MouseButton::MiddleButton )
-		{
-			if(m_isOrbiting)
-			{
-				m_isOrbiting = false;
-			}
-			if(m_isPanning)
-			{
-				m_isDragging = false;
-			}
-			// Surface Selection
-			if(!mouseMoved)
-			{
-				//Selection
-				QMatrix4x4 viewMatrix;
+			case Qt::MouseButton::LeftButton:
+			case Qt::MouseButton::MiddleButton: //Click Select Surface
 				getViewMatrix(viewMatrix);
 				Q_ASSERT(m_selector);
-				m_selector->clickSelectSurface(this->mapFromGlobal(QCursor::pos()), m_projection, viewMatrix);
-
-				std::vector<QVector3D> corners;
-				m_selector->getSelectionSurfaceCorners(corners);
-				std::vector<LineVertex> lines;
-				MultiQuadCornersToLineWireframe(corners,lines);
-				loadLines(lines);
+				// Shift click to add selection
+				if (event->modifiers() & Qt::ShiftModifier) m_selector->clickSelectSurfaceAdd(this->mapFromGlobal(QCursor::pos()), m_projection, viewMatrix);
+				else m_selector->clickSelectSurface(this->mapFromGlobal(QCursor::pos()), m_projection, viewMatrix);
+				loadSelectionLines();
+				event->accept();
+				break;
+			default:
+				break;
 			}
-			event->accept();
 		}
 		update();
 	}
@@ -430,10 +401,8 @@ namespace PMP
 		float prev_dist = m_cameraDistance;
 		m_cameraDistance -= event->angleDelta().y() / 2.0f; // todo make this customizable
 
-		if ( m_cameraDistance < cameraDistMin )
-			m_cameraDistance = cameraDistMin;
-		else if ( m_cameraDistance > cameraDistMax )
-			m_cameraDistance = cameraDistMax;
+		if ( m_cameraDistance < cameraDistMin ) m_cameraDistance = cameraDistMin;
+		else if ( m_cameraDistance > cameraDistMax ) m_cameraDistance = cameraDistMax;
 		
 		if(prev_dist - m_cameraDistance != 0) update();
 		event->accept();

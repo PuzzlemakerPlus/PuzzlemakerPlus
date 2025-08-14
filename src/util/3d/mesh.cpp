@@ -10,10 +10,10 @@ namespace PMP
 
     bool WallFacesDirection(WALLSIDE side, const QVector3D& dir) 
     {
-        QVector3D normal = GetWallNormal(side);
+        QVector3D normal = getWallNormal(side);
         return QVector3D::dotProduct(normal, dir) < 0.0f;
     }
-    QVector3D GetWallNormal(WALLSIDE side)
+    QVector3D getWallNormal(WALLSIDE side)
     {
 		using enum WALLSIDE;
         switch (side) {
@@ -26,7 +26,7 @@ namespace PMP
             default: return QVector3D(0, 0, 0); // default fallback
         }
     }
-    QVector3D GetWallUp(WALLSIDE side) {
+    QVector3D getWallUp(WALLSIDE side) {
         using enum WALLSIDE;
         switch (side) {
             case POS_X: return QVector3D(0, 1, 0); // +Y is up on +X face
@@ -49,7 +49,7 @@ namespace PMP
         const QVector3D p7(0.0f, size, size);
 
         std::array<QVector3D, 4> quad;
-        QVector3D normal = GetWallNormal(side);
+        QVector3D normal = getWallNormal(side);
 
         switch (side) {
             case WALLSIDE::NEG_Z: // Bottom

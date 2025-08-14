@@ -11,7 +11,6 @@ namespace PMP
         }
         return instance;
     }
-
     void Debugger::drawPoint(QVector3D point)
     {
         // This is safe because we check for viewport existence in instance()

@@ -22,21 +22,17 @@
 
 namespace PMP
 {
-	QVector3D GetWallFaceCenter(QVector3D center, unsigned int size, QVector3D normal)
+	QVector3D getWallFaceCenter(QVector3D center, unsigned int size, QVector3D normal)
 	{
 		return center + size/2 * -normal;
 	}
-
-	// TestChamber function implementations
-	// ==============================================
-	// TODO: This has been modified to use PMP::OptionalArray, but since it's unused it's currently untested. <- Added ctest for this 
 
 	TestChamber::TestChamber() :
 		m_rootNodeWorldSize(defaultRootNodeSize)
 	{
 		// Create the root node
 		// Currently, this will always be node ID 0, but explicitly storing it seems like a good idea
-		CreateOctreeNode(0, std::nullopt, {0,0,0}, m_rootNodeWorldSize);
+		createOctreeNode(0, std::nullopt, {0,0,0}, m_rootNodeWorldSize);
 		m_rootNode = 0;
 	}
 
@@ -57,27 +53,25 @@ namespace PMP
 	QVector3D getChildCenter(unsigned int order, unsigned int parentSize, QVector3D parentCenter)
 	{
 		//std::cout << parentSize << std::endl;
-		if (parentSize % 4 != 0)
-			throw std::runtime_error("Parent node size must be divisible by 4");
-		if (order > 7)
-			throw std::runtime_error("Order can not be greater than 7");
+		if (parentSize % 4 != 0) throw std::runtime_error("Parent node size must be divisible by 4");
+		if (order > 7) throw std::runtime_error("Order can not be greater than 7");
 
 		int offset = parentSize / 4;
 		// Branchless calculation
-		int xSign = ((order & 1) << 1) - 1;              // 1 if odd, -1 if even
+		int xSign = ((order & 1) << 1) - 1;               // 1 if odd, -1 if even
 		int ySign = (((order >> 1) & 1) << 1) - 1;        // 1 if bit 1 is 0, -1 if 1
 		int zSign = (((order >> 2) & 1) << 1) - 1;        // 1 if bit 2 is 0, -1 if 1
 
 		return parentCenter + QVector3D(offset * xSign, offset * ySign, offset * zSign);
 	}
 
-	void TestChamber::CreateChildrenForNode( NodeID parentID )
+	void TestChamber::createChildrenOfNode( NodeID parentID )
 	{
 		TestChamberNode& parentNode = m_nodeMap[parentID];
 		std::array<NodeID, 8>& parentChildIds = parentNode.m_childIDs.value_initialize();
 		
 		std::array<NodeID, 8> freeIDs;
-		FindFreeIDs(freeIDs);
+		findFreeIDs(freeIDs);
 		// Child Node Generation Order
 		//negx negy negz
 		//posx negy negz
@@ -89,13 +83,13 @@ namespace PMP
 		//posx posy posz
 		for (unsigned int i = 0; i < 8; ++i )
 		{
-			CreateOctreeNode(freeIDs[i],parentID, getChildCenter(i,parentNode.m_size, parentNode.m_center), parentNode.m_size/2); //NOTE: this code currently does not support forming a separate room.
+			createOctreeNode(freeIDs[i],parentID, getChildCenter(i,parentNode.m_size, parentNode.m_center), parentNode.m_size/2); //NOTE: this code currently does not support forming a separate room.
 			parentChildIds[i] = freeIDs[i];
 		}
 		parentNode.m_active = true; // Make sure the parent node is active after creating children
 	}
 
-	void TestChamber::DestroyChildrenForNode( NodeID parentID )
+	void TestChamber::destroyChildrenOfNode( NodeID parentID )
 	{
 		TestChamberNode& parentNode = m_nodeMap[parentID];
 		if(parentNode.m_childIDs.has_value())
@@ -109,7 +103,7 @@ namespace PMP
 
 				// if any child node is present than all others should be and vice versa
 				if ( childNode.m_childIDs.has_value() )
-					DestroyChildrenForNode(childID);
+					destroyChildrenOfNode(childID);
 
 				m_nodeMap.erase(childID);
 			}
@@ -118,7 +112,7 @@ namespace PMP
 		}
 	}
 
-	void TestChamber::CreateOctreeNode(NodeID newID, std::optional<NodeID> parentID, QVector3D center, unsigned int size)
+	void TestChamber::createOctreeNode(NodeID newID, std::optional<NodeID> parentID, QVector3D center, unsigned int size)
 	{
 		if ( parentID.has_value() )
 			m_nodeMap.emplace(newID, TestChamberNode( parentID.value(), center, size, m_nodeMap[parentID.value()].m_active));
@@ -131,7 +125,7 @@ namespace PMP
 	// GET O(1) ACCESS TO NODES
 	// YOU
 	// GET O(8 * n^2) SEARCH TIME TO FINDING FREE ID
-	void TestChamber::FindFreeIDs(std::array<NodeID, 8>& out)
+	void TestChamber::findFreeIDs(std::array<NodeID, 8>& out)
 	{
 		std::unordered_set<NodeID> used;
 
@@ -161,7 +155,7 @@ namespace PMP
 		};
 	}
 
-	std::array<QVector3D, 6> GetOuterFaceCoords(const unsigned int nodeSize, const QVector3D nodeCenter, float epsilon = 0.5f)
+	std::array<QVector3D, 6> getOuterFaceCoords(const unsigned int nodeSize, const QVector3D nodeCenter, float epsilon = 0.5f)
 	{
 		float halfSize = nodeSize / 2.0f + epsilon;
 
@@ -175,23 +169,21 @@ namespace PMP
 		};
 	}
 
-	int TestChamber::SetNodeActive(NodeID node, bool active) 
+	int TestChamber::setNodeActive(NodeID node, bool active) 
 	{
-		if(m_nodeMap[node].m_active != active)
+		if(m_nodeMap[node].m_active == active) return 0; // State of the node has not changed
+
+		m_nodeMap[node].m_active = active;
+		// Also need to make sure all adjacent nodes have matching size.
+		std::array<QVector3D, 6> outerCoords = getNeighborNodeCenters(m_nodeMap[node].m_size, m_nodeMap[node].m_center);
+		for(const auto& coord : outerCoords)
 		{
-			m_nodeMap[node].m_active = active;
-			// Also need to make sure all adjacent nodes have matching size.
-			std::array<QVector3D, 6> outerCoords = getNeighborNodeCenters(m_nodeMap[node].m_size, m_nodeMap[node].m_center);
-			for(const auto& coord : outerCoords)
-			{
-				SubdivideNodeToCoord(coord, 0, m_nodeMap[node].m_size);
-			}
-			return 1; // State of the node has changed
+			subdivideNodeToCoord(coord, 0, m_nodeMap[node].m_size);
 		}
-		return 0; // State of the node has not changed
+		return 1; // State of the node has changed
 	}
 
-	std::optional<ChamberSurface> TestChamber::GetSurface(NodeID node, WALLSIDE side)
+	std::optional<ChamberSurface> TestChamber::getSurface(NodeID node, WALLSIDE side)
 	{
 		ChamberSurface surf = m_surfaceMap[node][static_cast<int>(side)];
 		if(surf.side == WALLSIDE::NONE) return std::nullopt;
@@ -199,61 +191,56 @@ namespace PMP
 	}
 
 	//Assumes out is empty during non-recursive calls
-	void TestChamber::GetSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WALLSIDE side)
+	void TestChamber::getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WALLSIDE side)
 	{
 		// Node has children
 		if (m_nodeMap[node].m_childIDs.has_value())
 		{
-			qDebug() << "Node " << node << " has children, recursing into them for surface " << static_cast<int>(side);
 			// Iterate through all children and get their surfaces
 			for (const auto& childID : m_nodeMap[node].m_childIDs.valueRead())
 			{
-				GetSurfaceChildren(out, childID, side);
+				getSurfaceChildren(out, childID, side);
 			}
 		}
 		else
 		{
-			qDebug() << "Node " << node << " has no children, adding surface " << static_cast<int>(side);
 			// No children, so this node is the leaf node
 			ChamberSurface surf = m_surfaceMap[node][static_cast<int>(side)];
 			if (surf.side != WALLSIDE::NONE) out.push_back(surf);
 		}
 	}
 
-	NodeID TestChamber::SubdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size)
+	NodeID TestChamber::subdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size)
 	{
-		if(IsOutOOB(coord)) return parentID;
+		if(isOutOOB(coord)) return parentID;
 		if(m_nodeMap[parentID].m_size < size) throw std::runtime_error("Something went wrong trying to subdivide node");
 		if(m_nodeMap[parentID].m_size == size) return parentID;
 		unsigned int i = getChildOrder(coord, m_nodeMap[parentID].m_center);
-		if(!m_nodeMap[parentID].m_childIDs.has_value())
-		{
-			CreateChildrenForNode(parentID);
-		}
-		return SubdivideNodeToCoord(coord,  m_nodeMap[parentID].m_childIDs.value()[i], size);
+		if(!m_nodeMap[parentID].m_childIDs.has_value()) createChildrenOfNode(parentID);
+		return subdivideNodeToCoord(coord,  m_nodeMap[parentID].m_childIDs.value()[i], size);
 	}
 
-	std::array<QVector3D, 4> TestChamber::GetChamberSurfaceCorners(const ChamberSurface& surface)
+	std::array<QVector3D, 4> TestChamber::getChamberSurfaceCorners(const ChamberSurface& surface)
 	{
 		const TestChamberNode& node = m_nodeMap.at(surface.parentNode);
 		float halfSize = node.m_size / 2.0f;
 
-		QVector3D normal = GetWallNormal(surface.side);
-		QVector3D center = GetWallFaceCenter(node.m_center, node.m_size, normal);
-		QVector3D up     = GetWallUp(surface.side);
+		QVector3D normal = getWallNormal(surface.side);
+		QVector3D surfCenter = getWallFaceCenter(node.m_center, node.m_size, normal);
+		QVector3D up     = getWallUp(surface.side);
 		QVector3D right  = QVector3D::crossProduct(normal, up);
 
 		// Quad corners: counter-clockwise
-		QVector3D p0 = center + (-right - up) * halfSize;  // bottom-left
-		QVector3D p1 = center + ( right - up) * halfSize;  // bottom-right
-		QVector3D p2 = center + ( right + up) * halfSize;  // top-right
-		QVector3D p3 = center + (-right + up) * halfSize;  // top-left
+		QVector3D p0 = surfCenter + (-right - up) * halfSize;  // bottom-left
+		QVector3D p1 = surfCenter + ( right - up) * halfSize;  // bottom-right
+		QVector3D p2 = surfCenter + ( right + up) * halfSize;  // top-right
+		QVector3D p3 = surfCenter + (-right + up) * halfSize;  // top-left
 
 		return {p0, p1, p2, p3};
 	}
 
 	//Given a wallside of a node, should this wall be drawn
-	bool TestChamber::IsSurface(WALLSIDE side, NodeID node) const
+	bool TestChamber::isSurface(WALLSIDE side, NodeID node) const
     {
 		const QVector3D center = m_nodeMap.at(node).m_center;
         const float halfSize = m_nodeMap.at(node).m_size / 2.0f;
@@ -272,16 +259,16 @@ namespace PMP
 
         QVector3D neighborCoord = center + offset;
 
-        bool isVisible = IsOutOOB(neighborCoord); //if coordinate behind this surface is OOB, this surface should be drawn
+        bool isVisible = isOutOOB(neighborCoord); //if coordinate behind this surface is OOB, this surface should be drawn
         if (!isVisible) { // the coordinate behind this surface is in bound
-            NodeID neighborId = SearchNodeWithCoord(neighborCoord);
-            isVisible = !IsNodeActive(neighborId); // check if the node behind this surface is inactive
+            NodeID neighborId = searchNodeWithCoord(neighborCoord);
+            isVisible = !isNodeActive(neighborId); // check if the node behind this surface is inactive
         }
 		return isVisible;
     }
 
-	
-	std::optional<RayHitResult> TestChamber::RayCast(Ray ray) const
+	// Raycast function to find the closest hit on a surface
+	std::optional<RayHitResult> TestChamber::rayCast(Ray ray) const
 	{
 		float closestT = std::numeric_limits<float>::infinity();
 		std::optional<RayHitResult> closestHit;
@@ -295,11 +282,11 @@ namespace PMP
 				const TestChamberNode& node = m_nodeMap.at(surface.parentNode);
 
 				// Wall geometry
-				QVector3D normal = GetWallNormal(surface.side);
-				QVector3D center = GetWallFaceCenter(node.m_center, node.m_size, normal);
-				QVector3D up = GetWallUp(surface.side);
-				QVector3D right = QVector3D::crossProduct(normal, up);
 				float halfSize = node.m_size / 2.0f;
+				QVector3D up = getWallUp(surface.side);
+				QVector3D normal = getWallNormal(surface.side);
+				QVector3D right = QVector3D::crossProduct(normal, up);
+				QVector3D center = getWallFaceCenter(node.m_center, node.m_size, normal);
 
 				QVector3D p0 = center + (-right - up) * halfSize;
 				QVector3D p1 = center + ( right - up) * halfSize;
@@ -309,47 +296,37 @@ namespace PMP
 				float tTemp;
 				QVector3D hitPosTemp;
 
-				if (RayIntersectsQuad(ray, p0, p1, p2, p3, tTemp, hitPosTemp))
+				if (rayIntersectsQuad(ray, p0, p1, p2, p3, tTemp, hitPosTemp) && tTemp > 0.0f && tTemp < closestT)
 				{
-					if (tTemp > 0.0f && tTemp < closestT)
-					{
-						closestT = tTemp;
-						closestHit = RayHitResult{surface.parentNode, hitPosTemp, surface};
-					}
+					closestT = tTemp;
+					closestHit = RayHitResult{surface.parentNode, hitPosTemp, surface};
 				}
 			}
 		}
-
 		return closestHit;
 	}
-	// Is the given coordinate out of bounds?
-	bool TestChamber::IsOutOOB(QVector3D coord) const
+	bool TestChamber::isOutOOB(QVector3D coord) const
 	{
 		int halfSize = m_rootNodeWorldSize / 2;
 		return std::abs(coord.x()) > halfSize || std::abs(coord.y()) > halfSize || std::abs(coord.z()) > halfSize;
 	}
-
-	const NodeID TestChamber::SearchNodeWithCoord(QVector3D coord, NodeID parentID) const
+	const NodeID TestChamber::searchNodeWithCoord(QVector3D coord, NodeID parentID) const
 	{
-		if(IsOutOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
+		if(isOutOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
 		if(!m_nodeMap.at(parentID).m_childIDs.has_value()) return parentID; //found
 
 		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
-		return SearchNodeWithCoord(coord,  m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
+		return searchNodeWithCoord(coord,  m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
 	}
-
-	const NodeID TestChamber::SearchNodeWithCoordSize(QVector3D coord, unsigned int size, NodeID parentID) const
+	const NodeID TestChamber::searchNodeWithCoordSize(QVector3D coord, unsigned int size, NodeID parentID) const
 	{
-		if(IsOutOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
+		if(isOutOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
 		if(m_nodeMap.at(parentID).m_size == size) return parentID; //found
 
 		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
-		return SearchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
+		return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
 	}
-
-	// Based on generated surfaces, generate quads for rendering
-	// This is to separate rendering logic with octree logic (Octree does not need to know vertices of individual tris)
-	void TestChamber::GenerateQuads(std::vector<Quad>& out) const
+	void TestChamber::generateQuads(std::vector<Quad>& out) const
 	{
 		if(m_surfaceMap.size() == 0) throw std::runtime_error("Attempted to generate quads for test chamber with no surface. Forgot to call GenerateSurfaces()?");
 		for (const auto& [_, surfaces] : m_surfaceMap)
@@ -362,32 +339,23 @@ namespace PMP
 			}
 		}
 	}
-
-	// Based on the node structure, generate surfaces
-	void TestChamber::GenerateSurfaces()
+	void TestChamber::generateSurfaces()
     {
 		m_surfaceMap.clear();
-        //std::cout << "Generating Surfaces for test chamber "<< std::endl;
-        for (const auto& [id, node] : GetNodeMap()) {
-            if (!IsNodeActive(id) || NodeHasChild(id)) continue;
-            //std::cout << "Generating Surfaces for Node " << id << std::endl;
+        for (const auto& [id, node] : getNodeMap()) {
+            if (!isNodeActive(id) || nodeHasChild(id)) continue;
             const QVector3D& center = node.m_center;
             
 			std::array<ChamberSurface, 6>& walls = m_surfaceMap[id];
             for (int i = 0; i < 6; ++i) {
                 WALLSIDE side = static_cast<WALLSIDE>(i);
-                if(IsSurface(side,id))
+                if(isSurface(side,id))
                 {
 					walls[i] = {id,side};
                 }
             }
         }
-        std::cout << "Generated " << m_surfaceMap.size() << " Surfaces" << std::endl;
     }
-
-	// Given surfaces, and distance, find points that are distance * voxel away from the surface
-	// size of the voxel is determined by the size of the surface's parent node
-	// I know this description makes no sense so I suggest reading the definition
 	void TestChamber::calculateCenterPointsSurfaceDisplacement(const std::vector<ChamberSurface>& surfs, float dist, std::vector<QVector3D>& out)
 	{
 		for (const auto& s : surfs) {
@@ -397,15 +365,14 @@ namespace PMP
 			float size = node.m_size;
 
 			// Get the normal of the surface
-			QVector3D normal = GetWallNormal(s.side);
+			QVector3D normal = getWallNormal(s.side);
 
 			// Calculate the new position
 			QVector3D newPos = center + normal * size * dist;
 			out.push_back(newPos);
 		}
 	}
-	// Extruding all faces selected
-	int TestChamber::ExtrudeSurfaces(Selector* selector)
+	int TestChamber::extrudeSurfaces(Selector* selector)
 	{
 		std::vector<ChamberSurface> surfSel;
 		selector->getSurfaceSelectionMultiple(surfSel);
@@ -419,12 +386,10 @@ namespace PMP
 		for (const auto& s : surfSel) {
 			qDebug() << "Extruding surface with parent node ID: " << s.parentNode << " and side: " << static_cast<int>(s.side);
 			if (s.side != WALLSIDE::NONE) {
-				extrudeSides.push_back(s.side);
 				UniqueSurfaceIdentifer extrudeUSI;
-				extrudeUSI.size = m_nodeMap.at(s.parentNode).m_size;
-				extrudeUSI.nodeCord = m_nodeMap.at(s.parentNode).m_center;
-				extrudeUSI.side = s.side;
+				makeUSI(s.parentNode, extrudeUSI, s.side);
 				extrudeUSIs.push_back(extrudeUSI);
+				extrudeSides.push_back(s.side);
 			}
 			else throw std::runtime_error("HOW DID YOU SELECT AIR");
 		}
@@ -432,31 +397,28 @@ namespace PMP
 		calculateCenterPointsSurfaceDisplacement(surfSel, 1.0f, centerPoints);
 		int selectionCount = 0;
 		for (int i = 0; i < surfSel.size(); i++) {
-			if(SetNodeActive(surfSel[i].parentNode, false)) selectionCount++;
+			if(setNodeActive(surfSel[i].parentNode, false)) selectionCount++;
 		}
+		generateSurfaces();
+		selector->clearSurfaces();
 		// Extruded all surfaces.
 		// Now we need to find new surfaces to select
-		GenerateSurfaces();
-		selector->clearSurfaces();
-		
 		for (int i = 0; i < centerPoints.size(); i++)
 		{
-			if(IsOutOOB(centerPoints[i])) continue; // Skip if out of bounds
+			if(isOutOOB(centerPoints[i])) continue; // Skip if out of bounds
 			// Look for a node of the same size (to find all its child nodes as well)
-			const NodeID node = SearchNodeWithCoordSize(centerPoints[i], m_nodeMap[surfSel[i].parentNode].m_size);
+			const NodeID node = searchNodeWithCoordSize(centerPoints[i], m_nodeMap[surfSel[i].parentNode].m_size);
 			std::vector<ChamberSurface> surfs;
-			GetSurfaceChildren(surfs, node, extrudeSides[i]);
+			getSurfaceChildren(surfs, node, extrudeSides[i]);
 
 			if (surfs.size() == 0) continue;
+
 			selector->setSelectionMultiple(surfs);
 			// For each newly selectable surface, build a USI
 			for (const auto& s : surfs) {
-				UniqueSurfaceIdentifer u;
-				// Fill from the surface's owning node; adjust field names if different.
-				u.size = static_cast<uint>(m_nodeMap.at(s.parentNode).m_size);
-				u.nodeCord = m_nodeMap.at(s.parentNode).m_center;
-				u.side = s.side;
-				newSelectUSIs.push_back(u);
+				UniqueSurfaceIdentifer usi;
+				makeUSI(s.parentNode, usi, s.side);
+				newSelectUSIs.push_back(usi);
 			}
 		}
 		if (newSelectUSIs.size() > 0) UndoStack::instance().addAction(std::make_unique<TCExtrudeAction>(this, selector, extrudeUSIs, newSelectUSIs));
@@ -465,8 +427,7 @@ namespace PMP
 		// If any node was able to extrude, we consider success
 		return selectionCount > 0;
 	}
-
-	int TestChamber::RecedeSurfaces(Selector* selector)
+	int TestChamber::recedeSurfaces(Selector* selector)
 	{
 		std::vector<ChamberSurface> surfSel;
 		selector->getSurfaceSelectionMultiple(surfSel);
@@ -478,56 +439,47 @@ namespace PMP
 
 		std::vector<WALLSIDE> extrudeSides;
 		for (const auto& s : surfSel) {
+			if (s.side == WALLSIDE::NONE) throw std::runtime_error("HOW DID YOU SELECT AIR");
 			//Subdivide neighbors
 			std::array<QVector3D, 6> outerCoords = getNeighborNodeCenters(m_nodeMap.at(s.parentNode).m_size, m_nodeMap.at(s.parentNode).m_center);
 			for (const auto& coord : outerCoords)
 			{
-				SubdivideNodeToCoord(coord, 0, m_nodeMap.at(s.parentNode).m_size);
+				subdivideNodeToCoord(coord, 0, m_nodeMap.at(s.parentNode).m_size);
 			}
-
-			qDebug() << "Extruding surface with parent node ID: " << s.parentNode << " and side: " << static_cast<int>(s.side);
-			if (s.side != WALLSIDE::NONE) {
-				extrudeSides.push_back(s.side);
-				UniqueSurfaceIdentifer extrudeUSI;
-				extrudeUSI.size = m_nodeMap.at(s.parentNode).m_size;
-				extrudeUSI.nodeCord = m_nodeMap.at(s.parentNode).m_center;
-				extrudeUSI.side = s.side;
-				extrudeUSIs.push_back(extrudeUSI);
-			}
-			else throw std::runtime_error("HOW DID YOU SELECT AIR");
+			extrudeSides.push_back(s.side);
+			UniqueSurfaceIdentifer extrudeUSI;
+			makeUSI(s.parentNode, extrudeUSI, s.side);
+			extrudeUSIs.push_back(extrudeUSI);
 		}
 		std::vector<QVector3D> centerPoints;
 		calculateCenterPointsSurfaceDisplacement(surfSel, -1.0f, centerPoints);
-		//Debugger::instance().drawPoints(centerPoints);
 		int selectionCount = 0;
 		for (int i = 0; i < centerPoints.size(); i++)
 		{
-			if(IsOutOOB(centerPoints[i])) continue; // Skip if out of bounds
+			if(isOutOOB(centerPoints[i])) continue; // Skip if out of bounds
 			// Look for a node of the same size (to find all its child nodes as well)
 			const unsigned int parentSize = m_nodeMap[surfSel[i].parentNode].m_size;
-			NodeID node = SearchNodeWithCoord(centerPoints[i]);
-			if (GetNodeMap().at(node).m_size != parentSize)
+			NodeID node = searchNodeWithCoord(centerPoints[i]);
+			if (getNodeMap().at(node).m_size != parentSize)
 			{
 				// Subdivide this node to match the size of the neighboring node
-				node = SubdivideNodeToCoord(centerPoints[i], 0, parentSize); // Retarget the node to the newly subdivided node
+				node = subdivideNodeToCoord(centerPoints[i], 0, parentSize); // Retarget the node to the newly subdivided node
 			}
-			if (SetNodeActive(node, true)) // node state was changed (without this check, the node can recede already disabled node and fail to find selection face)
+			if (setNodeActive(node, true)) // node state was changed (without this check, the node can recede already disabled node and fail to find selection face)
 			{
-				std::cout << "Receding Surface" << std::endl;
 				selectionCount++;
 			}
 		}
 		
-		GenerateSurfaces();
+		generateSurfaces();
 		selector->clearSurfaces();
 		for (int i = 0; i < centerPoints.size(); i++)
 		{
-			std::optional<ChamberSurface>  surf = GetSurface(SearchNodeWithCoord(centerPoints[i]), extrudeSides[i]);
+			std::optional<ChamberSurface>  surf = getSurface(searchNodeWithCoord(centerPoints[i]), extrudeSides[i]);
 			if (surf.has_value()) selector->addSelection(surf.value());
 		}
 		return selectionCount > 0;
 	}
-
 	void TestChamber::makeUSI(NodeID nodeID, UniqueSurfaceIdentifer& out, WALLSIDE side)
 	{
 		const TestChamberNode& node = m_nodeMap.at(nodeID);
@@ -535,24 +487,12 @@ namespace PMP
 		out.nodeCord = node.m_center;
 		out.side = side;
 	}
-
- 
-
-
-
-
-
-
-	void TestChamber::PrintNodes()
+	void TestChamber::printNodes()
 	{
 		std::cout << "TestChamber has " << m_nodeMap.size() << " Node(s)\n";
 		for (const auto& [nodeId, node] : m_nodeMap) {
-			if(node.m_parentID.has_value()){
-				std::cout << "NodeID: " << nodeId << ", child of " << node.m_parentID.value() << "\n";
-			}
-			else {
-				std::cout << "NodeID: " << nodeId << " has no parentID" << "\n";
-			}
+			if(node.m_parentID.has_value()) std::cout << "NodeID: " << nodeId << ", child of " << node.m_parentID.value() << "\n";
+			else std::cout << "NodeID: " << nodeId << " has no parentID" << "\n";
     	}
 	}
 	const char* printVector3D(QVector3D in)
@@ -561,8 +501,7 @@ namespace PMP
 		snprintf(buffer, sizeof(buffer), "(%.2f, %.2f, %.2f)", in.x(), in.y(), in.z());
 		return buffer;	
 	}
-
-	void TestChamber::_PrintNodesTree(std::map<NodeID, std::vector<NodeID>>& children, NodeID id, std::string prefix, bool isLast) 
+	void TestChamber::_printNodesTree(std::map<NodeID, std::vector<NodeID>>& children, NodeID id, std::string prefix, bool isLast) 
 	{
 		std::cout << prefix;
 #ifdef WIN32
@@ -576,20 +515,18 @@ namespace PMP
 #endif
 
 		std::cout << "Node " << id << " at " << printVector3D(m_nodeMap[id].m_center) << " with size " << m_nodeMap[id].m_size << "\n";
-		
 
 		const auto& childVec = children[id];
 		for (size_t i = 0; i < childVec.size(); ++i) {
 			bool last = (i == childVec.size() - 1);
 #ifdef WIN32
-			_PrintNodesTree(children, childVec[i], prefix + (isLast ? "    " : "|   "), last);
+			_printNodesTree(children, childVec[i], prefix + (isLast ? "    " : "|   "), last);
 #else
 			_PrintNodesTree(children, childVec[i], prefix + (isLast ? "    " : "│   "), last);
 #endif
 		}
 	}
-
-	void TestChamber::PrintNodesTree() {
+	void TestChamber::printNodesTree() {
 		std::map<NodeID, std::vector<NodeID>> children;
 		NodeID root = 0;
 
@@ -601,10 +538,9 @@ namespace PMP
 			}
 		}
 
-		_PrintNodesTree(children, root, "", true);
+		_printNodesTree(children, root, "", true);
 	}
-
-	void TestChamber::TestChildNodeGeneration()
+	void TestChamber::testChildNodeGeneration()
 	{
 		TestChamberNode& root = m_nodeMap[0];
 		const auto& children = root.m_childIDs.value();
@@ -636,5 +572,4 @@ namespace PMP
 			}
 		}
 	}
-
 }

@@ -27,7 +27,7 @@ namespace PMP
             , m_newSelectUSIs(std::move(newSelectUSIs))
         {}
 
-        // Mult0=i-extrude No-select
+        // Multi-extrude No-select
         TCExtrudeAction(TestChamber* tc,
             Selector* sel,
             std::vector<UniqueSurfaceIdentifer> extrudeUSIs)
@@ -51,19 +51,17 @@ namespace PMP
             bool anyChanged = false;
             for (const auto& usi : m_extrudeUSIs) {
                 const NodeID node = toNode(usi);
-                anyChanged |= m_testChamber->SetNodeActive(node, true);
+                anyChanged |= m_testChamber->setNodeActive(node, true);
             }
 
             if (!anyChanged) return 0;
 
-            m_testChamber->GenerateSurfaces();
+            m_testChamber->generateSurfaces();
             m_selector->clearSurfaces();
 
-            // Pick the last valid extruded surface to reselect
             for (auto it = m_extrudeUSIs.rbegin(); it != m_extrudeUSIs.rend(); ++it) {
-                if (auto surf = m_testChamber->GetSurface(toNode(*it), it->side); surf.has_value()) {
-                    m_selector->setSelection(*surf); // last-one-wins
-                    break;
+                if (auto surf = m_testChamber->getSurface(toNode(*it), it->side); surf.has_value()) {
+                    m_selector->addSelection(surf.value());
                 }
             }
             return 1;
@@ -74,20 +72,18 @@ namespace PMP
             bool anyChanged = false;
             for (const auto& usi : m_extrudeUSIs) {
                 const NodeID node = toNode(usi);
-                anyChanged |= m_testChamber->SetNodeActive(node, false);
+                anyChanged |= m_testChamber->setNodeActive(node, false);
             }
 
             if (!anyChanged) return 0;
 
-            m_testChamber->GenerateSurfaces();
+            m_testChamber->generateSurfaces();
             m_selector->clearSurfaces();
 
-            // Select the last valid requested new surface (skip NONE)
             for (auto it = m_newSelectUSIs.rbegin(); it != m_newSelectUSIs.rend(); ++it) {
                 if (it->side == WALLSIDE::NONE) continue;
-                if (auto surf = m_testChamber->GetSurface(toNode(*it), it->side); surf.has_value()) {
-                    m_selector->setSelection(*surf); // last-one-wins
-                    break;
+                if (auto surf = m_testChamber->getSurface(toNode(*it), it->side); surf.has_value()) {
+                    m_selector->addSelection(surf.value());
                 }
             }
             return 1;
@@ -96,7 +92,7 @@ namespace PMP
     private:
         NodeID toNode(const UniqueSurfaceIdentifer& usi) const
         {
-            return m_testChamber->SearchNodeWithCoordSize(
+            return m_testChamber->searchNodeWithCoordSize(
                 usi.nodeCord, static_cast<unsigned int>(usi.size));
         }
 

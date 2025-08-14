@@ -46,16 +46,14 @@ namespace PMP
     bool WallFacesDirection(WALLSIDE side, const QVector3D& dir);
 
     QVector3D Lerp(const QVector3D& a, const QVector3D& b, float t);
-    QVector3D GetWallNormal(WALLSIDE side);
-    QVector3D GetWallUp(WALLSIDE side);
+    QVector3D getWallNormal(WALLSIDE side);
+    QVector3D getWallUp(WALLSIDE side);
 
     Quad generateCubeFace(WALLSIDE side, float size=128.0f);
     Quad generateQuadAt(QVector3D center, WALLSIDE side, float size);
 
-    Mesh CreateMesh(std::vector<Vertex> vertices, std::vector<unsigned int> indexBuffer);
     Mesh CreateMesh(std::vector<Quad> quads);
 
     void QuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color=QVector3D(0.0f,0.0f,0.0f), int start = 0);
     void MultiQuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color=QVector3D(0.0f,0.0f,0.0f));
-    void QuadCornersToSubdividedLineWireframes(int subdivisions, const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color=QVector3D(0.0f,0.0f,0.0f));
 }

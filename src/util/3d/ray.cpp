@@ -3,7 +3,7 @@
 #include "ray.h"
 
 namespace PMP {
-    Ray ScreenPosToWorldRay(int width, int height, QPoint mousePos, QMatrix4x4 projectionMatrix, QMatrix4x4 viewMatrix)
+    Ray screenPosToWorldRay(int width, int height, QPoint mousePos, QMatrix4x4 projectionMatrix, QMatrix4x4 viewMatrix)
 	{
 		float x = (2.0f * mousePos.x()) / width - 1.0f;
 		float y = 1.0f - (2.0f * mousePos.y()) / height;
@@ -22,8 +22,7 @@ namespace PMP {
 
 		return Ray{rayOrigin, rayWorld}; // Define your Ray struct as needed
 	}
-
-    bool RayIntersectsTriangle(const Ray& ray,
+    bool rayIntersectsTriangle(const Ray& ray,
                            const QVector3D& v0,
                            const QVector3D& v1,
                            const QVector3D& v2,
@@ -59,16 +58,14 @@ namespace PMP {
 
         return false;
     }
-
-    bool RayIntersectsQuad(const Ray& ray, const QVector3D& p0, const QVector3D& p1, const QVector3D& p2, const QVector3D& p3, float& t, QVector3D& hitPos)
+    bool rayIntersectsQuad(const Ray& ray, const QVector3D& p0, const QVector3D& p1, const QVector3D& p2, const QVector3D& p3, float& t, QVector3D& hitPos)
     {
         // Two triangle tests
-        if (RayIntersectsTriangle(ray, p0, p1, p2, t, hitPos)) return true;
-        if (RayIntersectsTriangle(ray, p0, p2, p3, t, hitPos)) return true;
+        if (rayIntersectsTriangle(ray, p0, p1, p2, t, hitPos)) return true;
+        if (rayIntersectsTriangle(ray, p0, p2, p3, t, hitPos)) return true;
         return false;
     }
-
-    bool RayIntersectsAABB(Ray ray, QVector3D center, float size, float& tHit)
+    bool rayIntersectsAABB(Ray ray, QVector3D center, float size, float& tHit)
     {
         const float halfSize = size / 2.0f;
         QVector3D min = center - QVector3D(halfSize, halfSize, halfSize);

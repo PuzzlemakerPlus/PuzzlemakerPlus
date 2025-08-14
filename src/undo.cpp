@@ -25,9 +25,7 @@ namespace PMP
     }
     void UndoStack::redo() 
     {
-        if (m_pos < m_stack.size())
-        {
-            if(m_stack[m_pos]->redo()) m_pos++;
-        }
+        if (m_pos >= m_stack.size()) return;
+        if(m_stack[m_pos]->redo()) m_pos++;
     }
 }

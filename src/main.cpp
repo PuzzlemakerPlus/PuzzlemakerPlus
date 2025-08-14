@@ -43,19 +43,19 @@ int main(int argc, char* argv[])
     mainViewport.show();
     
     PMP::TestChamber tc;
-    tc.CreateChildrenForNode(0);
-    tc.CreateChildrenForNode(6);
-    tc.CreateChildrenForNode(2);
-    tc.SetNodeActive(3, false);
+    tc.createChildrenOfNode(0);
+    tc.createChildrenOfNode(6);
+    tc.createChildrenOfNode(2);
+    tc.setNodeActive(3, false);
     //tc.SetNodeActive(13, false);
     
-    tc.CreateChildrenForNode(24);
-    tc.SetNodeActive(31, false);
-    tc.SetNodeActive(30, false);
-    tc.SetNodeActive(29, false);
+    tc.createChildrenOfNode(24);
+    tc.setNodeActive(31, false);
+    tc.setNodeActive(30, false);
+    tc.setNodeActive(29, false);
 
-    tc.PrintNodesTree();
-    tc.GenerateSurfaces();
+    tc.printNodesTree();
+    tc.generateSurfaces();
     std::cout << "Loaded Test Chamber" << std::endl;
     
     selector.setTestChamber(&tc);
