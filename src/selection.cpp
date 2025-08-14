@@ -19,6 +19,13 @@ namespace PMP
             out.insert(out.end(), corners.begin(), corners.end());
         }
     }
+    void Selector::addSelectionMultiple(std::vector<ChamberSurface>& surfaces)
+    {
+        for (const auto& sel : surfaces)
+        {
+            m_surfaceSelection.push_back(sel);
+        }
+    }
     void Selector::setSelectionMultiple(std::vector<ChamberSurface>& surfaces)
     {
         m_surfaceSelection.clear();

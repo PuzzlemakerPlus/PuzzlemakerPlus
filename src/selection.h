@@ -18,6 +18,8 @@ namespace PMP
         // Returns 4 corners of all selected surfaces
         void getSelectionSurfaceCorners(std::vector<QVector3D>& out);
 
+        
+
         std::optional<NodeID> getNodeSelection(int index=0) const {return m_surfaceSelection.size() <= index ? std::nullopt : std::optional<NodeID>{m_surfaceSelection.at(index).parentNode};}
         std::optional<ChamberSurface> getSurfaceSelection(int index=0) const {return m_surfaceSelection.size() <= index ? std::nullopt : std::optional<ChamberSurface>{m_surfaceSelection.at(index)};}
         void getSurfaceSelectionMultiple(std::vector<ChamberSurface>& out) const {
@@ -31,10 +33,13 @@ namespace PMP
         void clickSelectSurfaceAdd(QPoint point, QMatrix4x4 projection, QMatrix4x4 view);
         // For selecting multiple surfaces. Preserves previous selection
         void addSelection(ChamberSurface surface) { m_surfaceSelection.push_back(surface); }
+        // For selecting multiple surfaces. Preserves previous selection
+        void addSelectionMultiple(std::vector<ChamberSurface>& surfaces);
         // Select single surface
         void setSelectionSingle(ChamberSurface surface);
         // Select multiple surfaces, clears previous selection
         void setSelectionMultiple(std::vector<ChamberSurface>& surface);
+
 
         // Testchamber to make selection from
         void setTestChamber(TestChamber* tc) {m_testChamber = tc;};

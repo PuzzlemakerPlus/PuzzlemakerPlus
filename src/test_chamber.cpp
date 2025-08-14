@@ -413,7 +413,7 @@ namespace PMP
 
 			if (surfs.size() == 0) continue;
 
-			selector->setSelectionMultiple(surfs);
+			selector->addSelectionMultiple(surfs);
 			// For each newly selectable surface, build a USI
 			for (const auto& s : surfs) {
 				UniqueSurfaceIdentifer usi;
@@ -434,7 +434,7 @@ namespace PMP
 		if (!surfSel.size()) return 0; // No selection
 
 		// For building undoable action
-		std::vector<UniqueSurfaceIdentifer> extrudeUSIs;
+		std::vector<UniqueSurfaceIdentifer> recedeUSIs;
 		std::vector<UniqueSurfaceIdentifer> newSelectUSIs;
 
 		std::vector<WALLSIDE> extrudeSides;
@@ -447,9 +447,9 @@ namespace PMP
 				subdivideNodeToCoord(coord, 0, m_nodeMap.at(s.parentNode).m_size);
 			}
 			extrudeSides.push_back(s.side);
-			UniqueSurfaceIdentifer extrudeUSI;
-			makeUSI(s.parentNode, extrudeUSI, s.side);
-			extrudeUSIs.push_back(extrudeUSI);
+			UniqueSurfaceIdentifer recedeUSI;
+			makeUSI(s.parentNode, recedeUSI, s.side);
+			recedeUSIs.push_back(recedeUSI);
 		}
 		std::vector<QVector3D> centerPoints;
 		calculateCenterPointsSurfaceDisplacement(surfSel, -1.0f, centerPoints);
@@ -476,8 +476,19 @@ namespace PMP
 		for (int i = 0; i < centerPoints.size(); i++)
 		{
 			std::optional<ChamberSurface>  surf = getSurface(searchNodeWithCoord(centerPoints[i]), extrudeSides[i]);
-			if (surf.has_value()) selector->addSelection(surf.value());
+			if (surf.has_value())
+			{
+				// For each newly selectable surface, build a USI
+				const auto& s = surf.value();
+				selector->addSelection(s);
+				UniqueSurfaceIdentifer usi;
+				makeUSI(s.parentNode, usi, s.side);
+				newSelectUSIs.push_back(usi);
+			}
 		}
+		
+		if (newSelectUSIs.size() > 0) UndoStack::instance().addAction(std::make_unique<TCRecedeAction>(this, selector, recedeUSIs, newSelectUSIs));
+		else UndoStack::instance().addAction(std::make_unique<TCRecedeAction>(this, selector, recedeUSIs));
 		return selectionCount > 0;
 	}
 	void TestChamber::makeUSI(NodeID nodeID, UniqueSurfaceIdentifer& out, WALLSIDE side)
