@@ -1,7 +1,6 @@
 // viewport.cpp
 // Implements the main editor viewport as an extension of QOpenGLWidget
 #pragma once
-#include <GL/gl.h>
 #include <qassert.h>
 #include <vector>
 #include <QPainter>
