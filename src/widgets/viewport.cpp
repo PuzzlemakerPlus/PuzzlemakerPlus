@@ -400,12 +400,8 @@ namespace PMP
 		const int H = int(height() * devicePixelRatioF() * selectionTextureScale);
 		glViewport(0, 0, W, H);
 
-		// glEnable(GL_SCISSOR_TEST);
-		// const QPoint bl = m_lastDragRect.bottomLeft();
-		// glScissor(int(bl.x()*devicePixelRatioF()*selectionTextureScale), 
-		// 		  int(bl.y()*devicePixelRatioF()*selectionTextureScale), 
-		// 		int(m_lastDragRect.width()*devicePixelRatioF()*selectionTextureScale), 
-		// 		int(m_lastDragRect.height()*devicePixelRatioF()*selectionTextureScale));
+		// Do not implement scissors here
+		// Since m_lastDragRect can change during gpu rendering, using scissors can lead to pixels not being drawn when it should be.
 
 		// clear integer color + depth
 		const GLuint zero[4] = {0,0,0,0};
@@ -429,7 +425,6 @@ namespace PMP
 		glViewport(0, 0, int(width() * devicePixelRatioF()), int(height() * devicePixelRatioF()));
 		glEnable(GL_BLEND);
 		glEnable(GL_DITHER);
-		//glDisable(GL_SCISSOR_TEST);
 	}
 	void Viewport::drawDragBox()
 	{
@@ -503,6 +498,7 @@ namespace PMP
 	}
 	bool Viewport::readSelectionRectCPU(ScreenSurfaceSet& out)
 	{
+		//TODO: this setting does not seem to work on my windows machine
 		const int x = m_lastDragRect.left() * selectionTextureScale;
 		const int y = height() * selectionTextureScale- m_lastDragRect.bottom() * selectionTextureScale;
 		const int w = m_lastDragRect.width() * selectionTextureScale;
@@ -512,19 +508,12 @@ namespace PMP
 		// 4 uints (RGBA) per pixel
 		std::vector<uint32_t> buf(size_t(w) * h * 4);
 
-		// Bind the offscreen integer FBO and read the sub-rect
 		glBindFramebuffer(GL_FRAMEBUFFER, selectionFBO);
-
-		// (Not required for 16B pixels, but safe & predictable)
 		glPixelStorei(GL_PACK_ALIGNMENT, 1);
-
-		// Read integers (must match GL_RGBA32UI attachment)
 		glReadPixels(x, y, w, h, GL_RGBA_INTEGER, GL_UNSIGNED_INT, buf.data());
-
 		// Back to Qt’s default FBO so you don’t accidentally draw into the integer one
 		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
 
-		// Walk pixels and record triples (R=parent, G=surface, B=wallSide)
 		out.clear();
 		for (int i = 0; i < w * h; ++i) {
 			const uint32_t parent  = buf[i*4 + 0];
