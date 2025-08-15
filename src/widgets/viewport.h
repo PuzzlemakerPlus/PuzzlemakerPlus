@@ -2,33 +2,90 @@
 // Declares the main editor viewport as an extension of QOpenGLWidget
 #pragma once
 
-#include <qevent.h>
-#include <qvectornd.h>
-#include <qtimer.h>
 #include <vector>
+#include <qevent.h>
+#include <qtimer.h>
+#include <qvectornd.h>
+#include <unordered_set>
+#include <initializer_list>
 
 #include <QOpenGLWidget>
-#include <QOpenGLFunctions_3_3_Core>
-#include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
 #include <QOpenGLTexture>
 #include <QOpenGLDebugLogger>
+#include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
+#include <QOpenGLFramebufferObject>
+#include <QOpenGLFunctions_3_3_Core>
 
-#include <QMatrix4x4>
 #include <QVector3D>
+#include <QMatrix4x4>
 #include <QQuaternion>
 
-#include "../test_chamber.h"
-#include "../util/3d/ray.h"
 #include "../selection.h"
+#include "../util/3d/ray.h"
+#include "../test_chamber.h"
 
 namespace PMP
 {
+	
 	const float cameraDistDefault = 512.0f;
 	const float cameraDistMin = 256.0f;
 	const float cameraDistMax = 14000.0f;
 
+	template <typename T>
+	bool allDifferent(std::initializer_list<T> values) {
+		std::unordered_set<T> unique(values.begin(), values.end());
+		return unique.size() == values.size();
+	}	
+
+	struct ScreenSurface
+	{
+		unsigned int parentID;
+		unsigned int surfaceID;
+		WALLSIDE wallSide;
+		std::string toString() const {
+			std::ostringstream oss;
+			oss << "ScreenSurface{ parentID=" << parentID
+				<< ", surfaceID=" << surfaceID
+				<< ", wallSide="  << to_string(wallSide)
+				<< " }";
+			return oss.str();
+		}
+		// Needed for unordered_* key equality
+		friend bool operator==(const ScreenSurface& a, const ScreenSurface& b) noexcept {
+			return a.parentID  == b.parentID &&
+				a.surfaceID == b.surfaceID &&
+				a.wallSide  == b.wallSide;
+		}
+	};
+	// Robust, fast hasher (splitmix64-style mixing + hash_combine)
+	struct ScreenSurfaceHash {
+		static inline std::uint64_t mix(std::uint64_t x) noexcept {
+			x ^= x >> 30; x *= 0xbf58476d1ce4e5b9ULL;
+			x ^= x >> 27; x *= 0x94d049bb133111ebULL;
+			x ^= x >> 31; return x;
+		}
+		std::size_t operator()(const ScreenSurface& s) const noexcept {
+			std::uint64_t seed = 0;
+			auto combine = [&](std::uint64_t v){
+				std::uint64_t h = mix(v);
+				seed ^= h + 0x9e3779b97f4a7c15ULL + (seed<<6) + (seed>>2);
+			};
+			combine(s.parentID);
+			combine(s.surfaceID);
+			combine(static_cast<std::uint32_t>(s.wallSide));
+			return static_cast<std::size_t>(seed);
+		}
+	};
+	struct ScreenSurfaceEq {
+		bool operator()(const ScreenSurface& a, const ScreenSurface& b) const noexcept {
+			return a.parentID  == b.parentID &&
+				a.surfaceID == b.surfaceID &&
+				a.wallSide  == b.wallSide;
+		}
+	};
+	using ScreenSurfaceSet = std::unordered_set<ScreenSurface, ScreenSurfaceHash, ScreenSurfaceEq>;
 
 	class Viewport : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core
 	{
@@ -67,6 +124,7 @@ namespace PMP
 		void setFogColor(QVector3D col) {m_fogCol = col;};
 
 		void setTestChamber(TestChamber* tc) {m_testChamber = tc;};
+		void drawTestChamberSurfaceAttributes(QMatrix4x4 view);
 		void setSelector(Selector* s){m_selector = s;m_selector->setViewPortDim(width(), height());};
 
 		QMatrix4x4 getProjectionMatrix() {return m_projection;};
@@ -74,21 +132,29 @@ namespace PMP
 		
 	protected:
 		void createGraphicsObjects();
+		void createSelectionFBO();
+		void resizeSelectionFBO(GLsizei W, GLsizei H);
+		void createSelectionPBO(GLsizeiptr needBytes);
 		void loadShaders();
 		void paintGL() override;
 		void resizeGL( int width, int height ) override;
 		void reloadChamberMeshAndSelection();
 		void initializeGL() override;
+		bool readSelectionRectCPU(ScreenSurfaceSet& out);
 
 		void onFrameUpdate();
 		void keyPressEvent(QKeyEvent* event) override;
 		void mousePressEvent(QMouseEvent* event) override;
+		void mouseMoveEvent(QMouseEvent* event) override;
 		void mouseReleaseEvent(QMouseEvent* event) override;
 		void wheelEvent(QWheelEvent* event) override;
 
 		void drawDots(QMatrix4x4 view);
 		void drawLines(QMatrix4x4 view);
 		void drawTestChamber(QMatrix4x4 view);
+		void drawDragBox();
+
+		void setSelecting(bool on, const QRect& r = {}) { m_isDragging = on; m_rect = r; update(); }
 
 	private:
 		TestChamber* m_testChamber = nullptr;
@@ -125,9 +191,18 @@ namespace PMP
 		float m_fogEnd = 25000.0f;
 		QVector3D m_fogCol = {0.1,0.13,0.2};
 
+		// Debug view control
+		bool m_debugSurface = false;
+
+		// Drag box drawing
+		QPoint m_origin;
+    	QRect m_rect;
+		QRect m_lastDragRect;
+
 		// Graphics objects
 		// TODO: These will probably be moved elsewhere - Kelsey
 		QOpenGLShaderProgram m_wallShader;
+		QOpenGLShaderProgram m_selectionShader;
 		QOpenGLVertexArrayObject m_chamberVAO;
 		QOpenGLBuffer m_chamberVBO;
 		QOpenGLBuffer m_chamberIBO;
@@ -143,6 +218,10 @@ namespace PMP
 		QOpenGLBuffer m_lineVBO;
 		GLsizei m_lineVertCount = 0;
 
+		GLuint selectionFBO=0;
+		GLuint selectionTex=0;
+		GLuint selectionDep=0;
+		const float selectionTextureScale = 0.25f;
 
 #ifndef NDEBUG
 		QOpenGLDebugLogger m_debugLogger;

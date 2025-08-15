@@ -134,32 +134,90 @@ namespace PMP
         return { face, {0, 1, 2, 0, 2, 3} };
     }
 
-    Mesh CreateMesh(std::vector<Quad> quads)
+    TestChamberQuad generateTCQuadAt(QVector3D center, WALLSIDE side, float size, unsigned int surfaceID, unsigned int parentID)
+    {
+        float h = size / 2.0f;
+
+        QVector3D p0 = center + QVector3D(-h, -h, -h);
+        QVector3D p1 = center + QVector3D(+h, -h, -h);
+        QVector3D p2 = center + QVector3D(+h, +h, -h);
+        QVector3D p3 = center + QVector3D(-h, +h, -h);
+        QVector3D p4 = center + QVector3D(-h, -h, +h);
+        QVector3D p5 = center + QVector3D(+h, -h, +h);
+        QVector3D p6 = center + QVector3D(+h, +h, +h);
+        QVector3D p7 = center + QVector3D(-h, +h, +h);
+
+        std::array<QVector3D, 4> quad;
+        QVector3D normal;
+
+        switch (side) {
+            case WALLSIDE::NEG_Z: // Back
+                quad = { p0, p1, p2, p3 };
+                normal = QVector3D(0.0f, 0.0f, 1.0f);
+                break;
+            case WALLSIDE::NEG_Y: // Bottom
+                quad = { p1, p0, p4, p5 };
+                normal = QVector3D(0.0f, -1.0f, 0.0f);
+                break;
+            case WALLSIDE::POS_X: // Right
+                quad = { p2, p1, p5, p6 };
+                normal = QVector3D(1.0f, 0.0f, 0.0f);
+                break;
+            case WALLSIDE::POS_Y: // Top
+                quad = { p3, p2, p6, p7 };
+                normal = QVector3D(0.0f, 1.0f, 0.0f);
+                break;
+            case WALLSIDE::NEG_X: // Left
+                quad = { p0, p3, p7, p4 };
+                normal = QVector3D(-1.0f, 0.0f, 0.0f);
+                break;
+            case WALLSIDE::POS_Z: // Front
+                quad = { p5, p4, p7, p6 };
+                normal = QVector3D(0.0f, 0.0f, -1.0f);
+                break;
+            default:
+                throw std::out_of_range("Invalid side index");
+        }
+
+        std::array<TestChamberVertex, 4> face;
+        for (int i = 0; i < 4; ++i) {
+            face[i] = TestChamberVertex { quad[i], normal, surfaceID, parentID, static_cast<unsigned int>(side) };
+        }
+
+        return { face, {0, 1, 2, 0, 2, 3}};
+    }
+
+    void CreateMesh(std::vector<Quad> quads, Mesh& out)
     {
         unsigned int vertexOffset = 0;
-        std::vector<GLfloat> vertexBufferData;
-        std::vector<GLuint> indexBufferData;
         for (const auto& quad : quads) {
 			// Add vertices
-			//vertexBufferData.insert(vertexBufferData.end(), quad.verts.begin(), quad.verts.end());
-			for (const auto& v : quad.verts) {
-				vertexBufferData.push_back(v.Position.x());
-				vertexBufferData.push_back(v.Position.y());
-				vertexBufferData.push_back(v.Position.z());
-
-				vertexBufferData.push_back(v.Normal.x());
-				vertexBufferData.push_back(v.Normal.y());
-				vertexBufferData.push_back(v.Normal.z());
-			}
-
+			for(int i=0;i<4;i++)
+            {
+                out.vertices.push_back(quad.verts[i]);
+            }
 			// Add indices (adjusted)
 			for (unsigned int idx : quad.indices) {
-				indexBufferData.push_back(idx + vertexOffset);
+				out.indices.push_back(idx + vertexOffset);
 			}
-
 			vertexOffset += static_cast<unsigned int>(quad.verts.size());
 		}
-        return {vertexBufferData, indexBufferData};
+    }
+    void CreateTCMesh(std::vector<TestChamberQuad> quads, TestChamberMesh& out)
+    {
+        unsigned int vertexOffset = 0;
+        for (const auto& quad : quads) {
+			// Add vertices
+            for(int i=0;i<4;i++)
+            {
+                out.vertices.push_back(quad.verts[i]);
+            }
+			// Add indices (adjusted)
+			for (unsigned int idx : quad.indices) {
+				out.indices.push_back(idx + vertexOffset);
+			}
+			vertexOffset += static_cast<unsigned int>(quad.verts.size());
+		}
     }
     
     void generateWireframeGrid3D(int subdivisions, const QVector3D& A, const QVector3D& B,const QVector3D& C, const QVector3D& D, std::vector<LineVertex>& out, const QVector3D& color)

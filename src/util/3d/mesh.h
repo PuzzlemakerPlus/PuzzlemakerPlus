@@ -11,7 +11,8 @@
 
 namespace PMP
 {
-	enum class WALLSIDE {
+	enum class WALLSIDE
+    {
 		POS_X,
 		NEG_X,
 		POS_Y,
@@ -21,18 +22,42 @@ namespace PMP
         NONE
 	};
 
-    struct Vertex {
+    struct Vertex
+    {
         QVector3D Position;
         QVector3D Normal;
     };
 
-    struct Quad {
+    struct TestChamberVertex
+    {
+        QVector3D Position;
+        QVector3D Normal;
+        unsigned int surfaceID;
+        unsigned int parentNodeID;
+        unsigned int wallSide;
+    };
+
+    struct Quad
+    {
         std::array<Vertex,4> verts;
         std::array<unsigned int, 6> indices;
     };
 
-    struct Mesh{
-        std::vector<GLfloat> vertices;
+    struct TestChamberQuad
+    {
+        std::array<TestChamberVertex, 4> verts;
+        std::array<unsigned int, 6> indices;
+    };
+
+    struct Mesh
+    {
+        std::vector<Vertex> vertices;
+        std::vector<GLuint> indices;
+    };
+
+    struct TestChamberMesh
+    {
+        std::vector<TestChamberVertex> vertices;
         std::vector<GLuint> indices;
     };
 
@@ -42,7 +67,17 @@ namespace PMP
 		LineVertex(QVector3D position) : pos(position) {}
 		LineVertex(QVector3D position, QVector3D color) : pos(position), col(color) {}
 	};
-    
+    inline const char* to_string(WALLSIDE s) {
+    switch (s) {
+        case WALLSIDE::POS_X:  return "POS_X";
+        case WALLSIDE::NEG_X:   return "NEG_X";
+        case WALLSIDE::POS_Y:   return "POS_Y";
+        case WALLSIDE::NEG_Y:  return "NEG_Y";
+        case WALLSIDE::POS_Z:    return "POS_Z";
+        case WALLSIDE::NEG_Z: return "NEG_Z";
+        default:               return "None";
+    }
+}
     bool WallFacesDirection(WALLSIDE side, const QVector3D& dir);
 
     QVector3D Lerp(const QVector3D& a, const QVector3D& b, float t);
@@ -51,8 +86,10 @@ namespace PMP
 
     Quad generateCubeFace(WALLSIDE side, float size=128.0f);
     Quad generateQuadAt(QVector3D center, WALLSIDE side, float size);
+    TestChamberQuad generateTCQuadAt(QVector3D center, WALLSIDE side, float size, unsigned int surfaceID, unsigned int parentID);
 
-    Mesh CreateMesh(std::vector<Quad> quads);
+    void CreateMesh(std::vector<Quad> quads, Mesh& out);
+    void CreateTCMesh(std::vector<TestChamberQuad> quads, TestChamberMesh& out);
 
     void QuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color=QVector3D(0.0f,0.0f,0.0f), int start = 0);
     void MultiQuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out, const QVector3D& color=QVector3D(0.0f,0.0f,0.0f));

@@ -238,7 +238,11 @@ namespace PMP
 
 		return {p0, p1, p2, p3};
 	}
-
+	QVector3D TestChamber::getSurfaceCenter(ChamberSurface surface)
+	{
+		return m_nodeMap[surface.parentNode].m_size * 0.5f * getWallNormal(surface.side) * -1 + m_nodeMap[surface.parentNode].m_center;
+		
+	}
 	//Given a wallside of a node, should this wall be drawn
 	bool TestChamber::isSurface(WALLSIDE side, NodeID node) const
     {
@@ -336,6 +340,19 @@ namespace PMP
 				if(surface.side == WALLSIDE::NONE) continue;
 				const NodeID nodeID = surface.parentNode;
 				out.push_back(generateQuadAt(m_nodeMap.at(nodeID).m_center, surface.side, m_nodeMap.at(nodeID).m_size));
+			}
+		}
+	}
+	void TestChamber::generateTCQuads(std::vector<TestChamberQuad>& out) const
+	{
+		if(m_surfaceMap.size() == 0) throw std::runtime_error("Attempted to generate quads for test chamber with no surface. Forgot to call GenerateSurfaces()?");
+		for (const auto& [surfaceID, surfaces] : m_surfaceMap)
+		{
+			for(const auto& surface : surfaces)
+			{
+				if(surface.side == WALLSIDE::NONE) continue;
+				const NodeID nodeID = surface.parentNode;
+				out.push_back(generateTCQuadAt(m_nodeMap.at(nodeID).m_center, surface.side, m_nodeMap.at(nodeID).m_size, surfaceID, nodeID));
 			}
 		}
 	}
@@ -536,7 +553,7 @@ namespace PMP
 #ifdef WIN32
 			_printNodesTree(children, childVec[i], prefix + (isLast ? "    " : "|   "), last);
 #else
-			_PrintNodesTree(children, childVec[i], prefix + (isLast ? "    " : "│   "), last);
+			_printNodesTree(children, childVec[i], prefix + (isLast ? "    " : "│   "), last);
 #endif
 		}
 	}

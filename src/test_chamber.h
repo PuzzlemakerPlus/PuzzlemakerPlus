@@ -42,6 +42,9 @@ namespace PMP
 		std::optional<ChamberSurface> getSurface(NodeID node, WALLSIDE side);
 		void getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WALLSIDE side);
 		std::array<QVector3D, 4> getChamberSurfaceCorners(const ChamberSurface& surface);
+		QVector3D getSurfaceCenter(ChamberSurface surface);
+		const std::unordered_map<NodeID, TestChamberNode>& getNodes() const {return m_nodeMap;}
+		const std::unordered_map<NodeID, std::array<ChamberSurface, 6>>& getSurfaces() const {return m_surfaceMap; }
 		
 		// Is the given coordinate out of bounds?
 		bool isOutOOB(QVector3D coord) const;
@@ -64,6 +67,7 @@ namespace PMP
 		void generateSurfaces();
 		// Based on generated surfaces, generate quads for rendering. This is to separate rendering logic with octree logic
 		void generateQuads(std::vector<Quad>& out) const;
+		void generateTCQuads(std::vector<TestChamberQuad>& out) const;
 
 		// Extrude all surfaces selected
 		int extrudeSurfaces(Selector* selector);

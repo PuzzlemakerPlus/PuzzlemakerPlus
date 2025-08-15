@@ -1,7 +1,10 @@
 // viewport.cpp
 // Implements the main editor viewport as an extension of QOpenGLWidget
 #pragma once
+#include <GL/gl.h>
+#include <qassert.h>
 #include <vector>
+#include <QPainter>
 #include <QThread>
 #include <iostream>
 #include <stdexcept>
@@ -10,10 +13,11 @@
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <qvectornd.h>
+#include <QOpenGLExtraFunctions>
 
 #include "../undo.h"
 #include "../selection.h"
-#include "../util/debug.h"
+
 #include "../util/3d/mesh.h"
 #include "viewport.h"
 
@@ -22,6 +26,7 @@ namespace PMP
 	void Viewport::initializeGL()
 	{
 		initializeOpenGLFunctions();
+		
 #ifndef NDEBUG
 		if ( m_debugLogger.initialize() )
 		{
@@ -40,6 +45,10 @@ namespace PMP
 		glClearColor( 0.803, 0.815, 0.807, 1.0f );
 		loadShaders();
 		createGraphicsObjects();
+		auto* ext = context()->extraFunctions();
+		ext->glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE,
+                               GL_DEBUG_SEVERITY_NOTIFICATION,
+                               0, nullptr, GL_FALSE);
 		std::cout << "ViewportGL initialized." << std::endl;
 	}
 
@@ -51,9 +60,19 @@ namespace PMP
 		if (!m_wallShader.link()) {
 			qDebug() << "Shader failed to link:" << m_wallShader.log();
 			return;
-		}
+		} 
 #else
 		m_wallShader.link();
+#endif
+		m_selectionShader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/chamber_selection.vert");
+		m_selectionShader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/chamber_selection.frag");
+#ifndef NDEBUG
+		if (!m_selectionShader.link()) {
+			qDebug() << "Shader failed to link:" << m_selectionShader.log();
+			return;
+		}
+#else
+		m_selectionShader.link();
 #endif
 		m_dotShader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/dot.vert");
 		m_dotShader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/dot.frag");
@@ -91,13 +110,149 @@ namespace PMP
 		bool chamber_vao = m_chamberVAO.create();
 		bool chamber_vbo = m_chamberVBO.create();
 		bool chamber_ibo = m_chamberIBO.create();
+		m_chamberVAO.bind();
+		m_chamberVBO.bind();
+		m_chamberIBO.bind();
 
+		const GLsizei stride = sizeof(TestChamberVertex);
+
+
+		//Important to note: m_wallShader and m_selectionShader share the vao. 
+		// const int vertexPosLocation = m_selectionShader.attributeLocation("aPos");
+		// const int vertexNormalLocation = m_selectionShader.attributeLocation("aNormal");
+		// const int surfaceIDLocation = m_selectionShader.attributeLocation("aSurfaceId");
+		// const int parentIDLocation = m_selectionShader.attributeLocation("aParentId");
+		// const int wallSideLocation = m_selectionShader.attributeLocation("aWallSide");
+		// std::cout << vertexPosLocation << vertexNormalLocation << surfaceIDLocation << parentIDLocation << wallSideLocation<< "\n";
+		const int vertexPosLocation = 0;
+		const int vertexNormalLocation = 1;
+		const int surfaceIDLocation = 2;
+		const int parentIDLocation = 3;
+		const int wallSideLocation = 4;
+		bool vaoCheck = allDifferent({vertexPosLocation, vertexNormalLocation, surfaceIDLocation, parentIDLocation, wallSideLocation});
+		Q_ASSERT(vaoCheck && "All positions of VAO must have unique position");
+		glEnableVertexAttribArray(vertexPosLocation);
+		glVertexAttribPointer(vertexPosLocation, 3, GL_FLOAT, GL_FALSE, stride,reinterpret_cast<const void*>(offsetof(TestChamberVertex, Position)));
+
+		glEnableVertexAttribArray(vertexNormalLocation);
+		glVertexAttribPointer(vertexNormalLocation, 3, GL_FLOAT, GL_FALSE, stride,reinterpret_cast<const void*>(offsetof(TestChamberVertex, Normal)));
+
+		glEnableVertexAttribArray(surfaceIDLocation);
+		glVertexAttribIPointer(surfaceIDLocation, 1, GL_UNSIGNED_INT, stride,reinterpret_cast<const void*>(offsetof(TestChamberVertex, surfaceID)));
+
+		glEnableVertexAttribArray(parentIDLocation);
+		glVertexAttribIPointer(parentIDLocation, 1, GL_UNSIGNED_INT, stride,reinterpret_cast<const void*>(offsetof(TestChamberVertex, parentNodeID)));
+
+		glEnableVertexAttribArray(wallSideLocation);
+		glVertexAttribIPointer(wallSideLocation, 1, GL_UNSIGNED_INT, stride,reinterpret_cast<const void*>(offsetof(TestChamberVertex, wallSide)));
+		
+		
+		m_chamberVAO.release();
+		m_chamberVBO.release();
+		m_chamberIBO.release();
+		createSelectionFBO();
 		const std::string_view verStr = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 		const std::string_view vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
 		const std::string_view renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 		qDebug() << "Version: " << verStr;
 		qDebug() << "Adapter: " << renderer;
 		qDebug() << "Vendor: " << vendor;
+	}
+	void Viewport::createSelectionFBO()
+	{
+		makeCurrent(); // ensure context current if not in initializeGL/resizeGL
+		
+		const GLsizei baseW = GLsizei(width()  * devicePixelRatioF());
+		const GLsizei baseH = GLsizei(height() * devicePixelRatioF());
+		const int W = std::max(1, int(std::floor(baseW * selectionTextureScale)));
+    	const int H = std::max(1, int(std::floor(baseH * selectionTextureScale)));
+		
+		// delete old if any
+		if (selectionDep) glDeleteRenderbuffers(1, &selectionDep);
+		if (selectionTex) glDeleteTextures(1, &selectionTex);
+		if (selectionFBO) glDeleteFramebuffers(1, &selectionFBO);
+
+		glGenFramebuffers(1, &selectionFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, selectionFBO);
+
+		// Integer color texture
+		glGenTextures(1, &selectionTex);
+		glBindTexture(GL_TEXTURE_2D, selectionTex);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0,
+					GL_RGBA32UI,          // integer internal format
+					W, H, 0,
+					GL_RGBA_INTEGER,      // integer external format (NOT GL_RGBA)
+					GL_UNSIGNED_INT,      // integer type
+					nullptr);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+							GL_TEXTURE_2D, selectionTex, 0);
+
+		// Depth renderbuffer
+		glGenRenderbuffers(1, &selectionDep);
+		glBindRenderbuffer(GL_RENDERBUFFER, selectionDep);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, W, H);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+								GL_RENDERBUFFER, selectionDep);
+
+		// Draw buffer list
+		const GLenum db = GL_COLOR_ATTACHMENT0;
+		glDrawBuffers(1, &db);
+
+		// Completeness check
+		const GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (status != GL_FRAMEBUFFER_COMPLETE) {
+			qWarning() << "Selection FBO incomplete, status =" << Qt::hex << status;
+		}
+
+		// Back to Qt's onscreen FBO
+		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
+	}
+	void Viewport::resizeSelectionFBO(GLsizei baseW, GLsizei baseH)
+	{
+		if (baseW <= 0 || baseH <= 0) return; // guard against minimized window
+		const int W = std::max(1, int(std::floor(baseW * selectionTextureScale)));
+    	const int H = std::max(1, int(std::floor(baseH * selectionTextureScale)));
+
+		// If you haven’t created the FBO yet, make it once.
+		if (!selectionFBO) {
+			createSelectionFBO();     // your existing function
+			return;                   // createSelectionFBO already sized to current widget
+		}
+
+		// Reallocate attachments to the new size
+		glBindFramebuffer(GL_FRAMEBUFFER, selectionFBO);
+
+		// Color (integer) texture
+		glBindTexture(GL_TEXTURE_2D, selectionTex);
+		glTexImage2D(GL_TEXTURE_2D, 0,
+					GL_RGBA32UI,           // integer internal format
+					W, H, 0,
+					GL_RGBA_INTEGER,       // integer external format
+					GL_UNSIGNED_INT,       // integer type
+					nullptr);
+
+		// Depth renderbuffer
+		glBindRenderbuffer(GL_RENDERBUFFER, selectionDep);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, W, H);
+
+		// Make sure draw buffers are still set
+		const GLenum db = GL_COLOR_ATTACHMENT0;
+		glDrawBuffers(1, &db);
+
+		// Check completeness
+		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (status != GL_FRAMEBUFFER_COMPLETE) {
+			qWarning() << "Selection FBO incomplete after resize, status =" << Qt::hex << status;
+		}
+
+		// Return to Qt’s default FBO
+		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
 	}
 
 	// needs a list of points to draw
@@ -154,16 +309,15 @@ namespace PMP
 		MultiQuadCornersToLineWireframe(corners,lines);
 		loadLines(lines);
 	}
-	// Generate Test Chamber Mesh
 	void Viewport::loadTestChamberMesh()
 	{
-		qDebug() << "Loading test chamber mesh...";
 		Q_ASSERT(m_testChamber);
 		if(!m_testChamber) throw std::runtime_error("Can not load test chamber mesh without setting test chamber");
 		
-		std::vector<Quad> quads;
-		m_testChamber->generateQuads(quads);
-		Mesh mesh = CreateMesh(quads);
+		std::vector<TestChamberQuad> quads;
+		m_testChamber->generateTCQuads(quads);
+		TestChamberMesh mesh;
+		CreateTCMesh(quads, mesh);
 		if (mesh.vertices.empty() || mesh.indices.empty()) throw std::runtime_error("Mesh has no vertices or indices to allocate");
 		this->makeCurrent();
 		m_chamberVAO.bind();
@@ -172,17 +326,9 @@ namespace PMP
 		// Disabling for now until we are more certain it's what we want - Kelsey
 		//m_chamberVBO.setUsagePattern(QOpenGLBuffer::StaticDraw);
 		
-		m_chamberVBO.allocate(mesh.vertices.data(), mesh.vertices.size() * sizeof(GLfloat));
+		m_chamberVBO.allocate(mesh.vertices.data(), mesh.vertices.size() * sizeof(TestChamberVertex));
 		m_chamberIBO.allocate(mesh.indices.data(), mesh.indices.size() * sizeof(unsigned int));
 		
-		int vertexPosLocation = m_wallShader.attributeLocation("aPos");
-		m_wallShader.enableAttributeArray(vertexPosLocation);
-		m_wallShader.setAttributeBuffer(vertexPosLocation, GL_FLOAT, 0, 3, 6 * sizeof(GLfloat));
-
-		int vertexNormalLocation = m_wallShader.attributeLocation("aNormal");
-		m_wallShader.enableAttributeArray(vertexNormalLocation);
-		m_wallShader.setAttributeBuffer(vertexNormalLocation, GL_FLOAT, 3 * sizeof(GLfloat), 3, 6 * sizeof(GLfloat));
-
 		m_chamberVAO.release(); // must release VAO before index/vertex buffers, otherwise they get unbound from the VAO too!
 		m_chamberVBO.release(); // not necessary?
 		m_chamberIBO.release(); // not necessary?
@@ -230,6 +376,7 @@ namespace PMP
 		m_wallShader.setUniformValue("u_view", view);
 		m_wallShader.setUniformValue("u_proj", m_projection);
 		m_wallShader.setUniformValue("u_fogColor", m_fogCol);
+		m_wallShader.setUniformValue("u_debugView", static_cast<GLint>(m_debugSurface));
 		if(m_fog) m_wallShader.setUniformValue("u_fogStart", m_fogStart);
 		else m_wallShader.setUniformValue("u_fogStart", m_fogEnd);
 		m_wallShader.setUniformValue("u_fogEnd", m_fogEnd);
@@ -239,10 +386,69 @@ namespace PMP
 		m_chamberVAO.release();
 		m_wallShader.release();
 	}
+	void Viewport::drawTestChamberSurfaceAttributes(QMatrix4x4 view)
+	{
+		
+		if(m_indicesCount == 0) return;
+		if(m_lastDragRect.width() == 0 || m_lastDragRect.height() == 0) return;
+		// bind offscreen FBO
+		m_selectionShader.bind();
+		glBindFramebuffer(GL_FRAMEBUFFER, selectionFBO);
+		glDisable(GL_BLEND);
+		glDisable(GL_DITHER);
+		glEnable(GL_DEPTH_TEST);
+		const int W = int(width() * devicePixelRatioF() * selectionTextureScale);
+		const int H = int(height() * devicePixelRatioF() * selectionTextureScale);
+		glViewport(0, 0, W, H);
+
+		// glEnable(GL_SCISSOR_TEST);
+		// const QPoint bl = m_lastDragRect.bottomLeft();
+		// glScissor(int(bl.x()*devicePixelRatioF()*selectionTextureScale), 
+		// 		  int(bl.y()*devicePixelRatioF()*selectionTextureScale), 
+		// 		int(m_lastDragRect.width()*devicePixelRatioF()*selectionTextureScale), 
+		// 		int(m_lastDragRect.height()*devicePixelRatioF()*selectionTextureScale));
+
+		// clear integer color + depth
+		const GLuint zero[4] = {0,0,0,0};
+		glClearBufferuiv(GL_COLOR, 0, zero);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		
+		GLint curProg = 0;
+		glGetIntegerv(GL_CURRENT_PROGRAM, &curProg);
+		Q_ASSERT(curProg == (GLint)m_selectionShader.programId());
+		Q_ASSERT(m_selectionShader.isLinked());
+		m_selectionShader.setUniformValue("u_view", view);
+		m_selectionShader.setUniformValue("u_proj", m_projection);
+		m_chamberVAO.bind();
+
+		glDrawElements(GL_TRIANGLES, m_indicesCount, GL_UNSIGNED_INT, 0);
+		m_chamberVAO.release();
+		m_selectionShader.release();
+
+		//Switch back to default framebuffer object
+		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
+		glViewport(0, 0, int(width() * devicePixelRatioF()), int(height() * devicePixelRatioF()));
+		glEnable(GL_BLEND);
+		glEnable(GL_DITHER);
+		//glDisable(GL_SCISSOR_TEST);
+	}
+	void Viewport::drawDragBox()
+	{
+		QPainter p(this); // safe in QOpenGLWidget
+		p.setRenderHint(QPainter::Antialiasing, true);
+		QColor edge(77,163,255);
+		QColor fill(77,163,255, 40);
+		p.fillRect(m_rect, fill);
+		QPen pen(edge);
+		pen.setStyle(Qt::DashLine);
+		p.setPen(pen);
+		p.drawRect(m_rect.adjusted(0,0,-1,-1));
+	}
 
 // QT Functions
 	void Viewport::paintGL()
 	{
+		//qDebug() << "Start drawing";
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 		glEnable( GL_DEPTH_TEST );
 		glEnable( GL_CULL_FACE );
@@ -252,7 +458,29 @@ namespace PMP
 		getViewMatrix(view);
 		drawDots(view);
 		drawLines(view);
+		//qDebug() << "Start drawing testchamber";
 		drawTestChamber(view);
+		//qDebug() << "Start drawing testchamber attribute";
+		drawTestChamberSurfaceAttributes(view);
+
+		// after your normal scene draw (default FBO bound)
+		const int W = int(width()*devicePixelRatioF());
+		const int H = int(height()*devicePixelRatioF());
+		glViewport(0,0,W,H);
+
+		glDisable(GL_DEPTH_TEST);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		// Important: neutral GL state before QPainter
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_STENCIL_TEST);
+		glDisable(GL_SCISSOR_TEST);
+		glDisable(GL_CULL_FACE);
+		glBindVertexArray(0);
+		glUseProgram(0);
+		//qDebug() << "Drawing drag box";
+		if(m_isDragging) drawDragBox();
 	}
 
 	void Viewport::resizeGL( int width, int height )
@@ -264,6 +492,9 @@ namespace PMP
 		m_projection.perspective(m_fov, aspect, 7.0f, 32767.0f);
 		// Selector needs to be aware of the viewport size.
 		m_selector->setViewPortDim(width, height);
+		const int W = int(width * devicePixelRatioF());
+		const int H = int(height * devicePixelRatioF());
+		resizeSelectionFBO(W, H);
 	}
 
 	void Viewport::reloadChamberMeshAndSelection()
@@ -271,7 +502,39 @@ namespace PMP
 		loadTestChamberMesh();
 		loadSelectionLines();
 	}
+	bool Viewport::readSelectionRectCPU(ScreenSurfaceSet& out)
+	{
+		const int x = m_lastDragRect.left() * selectionTextureScale;
+		const int y = height() * selectionTextureScale- m_lastDragRect.bottom() * selectionTextureScale;
+		const int w = m_lastDragRect.width() * selectionTextureScale;
+		const int h = m_lastDragRect.height() * selectionTextureScale;
 
+		if (w <= 0 || h <= 0) return false;
+		// 4 uints (RGBA) per pixel
+		std::vector<uint32_t> buf(size_t(w) * h * 4);
+
+		// Bind the offscreen integer FBO and read the sub-rect
+		glBindFramebuffer(GL_FRAMEBUFFER, selectionFBO);
+
+		// (Not required for 16B pixels, but safe & predictable)
+		glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+		// Read integers (must match GL_RGBA32UI attachment)
+		glReadPixels(x, y, w, h, GL_RGBA_INTEGER, GL_UNSIGNED_INT, buf.data());
+
+		// Back to Qt’s default FBO so you don’t accidentally draw into the integer one
+		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
+
+		// Walk pixels and record triples (R=parent, G=surface, B=wallSide)
+		out.clear();
+		for (int i = 0; i < w * h; ++i) {
+			const uint32_t parent  = buf[i*4 + 0];
+			const uint32_t surface = buf[i*4 + 1];
+			const WALLSIDE side    = static_cast<WALLSIDE>(buf[i*4 + 2]);
+			out.emplace(parent, surface, side);
+		}
+		return true;
+	}
 	void Viewport::keyPressEvent(QKeyEvent* event)
 	{
 		Q_ASSERT(m_selector);
@@ -289,6 +552,11 @@ namespace PMP
 			switch (event->key()) {
 			case Qt::Key_F:
 				m_fog = !m_fog; // toggle fog. No need to reload chamber mesh and selection
+				event->accept();
+				update();
+				break;
+			case Qt::Key_G:
+				m_debugSurface = !m_debugSurface; // toggle fog. No need to reload chamber mesh and selection
 				event->accept();
 				update();
 				break;
@@ -325,8 +593,9 @@ namespace PMP
 				//Needs to be called after mainViewport.show()
 				if (rayCastChamber.has_value())
 				{
+					m_origin = event->pos();
 					//Start dragging
-					m_isDragging = true;
+					setSelecting(true,QRect(m_origin, QSize()));
 				}
 				else {
 					//Orbit if mouse click outside test chamber
@@ -351,6 +620,24 @@ namespace PMP
 		}
 		m_lastMousePos = QVector2D(event->position());
 	}
+	void Viewport::mouseMoveEvent(QMouseEvent* event) 
+	{
+        if (m_isDragging) 
+		{
+			m_selector->clearSurfaces();
+			setSelecting(true, QRect(m_origin, event->pos()).normalized());
+			m_lastDragRect = m_rect;
+			ScreenSurfaceSet surfaces;
+			readSelectionRectCPU(surfaces);
+			for(const auto& s : surfaces)
+			{
+				//std::cout << s.toString() << " ";
+				auto surf= m_testChamber->getSurface(s.parentID, s.wallSide);
+				if(surf.has_value()) m_selector->addSelection(surf.value());
+			}
+			loadSelectionLines();
+		}
+    }
 	void Viewport::mouseReleaseEvent(QMouseEvent* event)
 	{
 		QVector2D newPos = QVector2D(event->position());
@@ -364,7 +651,7 @@ namespace PMP
 				case Qt::MouseButton::LeftButton: 
 				case Qt::MouseButton::MiddleButton: //End Orbiting/Dragging
 					m_isOrbiting = false;
-					m_isDragging = false;
+					setSelecting(false);
 					event->accept();
 					break;
 				case Qt::MouseButton::RightButton: //End Panning

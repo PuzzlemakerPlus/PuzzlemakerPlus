@@ -27,7 +27,7 @@ namespace PMP
         Selector* m_selector = nullptr;
     };
 
-    class TCExtrudeAction : public Undoable, TCSurfaceAction
+    class TCExtrudeAction : public TCSurfaceAction
     {
     public:
         // Multi-extrude Multi-select
@@ -52,7 +52,7 @@ namespace PMP
     };
 
 
-    class TCRecedeAction : public Undoable, TCSurfaceAction
+    class TCRecedeAction : public TCSurfaceAction
     {
     public:
         // Multi-extrude Multi-select
