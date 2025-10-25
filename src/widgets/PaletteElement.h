@@ -6,20 +6,22 @@
 
 #include <QAbstractButton>
 
-namespace PMP {
-    class PaletteElement : public QWidget {
+namespace PMP 
+{
+	class PaletteElement : public QWidget 
+	{
 
-    Q_OBJECT
+	Q_OBJECT
 
-    public slots:
-        void handleClick();
+	public slots:
+		void handleClick();
 
-    public:
-        int m_id;
+	public:
+		int m_id;
 
-        explicit PaletteElement(int id) : m_id(id) {};
+		explicit PaletteElement(int id) : m_id(id) {};
 
-    private:
-        int id{};
-    };
+	private:
+		int id{};
+	};
 }

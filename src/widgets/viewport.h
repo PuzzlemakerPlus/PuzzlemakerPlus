@@ -43,7 +43,7 @@ namespace PMP
 	{
 		unsigned int parentID;
 		unsigned int surfaceID;
-		WALLSIDE wallSide;
+		WallSide wallSide;
 		std::string toString() const {
 			std::ostringstream oss;
 			oss << "ScreenSurface{ parentID=" << parentID
@@ -196,7 +196,7 @@ namespace PMP
 
 		// Drag box drawing
 		QPoint m_origin;
-    	QRect m_rect;
+		QRect m_rect;
 		QRect m_lastDragRect;
 
 		// Graphics objects

@@ -46,8 +46,8 @@ namespace PMP
 		createGraphicsObjects();
 		auto* ext = context()->extraFunctions();
 		ext->glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE,
-                               GL_DEBUG_SEVERITY_NOTIFICATION,
-                               0, nullptr, GL_FALSE);
+							   GL_DEBUG_SEVERITY_NOTIFICATION,
+							   0, nullptr, GL_FALSE);
 		std::cout << "ViewportGL initialized." << std::endl;
 	}
 
@@ -94,6 +94,7 @@ namespace PMP
 		m_lineShader.link();
 #endif
 	}
+
 	void Viewport::createGraphicsObjects()
 	{
 		std::cout << "Creating OpenGL Objects" << std::endl;
@@ -102,13 +103,15 @@ namespace PMP
 		m_chamberIBO = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
 		m_dotVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
 		m_lineVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-		bool dot_vao = m_dotVAO.create();
-		bool dot_vbo = m_dotVBO.create();
-		bool line_vao = m_lineVAO.create();
-		bool line_vbo = m_lineVBO.create();
-		bool chamber_vao = m_chamberVAO.create();
-		bool chamber_vbo = m_chamberVBO.create();
-		bool chamber_ibo = m_chamberIBO.create();
+
+		m_dotVAO.create();
+		m_dotVBO.create();
+		m_lineVAO.create();
+		m_lineVBO.create();
+		m_chamberVAO.create();
+		m_chamberVBO.create();
+		m_chamberIBO.create();
+
 		m_chamberVAO.bind();
 		m_chamberVBO.bind();
 		m_chamberIBO.bind();
@@ -157,6 +160,7 @@ namespace PMP
 		qDebug() << "Adapter: " << renderer;
 		qDebug() << "Vendor: " << vendor;
 	}
+
 	void Viewport::createSelectionFBO()
 	{
 		makeCurrent(); // ensure context current if not in initializeGL/resizeGL
@@ -164,7 +168,7 @@ namespace PMP
 		const GLsizei baseW = GLsizei(width()  * devicePixelRatioF());
 		const GLsizei baseH = GLsizei(height() * devicePixelRatioF());
 		const int W = std::max(1, int(std::floor(baseW * selectionTextureScale)));
-    	const int H = std::max(1, int(std::floor(baseH * selectionTextureScale)));
+		const int H = std::max(1, int(std::floor(baseH * selectionTextureScale)));
 		
 		// delete old if any
 		if (selectionDep) glDeleteRenderbuffers(1, &selectionDep);
@@ -212,11 +216,12 @@ namespace PMP
 		// Back to Qt's onscreen FBO
 		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
 	}
+
 	void Viewport::resizeSelectionFBO(GLsizei baseW, GLsizei baseH)
 	{
 		if (baseW <= 0 || baseH <= 0) return; // guard against minimized window
 		const int W = std::max(1, int(std::floor(baseW * selectionTextureScale)));
-    	const int H = std::max(1, int(std::floor(baseH * selectionTextureScale)));
+		const int H = std::max(1, int(std::floor(baseH * selectionTextureScale)));
 
 		// If you haven’t created the FBO yet, make it once.
 		if (!selectionFBO) {
@@ -273,6 +278,7 @@ namespace PMP
 
 		this->doneCurrent();
 	}
+
 	void Viewport::loadLines(std::vector<LineVertex> vertices)
 	{
 		m_lineVertCount = vertices.size();
@@ -295,10 +301,12 @@ namespace PMP
 		m_lineVBO.release();
 		this->doneCurrent();
 	}
+
 	void Viewport::loadLines(Ray ray, float length, QVector3D colStart, QVector3D colEnd)
 	{
 		loadLines({{ray.origin, colStart}, {ray.origin + ray.direction * length, colEnd}});
 	}
+
 	void Viewport::loadSelectionLines()
 	{
 		Q_ASSERT(m_selector);
@@ -308,6 +316,7 @@ namespace PMP
 		MultiQuadCornersToLineWireframe(corners,lines);
 		loadLines(lines);
 	}
+
 	void Viewport::loadTestChamberMesh()
 	{
 		Q_ASSERT(m_testChamber);
@@ -335,6 +344,7 @@ namespace PMP
 		m_indicesCount = mesh.indices.size();
 		update();
 	}
+
 	void Viewport::getViewMatrix(QMatrix4x4& out)
 	{
 		// Do camera offset from target point before rotating, easier that way
@@ -342,6 +352,7 @@ namespace PMP
 		out.rotate(QQuaternion::fromEulerAngles(m_cameraAngles));
 		out.translate(m_cameraTarget);
 	}
+
 	void Viewport::drawDots(QMatrix4x4 view)
 	{
 		if(m_dotCount == 0) return;
@@ -354,6 +365,7 @@ namespace PMP
 		m_dotVAO.release();
 		m_dotShader.release();
 	}
+
 	void Viewport::drawLines(QMatrix4x4 view)
 	{
 		if(m_lineVertCount == 0) return;
@@ -368,6 +380,7 @@ namespace PMP
 		m_lineShader.release();
 		glDisable(GL_POLYGON_OFFSET_LINE);
 	}
+
 	void Viewport::drawTestChamber(QMatrix4x4 view)
 	{
 		if(m_indicesCount == 0) return;
@@ -385,6 +398,7 @@ namespace PMP
 		m_chamberVAO.release();
 		m_wallShader.release();
 	}
+
 	void Viewport::drawTestChamberSurfaceAttributes(QMatrix4x4 view)
 	{
 		
@@ -426,6 +440,7 @@ namespace PMP
 		glEnable(GL_BLEND);
 		glEnable(GL_DITHER);
 	}
+
 	void Viewport::drawDragBox()
 	{
 		QPainter p(this); // safe in QOpenGLWidget
@@ -496,6 +511,7 @@ namespace PMP
 		loadTestChamberMesh();
 		loadSelectionLines();
 	}
+
 	bool Viewport::readSelectionRectCPU(ScreenSurfaceSet& out)
 	{
 		//TODO: this setting does not seem to work on my windows machine
@@ -518,11 +534,12 @@ namespace PMP
 		for (int i = 0; i < w * h; ++i) {
 			const uint32_t parent  = buf[i*4 + 0];
 			const uint32_t surface = buf[i*4 + 1];
-			const WALLSIDE side    = static_cast<WALLSIDE>(buf[i*4 + 2]);
+			const WallSide side    = static_cast<WallSide>(buf[i*4 + 2]);
 			out.emplace(parent, surface, side);
 		}
 		return true;
 	}
+
 	void Viewport::keyPressEvent(QKeyEvent* event)
 	{
 		Q_ASSERT(m_selector);
@@ -577,7 +594,6 @@ namespace PMP
 		switch (event->button())
 		{
 			case Qt::MouseButton::LeftButton:
-			case  Qt::MouseButton::MiddleButton:
 				//Needs to be called after mainViewport.show()
 				if (rayCastChamber.has_value())
 				{
@@ -592,14 +608,16 @@ namespace PMP
 				m_lastMouseClickPos = QVector2D(event->position());
 				event->accept();
 				break;
+			case Qt::MouseButton::MiddleButton:
+				// Middle click always orbits
+				m_isOrbiting = true;
+				m_lastMouseClickPos = QVector2D(event->position());
+				event->accept();
+				break;
 			case Qt::MouseButton::RightButton:
-				if (rayCastChamber.has_value())
-				{
-					// Right click on surface/object
-				}
-				else {
-					m_isPanning = true;
-				}
+				// To match PTI, rmb hold+drag needs to always pan, but releasing without moving opens context menus
+				// For now, it always pans since we don't have context menus yet
+				m_isPanning = true;
 				m_lastMouseClickPos = QVector2D(event->position());
 				event->accept();
 				break;
@@ -608,9 +626,10 @@ namespace PMP
 		}
 		m_lastMousePos = QVector2D(event->position());
 	}
+
 	void Viewport::mouseMoveEvent(QMouseEvent* event) 
 	{
-        if (m_isDragging) 
+		if (m_isDragging) 
 		{
 			m_selector->clearSurfaces();
 			setSelecting(true, QRect(m_origin, event->pos()).normalized());
@@ -625,7 +644,8 @@ namespace PMP
 			}
 			loadSelectionLines();
 		}
-    }
+	}
+
 	void Viewport::mouseReleaseEvent(QMouseEvent* event)
 	{
 		QVector2D newPos = QVector2D(event->position());
@@ -655,8 +675,7 @@ namespace PMP
 			QMatrix4x4 viewMatrix;
 			switch (event->button())
 			{
-			case Qt::MouseButton::LeftButton:
-			case Qt::MouseButton::MiddleButton: //Click Select Surface
+			case Qt::MouseButton::LeftButton: //Click Select Surface
 				m_isOrbiting = false;
 				m_isDragging = false;
 				getViewMatrix(viewMatrix);
@@ -673,6 +692,7 @@ namespace PMP
 		}
 		update();
 	}
+
 	void Viewport::wheelEvent( QWheelEvent* event )
 	{
 		float prev_dist = m_cameraDistance;

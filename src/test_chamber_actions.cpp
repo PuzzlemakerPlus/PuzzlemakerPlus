@@ -1,4 +1,5 @@
 #include "test_chamber_actions.h"
+
 namespace PMP
 {
     int TCExtrudeAction::undo()
@@ -36,7 +37,7 @@ namespace PMP
         m_selector->clearSurfaces();
 
         for (auto it = m_newSelectUSIs.rbegin(); it != m_newSelectUSIs.rend(); ++it) {
-            if (it->side == WALLSIDE::NONE) continue;
+            if (it->side == WallSide::NONE) continue;
             if (auto surf = m_testChamber->getSurface(toNode(*it), it->side); surf.has_value()) {
                 m_selector->addSelection(surf.value());
             }
@@ -79,7 +80,7 @@ namespace PMP
         m_selector->clearSurfaces();
 
         for (auto it = m_recedeUSIs.rbegin(); it != m_recedeUSIs.rend(); ++it) {
-            if (it->side == WALLSIDE::NONE) continue;
+            if (it->side == WallSide::NONE) continue;
             if (auto surf = m_testChamber->getSurface(toNode(*it), it->side); surf.has_value()) {
                 m_selector->addSelection(surf.value());
             }

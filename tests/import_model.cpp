@@ -6,26 +6,26 @@
 
 int main(int argc, char* argv[])
 {
-    std::cout << "Import Model Test" << std::endl;
-    QApplication a(argc, argv);
+	std::cout << "Import Model Test" << std::endl;
+	QApplication a(argc, argv);
 
-    // Configure OpenGL format
-    QSurfaceFormat format;
-    format.setDepthBufferSize(24);
-    format.setStencilBufferSize(8);
-    format.setVersion(3,2);
-    format.setProfile(QSurfaceFormat::CoreProfile);
+	// Configure OpenGL format
+	QSurfaceFormat format;
+	format.setDepthBufferSize(24);
+	format.setStencilBufferSize(8);
+	format.setVersion(3,2);
+	format.setProfile(QSurfaceFormat::CoreProfile);
 #ifndef NDEBUG
-    format.setOption(QSurfaceFormat::DebugContext);
+	format.setOption(QSurfaceFormat::DebugContext);
 #endif
-    QSurfaceFormat::setDefaultFormat( format );
+	QSurfaceFormat::setDefaultFormat( format );
 
-    // TODO: We probably want the main viewport to be a child of a separate "base" panel
-    PMP::Viewport mainViewport(nullptr);
-    mainViewport.resize(1280, 720);
-    mainViewport.setWindowTitle("Puzzlemaker Plus");
+	// TODO: We probably want the main viewport to be a child of a separate "base" panel
+	PMP::Viewport mainViewport(nullptr);
+	mainViewport.resize(1280, 720);
+	mainViewport.setWindowTitle("Puzzlemaker Plus");
 
-    mainViewport.show();
+	mainViewport.show();
 
-    return QApplication::exec();
+	return QApplication::exec();
 }

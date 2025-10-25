@@ -24,7 +24,7 @@ namespace PMP
 	{
 		uint size;
 		QVector3D nodeCord;
-		WALLSIDE side = WALLSIDE::NONE;
+		WallSide side = WallSide::NONE;
 	};
 
 	class TestChamber
@@ -36,20 +36,20 @@ namespace PMP
 		// Recursively destroys child of a node
 		void destroyChildrenOfNode( NodeID parentID );
 
-		unsigned int GetRootNodeSize() const {return m_rootNodeWorldSize;};
-		int GetRootNodeSizeInt() const {return static_cast<int>(m_rootNodeWorldSize);};
+		unsigned int getRootNodeSize() const {return m_rootNodeWorldSize;};
+		int getRootNodeSizeInt() const {return static_cast<int>(m_rootNodeWorldSize);};
 		const std::unordered_map<NodeID, TestChamberNode>& getNodeMap() const {return m_nodeMap;};
-		std::optional<ChamberSurface> getSurface(NodeID node, WALLSIDE side);
-		void getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WALLSIDE side);
+
+		std::optional<ChamberSurface> getSurface(NodeID node, WallSide side);
+		void getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WallSide side);
 		std::array<QVector3D, 4> getChamberSurfaceCorners(const ChamberSurface& surface);
 		QVector3D getSurfaceCenter(ChamberSurface surface);
-		const std::unordered_map<NodeID, TestChamberNode>& getNodes() const {return m_nodeMap;}
-		const std::unordered_map<NodeID, std::array<ChamberSurface, 6>>& getSurfaces() const {return m_surfaceMap; }
+		const std::unordered_map<NodeID, std::array<ChamberSurface, 6>>& getSurfaceMap() const {return m_surfaceMap; }
 		
 		// Is the given coordinate out of bounds?
 		bool isOutOOB(QVector3D coord) const;
 		// Is there surface on the given side of the node?
-		bool isSurface (WALLSIDE side, NodeID node) const;
+		bool isSurface (WallSide side, NodeID node) const;
 		bool isNodeActive(NodeID node) const {return m_nodeMap.at(node).m_active;};
 		bool nodeHasChild(NodeID node) const {return m_nodeMap.at(node).m_childIDs.has_value();};
 
@@ -75,7 +75,7 @@ namespace PMP
 		int recedeSurfaces(Selector* selector);
 		// Creates a UniqueSurfaceIdentifer for the given node and side.
 		// USI should be the standard to long term description of a node to remove dependency on NodeID and SurfaceID
-		void makeUSI (NodeID node, UniqueSurfaceIdentifer& out, WALLSIDE side = WALLSIDE::NONE);
+		void makeUSI (NodeID node, UniqueSurfaceIdentifer& out, WallSide side = WallSide::NONE);
 		// Offsets each surface's parent node center along its normal by (node size * dist) and stores the results.
 		void calculateCenterPointsSurfaceDisplacement(const std::vector<ChamberSurface>& surfs, float dist, std::vector<QVector3D>& out);
 
