@@ -8,6 +8,7 @@
 #include <qvectornd.h>
 #include <unordered_set>
 #include <initializer_list>
+#include <sstream>
 
 #include <QOpenGLWidget>
 #include <QOpenGLBuffer>
@@ -45,12 +46,12 @@ namespace PMP
 		unsigned int surfaceID;
 		WallSide wallSide;
 		std::string toString() const {
-			std::ostringstream oss;
-			oss << "ScreenSurface{ parentID=" << parentID
+			std::stringstream ss;
+			ss << "ScreenSurface{ parentID=" << parentID
 				<< ", surfaceID=" << surfaceID
 				<< ", wallSide="  << to_string(wallSide)
 				<< " }";
-			return oss.str();
+			return ss.str();
 		}
 		// Needed for unordered_* key equality
 		friend bool operator==(const ScreenSurface& a, const ScreenSurface& b) noexcept {
