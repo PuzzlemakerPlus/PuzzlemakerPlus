@@ -23,6 +23,8 @@
 #include <QMatrix4x4>
 #include <QQuaternion>
 
+#include <QLabel>
+
 #include "../selection.h"
 #include "../util/3d/ray.h"
 #include "../test_chamber.h"
@@ -106,7 +108,8 @@ namespace PMP
 			m_isPanning(false),
 			m_lastMousePos(0.0f, 0.0f),
 			m_isDragging(false),
-			m_shouldOrbitInertia(false)
+			m_shouldOrbitInertia(false),
+			m_gridSizeLabel(this)
 		{ 
 			connect(m_frameTimer, &QTimer::timeout, this, &Viewport::onFrameUpdate);
 			m_frameTimer->start(10); // ~100 FPS
@@ -124,7 +127,7 @@ namespace PMP
 		void setFogEnd(float x) {m_fogEnd = x;};
 		void setFogColor(QVector3D col) {m_fogCol = col;};
 
-		void setTestChamber(TestChamber* tc) {m_testChamber = tc;};
+		void setTestChamber(TestChamber* tc) {m_testChamber = tc;updateGridSizeLabel();};
 		void drawTestChamberSurfaceAttributes(QMatrix4x4 view);
 		void setSelector(Selector* s){m_selector = s;m_selector->setViewPortDim(width(), height());};
 
@@ -135,7 +138,6 @@ namespace PMP
 		void createGraphicsObjects();
 		void createSelectionFBO();
 		void resizeSelectionFBO(GLsizei W, GLsizei H);
-		void createSelectionPBO(GLsizeiptr needBytes);
 		void loadShaders();
 		void paintGL() override;
 		void resizeGL( int width, int height ) override;
@@ -150,12 +152,16 @@ namespace PMP
 		void mouseReleaseEvent(QMouseEvent* event) override;
 		void wheelEvent(QWheelEvent* event) override;
 
+		void resizeEvent(QResizeEvent* event) override;
+
 		void drawDots(QMatrix4x4 view);
 		void drawLines(QMatrix4x4 view);
 		void drawTestChamber(QMatrix4x4 view);
 		void drawDragBox();
 
 		void setSelecting(bool on, const QRect& r = {}) { m_isDragging = on; m_rect = r; update(); }
+
+		void updateGridSizeLabel();
 
 	private:
 		TestChamber* m_testChamber = nullptr;
@@ -223,6 +229,8 @@ namespace PMP
 		GLuint selectionTex=0;
 		GLuint selectionDep=0;
 		const float selectionTextureScale = 0.25f;
+
+		QLabel m_gridSizeLabel;
 
 #ifndef NDEBUG
 		QOpenGLDebugLogger m_debugLogger;

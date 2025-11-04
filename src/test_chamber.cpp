@@ -28,7 +28,8 @@ namespace PMP
 	}
 
 	TestChamber::TestChamber() :
-		m_rootNodeWorldSize(defaultRootNodeSize)
+		m_rootNodeWorldSize(defaultRootNodeSize),
+		m_gridSize(gridSizeDefault)
 	{
 		// Create the root node
 		// Currently, this will always be node ID 0, but explicitly storing it seems like a good idea
@@ -439,7 +440,8 @@ namespace PMP
 
 			if (surfs.size() == 0) continue;
 
-			selector->addSelectionMultiple(surfs);
+			// FIXME: Selections
+			//selector->addSelectionMultiple(surfs);
 			// For each newly selectable surface, build a USI
 			for (const auto& s : surfs) {
 				UniqueSurfaceIdentifer usi;
@@ -507,8 +509,9 @@ namespace PMP
 			if (surf.has_value())
 			{
 				// For each newly selectable surface, build a USI
-				const auto& s = surf.value();
-				selector->addSelection(s);
+				// FIXME: Selections
+				//const auto& s = surf.value();
+				//selector->addSelection(s);
 				
 			}
 			// Recede can completely remove surfaces. Therefore we always record the newSelectUSI 
@@ -618,5 +621,19 @@ namespace PMP
 						<< " (expected " << expectedCenter.x() << "," << expectedCenter.y() << "," << expectedCenter.z() << ")\n";
 			}
 		}
+	}
+
+	void TestChamber::increaseGridSize()
+	{
+		m_gridSize *= 2;
+		if ( m_gridSize > gridSizeMax )
+			m_gridSize = gridSizeMax;
+	}
+
+	void TestChamber::decreaseGridSize()
+	{
+		m_gridSize /= 2;
+		if ( m_gridSize < gridSizeMin )
+			m_gridSize = gridSizeMin;
 	}
 }

@@ -63,7 +63,8 @@ int main(int argc, char* argv[])
 	mainViewport.loadTestChamberMesh();
 
 	//creates all the buttons for the palette Right now most of the data for each element is junk for demo
-	PMP::Palette Palette(&mainViewport);
+	// Disabling this for now until we're ready to work on it more - Kelsey
+	//PMP::Palette Palette(&mainViewport);
 
 	return QApplication::exec();
 }

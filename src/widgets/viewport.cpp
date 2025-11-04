@@ -488,8 +488,6 @@ namespace PMP
 		glDisable(GL_CULL_FACE);
 		glBindVertexArray(0);
 		glUseProgram(0);
-		//qDebug() << "Drawing drag box";
-		if(m_isDragging) drawDragBox();
 	}
 
 	void Viewport::resizeGL( int width, int height )
@@ -561,7 +559,7 @@ namespace PMP
 				update();
 				break;
 			case Qt::Key_G:
-				m_debugSurface = !m_debugSurface; // toggle fog. No need to reload chamber mesh and selection
+				m_debugSurface = !m_debugSurface; // toggle debug mode. No need to reload chamber mesh and selection
 				event->accept();
 				update();
 				break;
@@ -570,6 +568,19 @@ namespace PMP
 				break;
 			case Qt::Key_Minus: //Recede surface
 				actionPerformed = m_testChamber->recedeSurfaces(m_selector);
+				break;
+			// Grid snap adjustment
+			case Qt::Key_BracketLeft:
+				m_testChamber->decreaseGridSize();
+				updateGridSizeLabel();
+				break;
+			case Qt::Key_BracketRight:
+				m_testChamber->increaseGridSize();
+				updateGridSizeLabel();
+				break;
+			case Qt::Key_Escape:
+				m_selector->clearSelection();
+				actionPerformed = true;
 				break;
 			default:
 				QWidget::keyPressEvent(event);
@@ -597,9 +608,15 @@ namespace PMP
 				//Needs to be called after mainViewport.show()
 				if (rayCastChamber.has_value())
 				{
+#if 0
 					m_origin = event->pos();
 					//Start dragging
 					setSelecting(true,QRect(m_origin, QSize()));
+#endif
+					m_selector->startSelection(rayCastChamber.value());
+					m_isDragging = true; // We can consider a left click to always be dragging in the new selection system
+					loadSelectionLines();
+					update();
 				}
 				else {
 					//Orbit if mouse click outside test chamber
@@ -631,6 +648,7 @@ namespace PMP
 	{
 		if (m_isDragging) 
 		{
+#if 0
 			m_selector->clearSurfaces();
 			setSelecting(true, QRect(m_origin, event->pos()).normalized());
 			m_lastDragRect = m_rect;
@@ -642,7 +660,18 @@ namespace PMP
 				auto surf= m_testChamber->getSurface(s.parentID, s.wallSide);
 				if(surf.has_value()) m_selector->addSelection(surf.value());
 			}
-			loadSelectionLines();
+#endif
+			// TODO: Probably want to switch this to use the frame buffer sampling, ray casts work for now though
+			QMatrix4x4 viewMatrix;
+			getViewMatrix(viewMatrix);
+			std::optional<RayHitResult> rayCastChamber = m_testChamber->rayCast(screenPosToWorldRay(width(),height(),this->mapFromGlobal(QCursor::pos()), m_projection, viewMatrix));
+
+			if ( rayCastChamber.has_value() )
+			{
+				m_selector->updateSelection(rayCastChamber.value());
+				loadSelectionLines();
+				update();
+			}
 		}
 	}
 
@@ -656,18 +685,25 @@ namespace PMP
 		{
 			switch (event->button())
 			{
-				case Qt::MouseButton::LeftButton: 
-				case Qt::MouseButton::MiddleButton: //End Orbiting/Dragging
-					m_isOrbiting = false;
-					setSelecting(false);
-					event->accept();
-					break;
-				case Qt::MouseButton::RightButton: //End Panning
-					m_isPanning = false;
-					event->accept();
-					break;
-				default:
-					break;
+			case Qt::MouseButton::LeftButton: //End Orbiting/Dragging
+				if ( m_isDragging )
+				{
+					m_selector->endSelection();
+					m_isDragging = false;
+				}
+				m_isOrbiting = false;
+				event->accept();
+				break;
+			case Qt::MouseButton::MiddleButton: // End Orbiting
+				m_isOrbiting = false;
+				event->accept();
+				break;
+			case Qt::MouseButton::RightButton: //End Panning
+				m_isPanning = false;
+				event->accept();
+				break;
+			default:
+				break;
 			}
 		}
 		else //Mouse did not move
@@ -676,14 +712,16 @@ namespace PMP
 			switch (event->button())
 			{
 			case Qt::MouseButton::LeftButton: //Click Select Surface
+				if ( m_isDragging )
+				{
+					m_selector->endSelection();
+					m_isDragging = false;
+				}
 				m_isOrbiting = false;
-				m_isDragging = false;
-				getViewMatrix(viewMatrix);
-				Q_ASSERT(m_selector);
-				// Shift click to add selection
-				if (event->modifiers() & Qt::ShiftModifier) m_selector->clickSelectSurfaceAdd(this->mapFromGlobal(QCursor::pos()), m_projection, viewMatrix);
-				else m_selector->clickSelectSurface(this->mapFromGlobal(QCursor::pos()), m_projection, viewMatrix);
-				loadSelectionLines();
+				event->accept();
+				break;
+			case Qt::MouseButton::MiddleButton:
+				m_isOrbiting = false;
 				event->accept();
 				break;
 			default:
@@ -766,5 +804,23 @@ namespace PMP
 		{
 			update();//Draws the frame again because the view changed
 		}
+	}
+
+	void Viewport::resizeEvent( QResizeEvent* event )
+	{
+		m_gridSizeLabel.resize(width(), m_gridSizeLabel.height());
+		m_gridSizeLabel.move(width() - m_gridSizeLabel.width(), height() - m_gridSizeLabel.height());
+		m_gridSizeLabel.setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignBottom);
+		updateGridSizeLabel();
+
+		QOpenGLWidget::resizeEvent(event);
+	}
+
+	void Viewport::updateGridSizeLabel()
+	{
+		if ( !m_testChamber )
+			return;
+
+		m_gridSizeLabel.setText(QString("Grid Size: ") + QString::number(m_testChamber->getGridSize()));
 	}
 }

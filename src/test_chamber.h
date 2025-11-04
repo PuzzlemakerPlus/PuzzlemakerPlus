@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include "test_chamber_types.h"
+#include "selection.h"
 
 #include "util/3d/mesh.h"
 #include "util/3d/ray.h"
@@ -16,8 +17,12 @@
 namespace PMP
 {
 	// DO NOT USE THIS DIRECTLY, this is just used to initialize the value in the test chamber class
-	const unsigned int defaultRootNodeSize = 8192;
-	class Selector;
+	// Kelsey: Lowered for now because 1024 is an easier value to work with
+	const unsigned int defaultRootNodeSize = 1024; // was 8192
+
+	const float gridSizeDefault = 32;
+	const float gridSizeMin = 32;
+	const float gridSizeMax = 256;
 
 	//Based on the information in this struct, it is possible to identify a surface without knowing its parentID or surfaceID
 	struct UniqueSurfaceIdentifer
@@ -83,6 +88,10 @@ namespace PMP
 		void printNodes();
 		void printNodesTree();
 		void testChildNodeGeneration();
+
+		void increaseGridSize();
+		void decreaseGridSize();
+		int getGridSize() { return m_gridSize; }
 		
 	private:
 		void findFreeIDs(std::array<NodeID,8>& out);
@@ -97,6 +106,8 @@ namespace PMP
 		
 		std::unordered_map<NodeID, TestChamberNode> m_nodeMap;
 		std::unordered_map<NodeID, std::array<ChamberSurface, 6>> m_surfaceMap;
+
+		int m_gridSize;
 	};
 
 }

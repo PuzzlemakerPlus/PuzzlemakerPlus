@@ -17,11 +17,11 @@ set(CMAKE_AUTOGEN_SOURCE_GROUP "")
 enable_testing()
 
 find_package(Qt6 COMPONENTS 
-            Core 
-            Gui 
-            Widgets 
-            OpenGLWidgets 
-            REQUIRED)
+			Core 
+			Gui 
+			Widgets 
+			OpenGLWidgets 
+			REQUIRED)
 
 # FetchContent_Declare(
 #     assimp
@@ -42,85 +42,86 @@ find_package(Qt6 COMPONENTS
 qt_standard_project_setup()
 
 qt_add_executable(PuzzlemakerPlus
-        # Entry point
-        src/main.cpp
+	# Entry point
+	src/main.cpp
 
-        # Widgets
-        src/widgets/palette.cpp
-        src/widgets/palette.h
-        src/widgets/viewport.cpp
-        src/widgets/viewport.h
-        src/widgets/PaletteElement.cpp
+	# Widgets
+	src/widgets/palette.cpp
+	src/widgets/palette.h
+	src/widgets/viewport.cpp
+	src/widgets/viewport.h
+	src/widgets/PaletteElement.cpp
 
-        # Utils
-        src/util/optional_array.h
-        src/util/3d/mesh.cpp
-        src/util/3d/mesh.h
-        src/util/3d/ray.cpp
-        src/util/3d/ray.h
-        src/util/debug.h
-        src/util/debug.cpp
+	# Utils
+	src/util/optional_array.h
+	src/util/3d/mesh.cpp
+	src/util/3d/mesh.h
+	src/util/3d/ray.cpp
+	src/util/3d/ray.h
+	src/util/debug.cpp
+	src/util/debug.h
+	src/util/math.cpp
+	src/util/math.h
 
-        # This is a test chamber. Four walls, ceiling and a floor
-        # ✅ Good enough for science! ❎ Not Aperture Science!
-        src/test_chamber_actions.h
+	# This is a test chamber. Four walls, ceiling and a floor
+	# ✅ Good enough for science! ❎ Not Aperture Science!
+	src/test_chamber_actions.h
 	src/test_chamber_actions.cpp
-        src/test_chamber_types.h
-        src/test_chamber.cpp
-        src/test_chamber.h
+	src/test_chamber_types.h
+	src/test_chamber.cpp
+	src/test_chamber.h
 
-        src/selection.h
-        src/selection.cpp
+	src/selection.h
+	src/selection.cpp
 
-        src/undo.h
-        src/undo.cpp
+	src/undo.h
+	src/undo.cpp
 
-        # Resources
-        res/resources.qrc
+	# Resources
+	res/resources.qrc
 )
 set_target_properties(PuzzlemakerPlus
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-    "${CMAKE_CURRENT_SOURCE_DIR}/bin")
+	PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+	"${CMAKE_CURRENT_SOURCE_DIR}/bin")
 set_target_properties(PuzzlemakerPlus
-    PROPERTIES AUTOGEN_BUILD_DIR
-    "${CMAKE_CURRENT_SOURCE_DIR}/bin/autogen/PuzzlemakerPlus")
+	PROPERTIES AUTOGEN_BUILD_DIR
+	"${CMAKE_CURRENT_SOURCE_DIR}/bin/autogen/PuzzlemakerPlus")
 
 target_link_libraries(PuzzlemakerPlus PRIVATE
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Widgets
-        Qt6::OpenGLWidgets
-        # assimp::assimp
+	Qt6::Core
+	Qt6::Gui
+	Qt6::Widgets
+	Qt6::OpenGLWidgets
+	# assimp::assimp
 )
 
 add_executable(octtreetest ${CMAKE_CURRENT_SOURCE_DIR}/tests/octtree_test.cpp
-    src/test_chamber_actions.h
-    src/test_chamber_actions.cpp
-    src/test_chamber_types.h
-    src/test_chamber.cpp
-    src/test_chamber.h
-    src/selection.cpp
-    src/selection.h
-    src/undo.h
-    src/undo.cpp
-    src/util/3d/mesh.cpp
-    src/util/3d/mesh.h
-    src/util/3d/ray.cpp
-    src/util/3d/ray.h
-
-    )
+	src/test_chamber_actions.h
+	src/test_chamber_actions.cpp
+	src/test_chamber_types.h
+	src/test_chamber.cpp
+	src/test_chamber.h
+	src/selection.cpp
+	src/selection.h
+	src/undo.h
+	src/undo.cpp
+	src/util/3d/mesh.cpp
+	src/util/3d/mesh.h
+	src/util/3d/ray.cpp
+	src/util/3d/ray.h
+)
 set_target_properties(octtreetest
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-    "${CMAKE_CURRENT_SOURCE_DIR}/bin")
+	PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+	"${CMAKE_CURRENT_SOURCE_DIR}/bin")
 set_target_properties(octtreetest
-    PROPERTIES AUTOGEN_BUILD_DIR
-    "${CMAKE_CURRENT_SOURCE_DIR}/bin/autogen/octtreetest")
+	PROPERTIES AUTOGEN_BUILD_DIR
+	"${CMAKE_CURRENT_SOURCE_DIR}/bin/autogen/octtreetest")
 add_test(NAME OctTreeTest COMMAND octtreetest)
 target_link_libraries(octtreetest PRIVATE
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Widgets
-        Qt6::OpenGLWidgets
+	Qt6::Core
+	Qt6::Gui
+	Qt6::Widgets
+	Qt6::OpenGLWidgets
 )
 
 set_property(TARGET PuzzlemakerPlus PROPERTY VS_DEBUGGER_COMMAND "$<TARGET_FILE:PuzzlemakerPlus>")
@@ -128,20 +129,20 @@ set_property(TARGET PuzzlemakerPlus PROPERTY VS_DEBUGGER_COMMAND "$<TARGET_FILE:
 message("windeployqt6.exe at ${qt_bin_path}/windeployqt6.exe")
 function(windeployqt target)
 
-    if (WIN32)
+	if (WIN32)
 
-        # POST_BUILD step
-        # - after build, we have a bin/lib for analyzing qt dependencies
-        # - we run windeployqt on target and deploy Qt libs
-        add_custom_command(TARGET ${target} POST_BUILD
-                COMMAND "${qt_bin_path}/windeployqt6.exe"
-                --verbose 1
-                $<IF:$<CONFIG:Debug>,--debug,--release>
-                \"$<TARGET_FILE:${target}>\"
-                COMMENT "Deploying Qt libraries using windeployqt for compilation target '${target}' ..."
-                )
+		# POST_BUILD step
+		# - after build, we have a bin/lib for analyzing qt dependencies
+		# - we run windeployqt on target and deploy Qt libs
+		add_custom_command(TARGET ${target} POST_BUILD
+				COMMAND "${qt_bin_path}/windeployqt6.exe"
+				--verbose 1
+				$<IF:$<CONFIG:Debug>,--debug,--release>
+				\"$<TARGET_FILE:${target}>\"
+				COMMENT "Deploying Qt libraries using windeployqt for compilation target '${target}' ..."
+				)
 
-    endif ()
+	endif ()
 
 endfunction()
 windeployqt(PuzzlemakerPlus)

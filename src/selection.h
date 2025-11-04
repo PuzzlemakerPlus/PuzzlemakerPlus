@@ -14,7 +14,12 @@ namespace PMP
 	class Selector
 	{
 	public:
-		Selector(){}
+		Selector() :
+			m_selectionActive(false),
+			m_isVolumeSelection(false),
+			m_mins(),
+			m_maxs()
+		{}
 		// Returns 4 corners of all selected surfaces
 		void getSelectionSurfaceCorners(std::vector<QVector3D>& out);
 
@@ -34,33 +39,36 @@ namespace PMP
 			out.insert(out.end(), m_surfaceSelection.begin(), m_surfaceSelection.end());
 		}
 
-		// Select single surface with ray cast
-		void clickSelectSurface(QPoint point, QMatrix4x4 projection, QMatrix4x4 view);
-		// Add single surface to selection with ray cast
-		void clickSelectSurfaceAdd(QPoint point, QMatrix4x4 projection, QMatrix4x4 view);
-		void dragSelectSurfaces(QPoint boxOrigin, QPoint boxEnd, QMatrix4x4 view);
-		bool hasSelection(ChamberSurface surface) const;
-		// For selecting multiple surfaces. Preserves previous selection
-		void addSelection(ChamberSurface surface) { m_surfaceSelection.push_back(surface); }
-		// For selecting multiple surfaces. Preserves previous selection
-		void addSelectionMultiple(std::vector<ChamberSurface>& surfaces);
-		// Select single surface
-		void setSelectionSingle(ChamberSurface surface);
-		// Select multiple surfaces, clears previous selection
-		void setSelectionMultiple(std::vector<ChamberSurface>& surface);
-
-		void getCameraFacingSurfaces(QMatrix4x4 view, std::vector<ChamberSurface>& surface, std::vector<ChamberSurface>& out);
-		bool isCameraFacingSurface(QMatrix4x4 view, const ChamberSurface& surface);
-
 		// Testchamber to make selection from
 		void setTestChamber(TestChamber* tc) {m_testChamber = tc;};
 		void setViewPortDim(int width, int height) {m_viewPortWidth = width; m_viewPortHeight = height;};
 		void clearSurfaces() { m_surfaceSelection.clear(); };
-		private:
+
+		// New selection stuff
+		// Might be worth changing these to not take the ray hit result directly
+		void getGridTileCorners(QVector3D& mins, QVector3D& maxs, const RayHitResult& hitResult);
+		void startSelection(const RayHitResult& hitResult);
+		void updateSelection(const RayHitResult& hitResult);
+		void endSelection();
+		void clearSelection();
+
+	private:
 		TestChamber* m_testChamber = nullptr;
 		int m_viewPortWidth = 0;
 		int m_viewPortHeight = 0;
 		//m_selection
 		std::vector<ChamberSurface> m_surfaceSelection;
+
+		// TODO: this needs more work to support multi selection
+		bool m_selectionActive;
+		QVector3D m_mins;
+		QVector3D m_maxs;
+		QVector3D m_startMins;
+		QVector3D m_startMaxs;
+		bool m_isVolumeSelection;
+
+		// Normal of the surface the selection was started from.
+		// Should ONLY be used for surface selections
+		QVector3D m_surfaceNormal; 
 	};
 }

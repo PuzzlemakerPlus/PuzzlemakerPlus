@@ -11,8 +11,6 @@ namespace PMP {
 
 		QVector4D rayClip(x, y, -1.0f, 1.0f); // NDC near plane
 
-		QMatrix4x4 invVP = (projectionMatrix * viewMatrix).inverted();
-
 		QVector4D rayEye = projectionMatrix.inverted() * rayClip;
 		rayEye = QVector4D(rayEye.x(), rayEye.y(), -1.0, 0.0); // Direction in eye space
 

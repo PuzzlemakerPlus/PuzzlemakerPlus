@@ -1,119 +1,114 @@
+
+#include <qvectornd.h>
+
 #include "selection.h"
 #include "test_chamber_types.h"
 #include "util/3d/mesh.h"
 #include "util/3d/ray.h"
 #include "test_chamber.h"
-#include <qvectornd.h>
+#include "util/math.h"
 
 namespace PMP
 {
-	void Selector::setSelectionSingle(ChamberSurface surface)
-	{
-		qDebug() << "Selected single surface of node " << surface.parentNode;
-		m_surfaceSelection.clear();
-		m_surfaceSelection.push_back(surface);
-	}
 	void Selector::getSelectionSurfaceCorners(std::vector<QVector3D>& out)
 	{
-		for(const auto& sel : m_surfaceSelection)
-		{
-			std::array<QVector3D,4> corners = m_testChamber->getChamberSurfaceCorners(sel);
-			out.insert(out.end(), corners.begin(), corners.end());
-		}
-	}
-	void Selector::addSelectionMultiple(std::vector<ChamberSurface>& surfaces)
-	{
-		for (const auto& sel : surfaces)
-		{
-			m_surfaceSelection.push_back(sel);
-		}
-	}
-	void Selector::setSelectionMultiple(std::vector<ChamberSurface>& surfaces)
-	{
-		m_surfaceSelection.clear();
-		for(const auto& sel : surfaces)
-		{
-			m_surfaceSelection.push_back(sel);
-		}
-	}
-	void Selector::clickSelectSurface(QPoint point, QMatrix4x4 projection, QMatrix4x4 view)
-	{
-		Q_ASSERT(m_testChamber != nullptr && "Test chamber must be set before selecting surfaces");
-		Q_ASSERT((m_viewPortWidth != 0 && m_viewPortHeight != 0) && "Viewport width and height must be set before selecting surfaces");
-		Ray ray = screenPosToWorldRay(m_viewPortWidth,m_viewPortHeight, point, projection, view);
-		std::optional<RayHitResult> cast = m_testChamber->rayCast(ray);
-		if (!cast.has_value()) return;
-		setSelectionSingle(cast->surface);
-	}
-	void Selector::clickSelectSurfaceAdd(QPoint point, QMatrix4x4 projection, QMatrix4x4 view)
-	{
-		Q_ASSERT(m_testChamber != nullptr && "Test chamber must be set before selecting surfaces");
-		Q_ASSERT((m_viewPortWidth != 0 && m_viewPortHeight != 0) && "Viewport width and height must be set before selecting surfaces");
-		Ray ray = screenPosToWorldRay(m_viewPortWidth, m_viewPortHeight, point, projection, view);
-		std::optional<RayHitResult> cast = m_testChamber->rayCast(ray);
-		if (!cast.has_value()) return;
-		if (!hasSelection(cast->surface)) addSelection(cast->surface);
-		else {
-			// If already selected, remove it from selection
-			m_surfaceSelection.erase(std::remove_if(m_surfaceSelection.begin(), m_surfaceSelection.end(),
-				[&cast](const ChamberSurface& sel) {
-					return sel.parentNode == cast->surface.parentNode && sel.side == cast->surface.side;
-				}), m_surfaceSelection.end());
-		}
-	}
-	bool Selector::hasSelection(ChamberSurface surface) const
-	{
-		for(auto const& sel : m_surfaceSelection)
-		{
-			if (sel.parentNode == surface.parentNode && sel.side == surface.side)
-				return true;
-		}
-		return false;
-	}
-	void Selector::getCameraFacingSurfaces(QMatrix4x4 view, std::vector<ChamberSurface>& surfaces, std::vector<ChamberSurface>& out)
-	{
-		Q_ASSERT(m_testChamber != nullptr && "Test chamber must be set before selecting surfaces");
-		// Camera position in world space: inverse(view) * (0,0,0,1)
-		const QMatrix4x4 invView = view.inverted();           // QMatrix4x4::inverted()
-		const QVector3D camPos = (invView * QVector4D(0,0,0,1)).toVector3D();
+		// TODO: this is a dumb hack, but it's late and I'm tired - Kelsey
 
-		for (const auto& surface : surfaces)
-		{
-			const QVector3D center = m_testChamber->getSurfaceCenter(surface);
-			const QVector3D normal = getWallNormal(surface.side).normalized();
-			const QVector3D toCam = camPos - center;
-			// Facing camera if normal points toward camera
-			if (QVector3D::dotProduct(normal, toCam) > 0.0f) {
-				out.push_back(surface);
-			}
-		}
-	}
-	bool Selector::isCameraFacingSurface(QMatrix4x4 view, const ChamberSurface& surface)
-	{
-		Q_ASSERT(m_testChamber != nullptr && "Test chamber must be set before selecting surfaces");
-		// Camera position in world space: inverse(view) * (0,0,0,1)
-		const QMatrix4x4 invView = view.inverted();           // QMatrix4x4::inverted()
-		const QVector3D camPos = (invView * QVector4D(0,0,0,1)).toVector3D();
-
-		const QVector3D center = m_testChamber->getSurfaceCenter(surface);
-		const QVector3D normal = getWallNormal(surface.side).normalized();
-		const QVector3D toCam = camPos - center;
-		// Facing camera if normal points toward camera
-		return QVector3D::dotProduct(normal, toCam) > 0.0f;
+		// Bottom
+		out.push_back(m_mins);
+		out.push_back(QVector3D(m_maxs.x(), m_mins.y(), m_mins.z()));
+		out.push_back(QVector3D(m_maxs.x(), m_maxs.y(), m_mins.z()));
+		out.push_back(QVector3D(m_mins.x(), m_maxs.y(), m_mins.z()));
+		// -X
+		out.push_back(m_mins);
+		out.push_back(QVector3D(m_mins.x(), m_mins.y(), m_maxs.z()));
+		out.push_back(QVector3D(m_maxs.x(), m_mins.y(), m_maxs.z()));
+		out.push_back(QVector3D(m_maxs.x(), m_mins.y(), m_mins.z()));
+		// -Y
+		out.push_back(m_mins);
+		out.push_back(QVector3D(m_mins.x(), m_maxs.y(), m_mins.z()));
+		out.push_back(QVector3D(m_mins.x(), m_maxs.y(), m_maxs.z()));
+		out.push_back(QVector3D(m_mins.x(), m_mins.y(), m_maxs.z()));
+		// +X
+		out.push_back(m_maxs);
+		out.push_back(QVector3D(m_mins.x(), m_maxs.y(), m_maxs.z()));
+		out.push_back(QVector3D(m_mins.x(), m_maxs.y(), m_mins.z()));
+		out.push_back(QVector3D(m_maxs.x(), m_maxs.y(), m_mins.z()));
+		// +Y
+		out.push_back(m_maxs);
+		out.push_back(QVector3D(m_maxs.x(), m_maxs.y(), m_mins.z()));
+		out.push_back(QVector3D(m_maxs.x(), m_mins.y(), m_mins.z()));
+		out.push_back(QVector3D(m_maxs.x(), m_mins.y(), m_maxs.z()));
+		// Top
+		out.push_back(m_maxs);
+		out.push_back(QVector3D(m_maxs.x(), m_mins.y(), m_maxs.z()));
+		out.push_back(QVector3D(m_mins.x(), m_mins.y(), m_maxs.z()));
+		out.push_back(QVector3D(m_mins.x(), m_maxs.y(), m_maxs.z()));
 	}
 
-	void Selector::dragSelectSurfaces(QPoint boxOrigin, QPoint boxEnd, QMatrix4x4 view)
+	void Selector::getGridTileCorners( QVector3D& mins, QVector3D& maxs, const RayHitResult& hitResult )
 	{
-		for(auto& [nodeId, surfaces] : m_testChamber->getSurfaceMap())
-		{
-			for (const auto& surface : surfaces)
-			{
-				if(isCameraFacingSurface(view, surface))
-				{
-					
-				}
-			}
-			
-		}
+		int gridSize = m_testChamber->getGridSize(); // for convenience
+		Q_ASSERT(gridSize >= 1 && "Fractional grid sizes not supported");
+
+		QVector3D forward = getWallNormal(hitResult.surface.side);
+		QVector3D up = getWallUp(hitResult.surface.side);
+		QVector3D right = QVector3D::crossProduct(forward, up);
+
+		QVector3D forwardMask( abs(forward.x()), 
+							   abs(forward.y()), 
+							   abs(forward.z()) );
+		QVector3D sideMask( abs(up.x() + right.x()), 
+							abs(up.y() + right.y()), 
+							abs(up.z() + right.z()) );
+
+		mins.setX( floor( hitResult.hitPoint.x() / gridSize ) * gridSize );
+		mins.setY( floor( hitResult.hitPoint.y() / gridSize ) * gridSize );
+		mins.setZ( floor( hitResult.hitPoint.z() / gridSize ) * gridSize );
+		mins *= sideMask;
+		mins += m_testChamber->getSurfaceCenter(hitResult.surface) * forwardMask;
+
+		maxs = mins + QVector3D(gridSize, gridSize, gridSize) * sideMask;
+	}
+
+	void Selector::startSelection( const RayHitResult& hitResult )
+	{
+		getGridTileCorners(m_mins, m_maxs, hitResult);
+		m_startMaxs = m_maxs;
+		m_startMins = m_mins;
+
+		m_surfaceNormal = getWallNormal(hitResult.surface.side);
+		// Selection never starts as a volume
+		m_isVolumeSelection = false;
+		m_selectionActive = true;
+	}
+
+	void Selector::updateSelection( const RayHitResult& hitResult )
+	{
+		QVector3D mins, maxs;
+		getGridTileCorners(mins, maxs, hitResult);
+
+		vector3DMin(mins, m_startMins, m_mins);
+		vector3DMin(maxs, m_mins, m_mins);
+
+		vector3DMax(mins, m_startMaxs, m_maxs);
+		vector3DMax(maxs, m_maxs, m_maxs);
+
+		// If the corners are aligned on any axis, it's a flat surface selection
+		m_isVolumeSelection = !( closeEnough(m_mins.x(), m_maxs.x()) ||
+								 closeEnough(m_mins.y(), m_maxs.y()) ||
+								 closeEnough(m_mins.z(), m_maxs.z()) );
+	}
+
+	void Selector::endSelection()
+	{
+		qDebug() << "Is Volume Selection:" << m_isVolumeSelection;
+	}
+
+	void Selector::clearSelection()
+	{
+		m_selectionActive = false;
+		m_isVolumeSelection = false;
+		m_maxs = m_mins = m_startMaxs = m_startMins = QVector3D(0, 0, 0);
 	}
 }
