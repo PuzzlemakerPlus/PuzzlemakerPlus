@@ -13,7 +13,8 @@ namespace PMP
         if (!anyChanged) return 0;
 
         m_testChamber->generateSurfaces();
-        m_selector->clearSurfaces();
+        // FIXME: Selections
+        //m_selector->clearSurfaces();
 
         for (auto it = m_extrudeUSIs.rbegin(); it != m_extrudeUSIs.rend(); ++it) {
             if (auto surf = m_testChamber->getSurface(toNode(*it), it->side); surf.has_value()) {
@@ -35,7 +36,8 @@ namespace PMP
         if (!anyChanged) return 0;
 
         m_testChamber->generateSurfaces();
-        m_selector->clearSurfaces();
+        // FIXME: Selections
+        //m_selector->clearSurfaces();
 
         for (auto it = m_newSelectUSIs.rbegin(); it != m_newSelectUSIs.rend(); ++it) {
             if (it->side == WallSide::NONE) continue;
@@ -58,7 +60,8 @@ namespace PMP
         if (!anyChanged) return 0;
 
         m_testChamber->generateSurfaces();
-        m_selector->clearSurfaces();
+        // FIXME: Selections
+        //m_selector->clearSurfaces();
 
         for (auto it = m_recedeUSIs.rbegin(); it != m_recedeUSIs.rend(); ++it) {
             if (auto surf = m_testChamber->getSurface(toNode(*it), it->side); surf.has_value()) {
@@ -80,7 +83,8 @@ namespace PMP
         if (!anyChanged) return 0;
 
         m_testChamber->generateSurfaces();
-        m_selector->clearSurfaces();
+        // FIXME: Selections
+        //m_selector->clearSurfaces();
 
         for (auto it = m_recedeUSIs.rbegin(); it != m_recedeUSIs.rend(); ++it) {
             if (it->side == WallSide::NONE) continue;

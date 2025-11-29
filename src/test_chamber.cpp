@@ -7,6 +7,7 @@
 #include "test_chamber.h"
 #include "test_chamber_types.h"
 #include "test_chamber_actions.h"
+#include "util/math.h"
 
 #include <array>
 #include <memory>
@@ -183,6 +184,26 @@ namespace PMP
 		return 1; // State of the node has changed
 	}
 
+	int TestChamber::setNodesActive(std::vector<NodeID>& nodes, bool active) 
+	{
+		int nodesChanged = 0;
+		for ( int i = 0; i < nodes.size(); i++ )
+		{
+			m_nodeMap[nodes[i]].m_active = active;
+			nodesChanged++;
+		}
+		// Match the sizes of adjacent nodes only after all nodes have had their active state set
+		for ( int i = 0; i < nodes.size(); i++ )
+		{
+			std::array<QVector3D, 6> outerCoords = getNeighborNodeCenters( m_nodeMap[nodes[i]].m_size, m_nodeMap[nodes[i]].m_center );
+			for ( const auto& coord : outerCoords )
+			{
+				subdivideNodeToCoord( coord, 0, m_nodeMap[nodes[i]].m_size );
+			}
+		}
+		return nodesChanged; // State of the node has changed
+	}
+
 	std::optional<ChamberSurface> TestChamber::getSurface(NodeID node, WallSide side)
 	{
 		ChamberSurface surf = m_surfaceMap[node][static_cast<int>(side)];
@@ -212,7 +233,7 @@ namespace PMP
 
 	NodeID TestChamber::subdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size)
 	{
-		if(isOutOOB(coord)) return parentID;
+		if(isPointOOB(coord)) return parentID;
 		if(m_nodeMap[parentID].m_size < size) throw std::runtime_error("Something went wrong trying to subdivide node");
 		if(m_nodeMap[parentID].m_size == size) return parentID;
 		unsigned int i = getChildOrder(coord, m_nodeMap[parentID].m_center);
@@ -265,7 +286,7 @@ namespace PMP
 
 		QVector3D neighborCoord = center + offset;
 
-		bool isVisible = isOutOOB(neighborCoord); //if coordinate behind this surface is OOB, this surface should be drawn
+		bool isVisible = isPointOOB(neighborCoord); //if coordinate behind this surface is OOB, this surface should be drawn
 		if (!isVisible) { // the coordinate behind this surface is in bound
 			NodeID neighborId = searchNodeWithCoord(neighborCoord);
 			isVisible = !isNodeActive(neighborId); // check if the node behind this surface is inactive
@@ -312,7 +333,7 @@ namespace PMP
 		return closestHit;
 	}
 
-	bool TestChamber::isOutOOB(QVector3D coord) const
+	bool TestChamber::isPointOOB(QVector3D coord) const
 	{
 		int halfSize = m_rootNodeWorldSize / 2;
 		return std::abs(coord.x()) > halfSize || std::abs(coord.y()) > halfSize || std::abs(coord.z()) > halfSize;
@@ -320,7 +341,7 @@ namespace PMP
 
 	const NodeID TestChamber::searchNodeWithCoord(QVector3D coord, NodeID parentID) const
 	{
-		if(isOutOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
+		if(isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
 		if(!m_nodeMap.at(parentID).m_childIDs.has_value()) return parentID; //found
 
 		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
@@ -329,11 +350,83 @@ namespace PMP
 
 	const NodeID TestChamber::searchNodeWithCoordSize(QVector3D coord, unsigned int size, NodeID parentID) const
 	{
-		if(isOutOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
+		if(isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
 		if(m_nodeMap.at(parentID).m_size == size) return parentID; //found
 
 		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
 		return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
+	}
+
+	std::array<QVector3D, 2> TestChamber::getNodeBBox( NodeID id )
+	{
+		TestChamberNode& node = m_nodeMap.at(id);
+		int halfSize = node.m_size / 2;
+
+		QVector3D mins(node.m_center.x() - halfSize, node.m_center.y() - halfSize, node.m_center.z() - halfSize);
+		QVector3D maxs(node.m_center.x() + halfSize, node.m_center.y() + halfSize, node.m_center.z() + halfSize);
+
+		return { mins, maxs };
+	}
+
+	void TestChamber::checkChildrenTouchingBBoxRecursive( NodeID parentID, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out )
+	{
+		TestChamberNode& parent = m_nodeMap.at(parentID);
+
+		if ( !parent.m_childIDs.has_value() )
+		{
+			// this is a leaf node and we already know it was touching if this code was reached
+			out.push_back(parentID);
+		}
+		else
+		{
+			// check children
+			for ( int i = 0; i < 8; i++ )
+			{
+				// okay, this can definitely be made more efficient, but whatever
+				std::array<QVector3D, 2> childBBox = getNodeBBox( parent.m_childIDs.value()[i] );
+				if ( boundingBoxesIntersect( childBBox[0], childBBox[1], mins, maxs ) )
+				{
+					checkChildrenTouchingBBoxRecursive(parent.m_childIDs.value()[i], mins, maxs, out);
+				}
+			}
+		}
+	}
+
+	void TestChamber::getNodesTouchingBBox( const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out )
+	{
+		out.clear();
+		checkChildrenTouchingBBoxRecursive(m_rootNode, mins, maxs, out);
+	}
+
+	void TestChamber::subdivideNodesToBBox( const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out )
+	{
+		// Get a list of all the nodes touching the bbox, then subdivide the ones that overlap the edge
+		std::vector<NodeID> touchingNodes;
+		getNodesTouchingBBox(mins, maxs, touchingNodes);
+		for ( int i = 0; i < touchingNodes.size(); i++ )
+		{
+			subdivideNodeToBBoxRecursive(touchingNodes[i], mins, maxs, out);
+		}
+	}
+
+	void TestChamber::subdivideNodeToBBoxRecursive( NodeID node, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out )
+	{
+		std::array<QVector3D, 2> nodeBBox = getNodeBBox( node );
+		if ( boundingBoxEdgesIntersect( nodeBBox[0], nodeBBox[1], mins, maxs ) )
+		{
+			createChildrenOfNode(node);
+			for ( int i = 0; i < 8; i++ )
+			{
+				NodeID childID = m_nodeMap.at(node).m_childIDs.value()[i];
+				// keep subdividin'
+				subdivideNodeToBBoxRecursive( childID, mins, maxs, out );
+			}
+		}
+		// TODO: optimize this so we're not doing the intersection check twice
+		else if ( boundingBoxesIntersect(nodeBBox[0], nodeBBox[1], mins, maxs) )
+		{
+			out.push_back(node);
+		}
 	}
 
 	void TestChamber::generateQuads(std::vector<Quad>& out) const
@@ -401,128 +494,46 @@ namespace PMP
 
 	int TestChamber::extrudeSurfaces(Selector* selector)
 	{
-		std::vector<ChamberSurface> surfSel;
-		selector->getSurfaceSelectionMultiple(surfSel);
-		if (!surfSel.size()) return 0; // No selection
-
-		// For building undoable action
-		std::vector<UniqueSurfaceIdentifer> extrudeUSIs;
-		std::vector<UniqueSurfaceIdentifer> newSelectUSIs;
-
-		std::vector<WallSide> extrudeSides;
-		for (const auto& s : surfSel) {
-			qDebug() << "Extruding surface with parent node ID: " << s.parentNode << " and side: " << static_cast<int>(s.side);
-			if (s.side != WallSide::NONE) {
-				UniqueSurfaceIdentifer extrudeUSI;
-				makeUSI(s.parentNode, extrudeUSI, s.side);
-				extrudeUSIs.push_back(extrudeUSI);
-				extrudeSides.push_back(s.side);
-			}
-			else throw std::runtime_error("HOW DID YOU SELECT AIR");
-		}
-		std::vector<QVector3D> centerPoints;
-		calculateCenterPointsSurfaceDisplacement(surfSel, 1.0f, centerPoints);
-		int selectionCount = 0;
-		for (int i = 0; i < surfSel.size(); i++) {
-			if(setNodeActive(surfSel[i].parentNode, false)) selectionCount++;
-		}
-		generateSurfaces();
-		selector->clearSurfaces();
-		// Extruded all surfaces.
-		// Now we need to find new surfaces to select
-		for (int i = 0; i < centerPoints.size(); i++)
+		QVector3D mins = selector->getMins();
+		QVector3D maxs = selector->getMaxs();
+		if ( !selector->isVolumeSelection() )
 		{
-			if(isOutOOB(centerPoints[i])) continue; // Skip if out of bounds
-			// Look for a node of the same size (to find all its child nodes as well)
-			const NodeID node = searchNodeWithCoordSize(centerPoints[i], m_nodeMap[surfSel[i].parentNode].m_size);
-			std::vector<ChamberSurface> surfs;
-			getSurfaceChildren(surfs, node, extrudeSides[i]);
+			// Shift selection forward
+			selector->shiftSelection(selector->getSurfaceNormal() * m_gridSize);
 
-			if (surfs.size() == 0) continue;
-
-			// FIXME: Selections
-			//selector->addSelectionMultiple(surfs);
-			// For each newly selectable surface, build a USI
-			for (const auto& s : surfs) {
-				UniqueSurfaceIdentifer usi;
-				makeUSI(s.parentNode, usi, s.side);
-				newSelectUSIs.push_back(usi);
-			}
+			// Make a volume between the new and original positions
+			vector3DMin(selector->getMins(), mins, mins);
+			vector3DMax(selector->getMaxs(), maxs, maxs);
 		}
-		if (newSelectUSIs.size() > 0) UndoStack::instance().addAction(std::make_unique<TCExtrudeAction>(this, selector, extrudeUSIs, newSelectUSIs));
-		else UndoStack::instance().addAction(std::make_unique<TCExtrudeAction>(this, selector, extrudeUSIs));
+		std::vector<NodeID> touchingNodes;
+		subdivideNodesToBBox(mins, maxs, touchingNodes);
+		int nodesChanged = setNodesActive(touchingNodes, false);
 
-		// If any node was able to extrude, we consider success
-		return selectionCount > 0;
+		// TODO: Hook up to undo/redo
+		generateSurfaces();
+		return nodesChanged;
 	}
 
 	int TestChamber::recedeSurfaces(Selector* selector)
 	{
-		std::vector<ChamberSurface> surfSel;
-		selector->getSurfaceSelectionMultiple(surfSel);
-		if (!surfSel.size()) return 0; // No selection
-
-		// For building undoable action
-		std::vector<UniqueSurfaceIdentifer> recedeUSIs;
-		std::vector<UniqueSurfaceIdentifer> newSelectUSIs;
-
-		std::vector<WallSide> extrudeSides;
-		for (const auto& s : surfSel) {
-			if (s.side == WallSide::NONE) throw std::runtime_error("HOW DID YOU SELECT AIR");
-			//Subdivide neighbors
-			std::array<QVector3D, 6> outerCoords = getNeighborNodeCenters(m_nodeMap.at(s.parentNode).m_size, m_nodeMap.at(s.parentNode).m_center);
-			for (const auto& coord : outerCoords)
-			{
-				subdivideNodeToCoord(coord, 0, m_nodeMap.at(s.parentNode).m_size);
-			}
-			extrudeSides.push_back(s.side);
-			UniqueSurfaceIdentifer recedeUSI;
-			makeUSI(s.parentNode, recedeUSI, s.side);
-			recedeUSIs.push_back(recedeUSI);
-		}
-		std::vector<QVector3D> centerPoints;
-		calculateCenterPointsSurfaceDisplacement(surfSel, -1.0f, centerPoints);
-		int selectionCount = 0;
-		for (int i = 0; i < centerPoints.size(); i++)
+		QVector3D mins = selector->getMins();
+		QVector3D maxs = selector->getMaxs();
+		if ( !selector->isVolumeSelection() )
 		{
-			if(isOutOOB(centerPoints[i])) continue; // Skip if out of bounds
-			// Look for a node of the same size (to find all its child nodes as well)
-			const unsigned int parentSize = m_nodeMap[surfSel[i].parentNode].m_size;
-			NodeID node = searchNodeWithCoord(centerPoints[i]);
-			if (getNodeMap().at(node).m_size != parentSize)
-			{
-				// Subdivide this node to match the size of the neighboring node
-				node = subdivideNodeToCoord(centerPoints[i], 0, parentSize); // Retarget the node to the newly subdivided node
-			}
-			if (setNodeActive(node, true)) // node state was changed (without this check, the node can recede already disabled node and fail to find selection face)
-			{
-				selectionCount++;
-			}
+			// Shift selection backward
+			selector->shiftSelection(selector->getSurfaceNormal() * -m_gridSize);
+
+			// Make a volume between the new and original positions
+			vector3DMin(selector->getMins(), mins, mins);
+			vector3DMax(selector->getMaxs(), maxs, maxs);
 		}
-		
+		std::vector<NodeID> touchingNodes;
+		subdivideNodesToBBox(mins, maxs, touchingNodes);
+		int nodesChanged = setNodesActive(touchingNodes, true);
+
+		// TODO: Hook up to undo/redo
 		generateSurfaces();
-		selector->clearSurfaces();
-		for (int i = 0; i < centerPoints.size(); i++)
-		{
-			NodeID node = searchNodeWithCoord(centerPoints[i]);
-			std::optional<ChamberSurface> surf = getSurface(node, extrudeSides[i]);
-			if (surf.has_value())
-			{
-				// For each newly selectable surface, build a USI
-				// FIXME: Selections
-				//const auto& s = surf.value();
-				//selector->addSelection(s);
-				
-			}
-			// Recede can completely remove surfaces. Therefore we always record the newSelectUSI 
-			UniqueSurfaceIdentifer usi;
-			makeUSI(node, usi, extrudeSides[i]);
-			newSelectUSIs.push_back(usi);
-		}
-		
-		if (newSelectUSIs.size() > 0) UndoStack::instance().addAction(std::make_unique<TCRecedeAction>(this, selector, recedeUSIs, newSelectUSIs));
-		else UndoStack::instance().addAction(std::make_unique<TCRecedeAction>(this, selector, recedeUSIs));
-		return selectionCount > 0;
+		return nodesChanged;
 	}
 
 	void TestChamber::makeUSI(NodeID nodeID, UniqueSurfaceIdentifer& out, WallSide side)

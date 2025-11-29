@@ -18,4 +18,19 @@ namespace PMP
 		out.setY( fmax( v1.y(), v2.y() ) );
 		out.setZ( fmax( v1.z(), v2.z() ) );
 	}
+
+	bool boundingBoxesIntersect( const QVector3D& mins1, const QVector3D& maxs1, const QVector3D& mins2, const QVector3D& maxs2 )
+	{
+		return mins1.x() < maxs2.x() && maxs1.x() > mins2.x() &&  
+		       mins1.y() < maxs2.y() && maxs1.y() > mins2.y() &&
+		       mins1.z() < maxs2.z() && maxs1.z() > mins2.z();
+	}
+	
+	bool boundingBoxEdgesIntersect( const QVector3D& mins1, const QVector3D& maxs1, const QVector3D& mins2, const QVector3D& maxs2 )
+	{
+		return boundingBoxesIntersect(mins1, maxs1, mins2, maxs2) && (
+		       mins1.x() < mins2.x() || maxs1.x() > maxs2.x() ||
+		       mins1.y() < mins2.y() || maxs1.y() > maxs2.y() ||
+		       mins1.z() < mins2.z() || maxs1.z() > maxs2.z() );
+	}
 }

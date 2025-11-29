@@ -52,7 +52,7 @@ namespace PMP
 		const std::unordered_map<NodeID, std::array<ChamberSurface, 6>>& getSurfaceMap() const {return m_surfaceMap; }
 		
 		// Is the given coordinate out of bounds?
-		bool isOutOOB(QVector3D coord) const;
+		bool isPointOOB(QVector3D coord) const;
 		// Is there surface on the given side of the node?
 		bool isSurface (WallSide side, NodeID node) const;
 		bool isNodeActive(NodeID node) const {return m_nodeMap.at(node).m_active;};
@@ -64,9 +64,18 @@ namespace PMP
 		const NodeID searchNodeWithCoordSize(QVector3D coord, unsigned int size, NodeID parentID=0) const;
 		std::optional<RayHitResult> rayCast(Ray ray) const;
 
+		std::array<QVector3D, 2> getNodeBBox(NodeID id);
+		// Returns leaf nodes which touch the specified bbox
+		void getNodesTouchingBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
+		// Given a bounding box, subdivide all nodes within in so that their sides lie along the bounding box sides
+		// - out will be set to the resulting nodes inside the bbox
+		void subdivideNodesToBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
+		void subdivideNodeToBBoxRecursive(NodeID node, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
+
 		// Expand the tree until the coordinate is enclosed by a node of given size
 		NodeID subdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size);
 		int setNodeActive(NodeID node, bool active);
+		int setNodesActive(std::vector<NodeID>& nodes, bool active);
 
 		// Based on the octree structure, generate surfaces
 		void generateSurfaces();
@@ -100,8 +109,11 @@ namespace PMP
 		void createOctreeNode(NodeID newID, std::optional<NodeID> parentID, QVector3D center, unsigned int size);
 		void _printNodesTree(std::map<NodeID, std::vector<NodeID>>& children, NodeID id, std::string prefix, bool isLast);
 
-		// Size of the root node in hammer units - this is effectively the internal max map size
+		// TODO: shorten this name?
+		void checkChildrenTouchingBBoxRecursive(NodeID parentID, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
+
 		NodeID m_rootNode;
+		// Size of the root node in hammer units - this is effectively the internal max map size
 		unsigned int m_rootNodeWorldSize;
 		
 		std::unordered_map<NodeID, TestChamberNode> m_nodeMap;

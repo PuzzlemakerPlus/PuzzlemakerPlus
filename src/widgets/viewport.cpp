@@ -311,7 +311,7 @@ namespace PMP
 	{
 		Q_ASSERT(m_selector);
 		std::vector<QVector3D> corners;
-		m_selector->getSelectionSurfaceCorners(corners);
+		m_selector->getSelectionGeometry(corners);
 		std::vector<LineVertex> lines;
 		MultiQuadCornersToLineWireframe(corners,lines);
 		loadLines(lines);
@@ -497,8 +497,6 @@ namespace PMP
 		m_projection.setToIdentity();
 		// Source near clip plane value, might change later
 		m_projection.perspective(m_fov, aspect, 7.0f, 32767.0f);
-		// Selector needs to be aware of the viewport size.
-		m_selector->setViewPortDim(width, height);
 		const int W = int(width * devicePixelRatioF());
 		const int H = int(height * devicePixelRatioF());
 		resizeSelectionFBO(W, H);
@@ -580,6 +578,9 @@ namespace PMP
 				break;
 			case Qt::Key_Escape:
 				m_selector->clearSelection();
+				actionPerformed = true;
+				break;
+			case Qt::Key_F5: // force visual reload for debugging
 				actionPerformed = true;
 				break;
 			default:

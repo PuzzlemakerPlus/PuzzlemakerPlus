@@ -129,7 +129,7 @@ namespace PMP
 
 		void setTestChamber(TestChamber* tc) {m_testChamber = tc;updateGridSizeLabel();};
 		void drawTestChamberSurfaceAttributes(QMatrix4x4 view);
-		void setSelector(Selector* s){m_selector = s;m_selector->setViewPortDim(width(), height());};
+		void setSelector(Selector* s){m_selector = s;};
 
 		QMatrix4x4 getProjectionMatrix() {return m_projection;};
 		void getViewMatrix(QMatrix4x4& out);

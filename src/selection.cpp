@@ -10,7 +10,7 @@
 
 namespace PMP
 {
-	void Selector::getSelectionSurfaceCorners(std::vector<QVector3D>& out)
+	void Selector::getSelectionGeometry(std::vector<QVector3D>& out)
 	{
 		// TODO: this is a dumb hack, but it's late and I'm tired - Kelsey
 
@@ -49,7 +49,7 @@ namespace PMP
 	void Selector::getGridTileCorners( QVector3D& mins, QVector3D& maxs, const RayHitResult& hitResult )
 	{
 		int gridSize = m_testChamber->getGridSize(); // for convenience
-		Q_ASSERT(gridSize >= 1 && "Fractional grid sizes not supported");
+		Q_ASSERT(gridSize >= 1 && "Grid size < 1 not supported");
 
 		QVector3D forward = getWallNormal(hitResult.surface.side);
 		QVector3D up = getWallUp(hitResult.surface.side);
@@ -102,13 +102,21 @@ namespace PMP
 
 	void Selector::endSelection()
 	{
-		qDebug() << "Is Volume Selection:" << m_isVolumeSelection;
+		// Don't need to do anything here currently, but we will later
 	}
 
 	void Selector::clearSelection()
 	{
 		m_selectionActive = false;
 		m_isVolumeSelection = false;
-		m_maxs = m_mins = m_startMaxs = m_startMins = QVector3D(0, 0, 0);
+		m_maxs = m_mins = m_startMaxs = m_startMins = m_surfaceNormal = QVector3D(0, 0, 0);
+	}
+
+	void Selector::shiftSelection( const QVector3D& offset )
+	{
+		m_mins += offset;
+		m_maxs += offset;
+		m_startMins += offset;
+		m_startMaxs += offset;
 	}
 }
