@@ -194,7 +194,7 @@ namespace PMP
 
 		// Fog control
 		bool m_fog = false;
-		float m_fogStart = 2500.0f;
+		float m_fogStart = 250.0f;
 		float m_fogEnd = 25000.0f;
 		QVector3D m_fogCol = {0.1,0.13,0.2};
 

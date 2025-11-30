@@ -635,6 +635,7 @@ namespace PMP
 			case Qt::MouseButton::RightButton:
 				// To match PTI, rmb hold+drag needs to always pan, but releasing without moving opens context menus
 				// For now, it always pans since we don't have context menus yet
+				if (m_isPanning) break; // already panning
 				m_isPanning = true;
 				m_lastMouseClickPos = QVector2D(event->position());
 				event->accept();
@@ -650,6 +651,7 @@ namespace PMP
 		if (m_isDragging) 
 		{
 #if 0
+			// Frame buffer selection method. will be useful for item select
 			m_selector->clearSurfaces();
 			setSelecting(true, QRect(m_origin, event->pos()).normalized());
 			m_lastDragRect = m_rect;

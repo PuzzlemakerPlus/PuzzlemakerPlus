@@ -402,9 +402,10 @@ namespace PMP
 	{
 		// Get a list of all the nodes touching the bbox, then subdivide the ones that overlap the edge
 		std::vector<NodeID> touchingNodes;
-		getNodesTouchingBBox(mins, maxs, touchingNodes);
+		getNodesTouchingBBox(mins, maxs, touchingNodes); // for all nodes overlapping the bbox,
 		for ( int i = 0; i < touchingNodes.size(); i++ )
 		{
+			//subdivide them to the bbox
 			subdivideNodeToBBoxRecursive(touchingNodes[i], mins, maxs, out);
 		}
 	}
@@ -412,8 +413,13 @@ namespace PMP
 	void TestChamber::subdivideNodeToBBoxRecursive( NodeID node, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out )
 	{
 		std::array<QVector3D, 2> nodeBBox = getNodeBBox( node );
-		if ( boundingBoxEdgesIntersect( nodeBBox[0], nodeBBox[1], mins, maxs ) )
+		// check if bbox intersect
+		bool overlap = boundingBoxesIntersect(nodeBBox[0], nodeBBox[1], mins, maxs);
+		if (!overlap) return;
+		bool encapsulated = isBoxAInsideBoxB(nodeBBox[0], nodeBBox[1], mins, maxs);
+		if (overlap && !encapsulated)
 		{
+			std::cout << "first condition \n";
 			createChildrenOfNode(node);
 			for ( int i = 0; i < 8; i++ )
 			{
@@ -423,8 +429,9 @@ namespace PMP
 			}
 		}
 		// TODO: optimize this so we're not doing the intersection check twice
-		else if ( boundingBoxesIntersect(nodeBBox[0], nodeBBox[1], mins, maxs) )
+		else if (overlap)
 		{
+			std::cout << "second condition \n";
 			out.push_back(node);
 		}
 	}

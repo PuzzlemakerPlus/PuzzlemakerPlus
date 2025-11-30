@@ -112,6 +112,8 @@ namespace PMP
 		// TODO: shorten this name?
 		void checkChildrenTouchingBBoxRecursive(NodeID parentID, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
 
+		void getNodesTouchingBBox(NodeID parentNode, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
+
 		NodeID m_rootNode;
 		// Size of the root node in hammer units - this is effectively the internal max map size
 		unsigned int m_rootNodeWorldSize;

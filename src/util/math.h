@@ -12,6 +12,7 @@ namespace PMP
 
 	// Tests if two AABBs overlap
 	bool boundingBoxesIntersect( const QVector3D& mins1, const QVector3D& maxs1, const QVector3D& mins2, const QVector3D& maxs2 );
+	bool isBoxAInsideBoxB(const QVector3D& minsA, const QVector3D& maxsA, const QVector3D& minsB, const QVector3D& maxsB);
 	// Returns true if bbox1's volume touches bbox2's edges - the order of these matters!
 	bool boundingBoxEdgesIntersect( const QVector3D& mins1, const QVector3D& maxs1, const QVector3D& mins2, const QVector3D& maxs2 );
 
