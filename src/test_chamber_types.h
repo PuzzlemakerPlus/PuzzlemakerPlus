@@ -1,5 +1,6 @@
 #pragma once
 #include "util/3d/mesh.h"
+#include "util/math.h"
 #include "util/optional_array.h"
 
 namespace PMP
@@ -33,13 +34,13 @@ namespace PMP
 			m_center(0.0f, 0.0f, 0.0f)
 		{}
 		
-		TestChamberNode(QVector3D center, unsigned int size) :
+		TestChamberNode(IntVector3D center, unsigned int size) :
 		m_size(size),
 		m_active(true),
 		m_center(center)
 		{} // Constructor without parent, used for root node only
 
-		TestChamberNode( NodeID parentID, QVector3D center, unsigned int size, bool active) :
+		TestChamberNode( NodeID parentID, IntVector3D center, unsigned int size, bool active) :
 			m_size(size),
 			m_active(active),
 			m_center(center),
@@ -47,7 +48,7 @@ namespace PMP
 		{}
 		
 		bool m_active; // Node is "open" - draws surfaces on the sides, items can be placed here, etc.
-		QVector3D m_center; // Position of the center of the node in world units
+		IntVector3D m_center; // Position of the center of the node in world units
 		unsigned int m_size; // Size of the node in world units
 
 		std::optional<NodeID> m_parentID;

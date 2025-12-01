@@ -51,24 +51,25 @@ namespace PMP
 		int gridSize = m_testChamber->getGridSize(); // for convenience
 		Q_ASSERT(gridSize >= 1 && "Grid size < 1 not supported");
 
-		QVector3D forward = getWallNormal(hitResult.surface.side);
-		QVector3D up = getWallUp(hitResult.surface.side);
-		QVector3D right = QVector3D::crossProduct(forward, up);
+		IntVector3D forward = getWallNormal(hitResult.surface.side);
+		IntVector3D up = getWallUp(hitResult.surface.side);
+		IntVector3D right = forward.cross(up);
 
-		QVector3D forwardMask( abs(forward.x()), 
+		IntVector3D forwardMask( abs(forward.x()), 
 							   abs(forward.y()), 
 							   abs(forward.z()) );
-		QVector3D sideMask( abs(up.x() + right.x()), 
+		IntVector3D sideMask( abs(up.x() + right.x()), 
 							abs(up.y() + right.y()), 
 							abs(up.z() + right.z()) );
 
 		mins.setX( floor( hitResult.hitPoint.x() / gridSize ) * gridSize );
 		mins.setY( floor( hitResult.hitPoint.y() / gridSize ) * gridSize );
 		mins.setZ( floor( hitResult.hitPoint.z() / gridSize ) * gridSize );
-		mins *= sideMask;
-		mins += m_testChamber->getSurfaceCenter(hitResult.surface) * forwardMask;
 
-		maxs = mins + QVector3D(gridSize, gridSize, gridSize) * sideMask;
+		mins *= sideMask.toQVector3D();
+		mins += m_testChamber->getSurfaceCenter(hitResult.surface).toQVector3D() * forwardMask.toQVector3D();
+
+		maxs = mins + QVector3D(gridSize, gridSize, gridSize) * sideMask.toQVector3D();
 	}
 
 	void Selector::startSelection( const RayHitResult& hitResult )
@@ -109,7 +110,8 @@ namespace PMP
 	{
 		m_selectionActive = false;
 		m_isVolumeSelection = false;
-		m_maxs = m_mins = m_startMaxs = m_startMins = m_surfaceNormal = QVector3D(0, 0, 0);
+		m_maxs = m_mins = m_startMaxs = m_startMins = QVector3D(0, 0, 0);
+		m_surfaceNormal = IntVector3D(0, 0, 0);
 	}
 
 	void Selector::shiftSelection( const QVector3D& offset )
@@ -118,5 +120,12 @@ namespace PMP
 		m_maxs += offset;
 		m_startMins += offset;
 		m_startMaxs += offset;
+	}
+	void Selector::shiftSelection(const IntVector3D& offset)
+	{
+		m_mins += offset.toQVector3D();
+		m_maxs += offset.toQVector3D();
+		m_startMins += offset.toQVector3D();
+		m_startMaxs += offset.toQVector3D();
 	}
 }

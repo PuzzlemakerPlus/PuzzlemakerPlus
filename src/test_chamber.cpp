@@ -23,9 +23,10 @@
 
 namespace PMP
 {
-	QVector3D getWallFaceCenter(QVector3D center, unsigned int size, QVector3D normal)
+	IntVector3D getWallFaceCenter(IntVector3D center, unsigned int size, IntVector3D normal)
 	{
-		return center + size/2 * -normal;
+		assert(size % 2 == 0 && "Node size must be even");
+		return center + (int)(size/2) * -normal;
 	}
 
 	TestChamber::TestChamber() :
@@ -39,9 +40,9 @@ namespace PMP
 	}
 
 	// Given a coordinate, compare against the parent coordinate to find the order at which the child node is placed in the child array
-	unsigned int getChildOrder(QVector3D coord, QVector3D parentCenter)
+	unsigned int getChildOrder(IntVector3D coord, IntVector3D parentCenter)
 	{
-		QVector3D delta = coord - parentCenter;
+		IntVector3D delta = coord - parentCenter;
 
 		// Determine sign bits: 0 for negative, 1 for positive
 		unsigned int xBit = (delta.x() >= 0) ? 1 : 0;
@@ -52,7 +53,7 @@ namespace PMP
 		return (zBit << 2) | (yBit << 1) | xBit;
 	}
 
-	QVector3D getChildCenter(unsigned int order, unsigned int parentSize, QVector3D parentCenter)
+	IntVector3D getChildCenter(unsigned int order, unsigned int parentSize, IntVector3D parentCenter)
 	{
 		//std::cout << parentSize << std::endl;
 		if (parentSize % 4 != 0) throw std::runtime_error("Parent node size must be divisible by 4");
@@ -64,7 +65,7 @@ namespace PMP
 		int ySign = (((order >> 1) & 1) << 1) - 1;        // 1 if bit 1 is 0, -1 if 1
 		int zSign = (((order >> 2) & 1) << 1) - 1;        // 1 if bit 2 is 0, -1 if 1
 
-		return parentCenter + QVector3D(offset * xSign, offset * ySign, offset * zSign);
+		return parentCenter + IntVector3D(offset * xSign, offset * ySign, offset * zSign);
 	}
 
 	void TestChamber::createChildrenOfNode( NodeID parentID )
@@ -83,7 +84,7 @@ namespace PMP
 		//posx posy posz
 		for (unsigned int i = 0; i < 8; ++i )
 		{
-			QVector3D pos = getChildCenter(i, parentNode.m_size, parentNode.m_center);
+			IntVector3D pos = getChildCenter(i, parentNode.m_size, parentNode.m_center);
 			NodeID id = positionToNodeID(pos);
 			createOctreeNode(id, parentID, pos, parentNode.m_size/2);
 			parentChildIds[i] = id;
@@ -113,7 +114,7 @@ namespace PMP
 		}
 	}
 
-	void TestChamber::createOctreeNode(NodeID newID, std::optional<NodeID> parentID, QVector3D center, unsigned int size)
+	void TestChamber::createOctreeNode(NodeID newID, std::optional<NodeID> parentID, IntVector3D center, unsigned int size)
 	{
 		if ( parentID.has_value() )
 			m_nodeMap.emplace(newID, TestChamberNode( parentID.value(), center, size, m_nodeMap.at(parentID.value()).m_active));
@@ -121,10 +122,10 @@ namespace PMP
 			m_nodeMap.emplace(newID, TestChamberNode(center, size));
 	}
 
-	NodeID TestChamber::positionToNodeID(QVector3D pos)
+	NodeID TestChamber::positionToNodeID(IntVector3D pos)
 	{
 		// make sure all coordinates are positive
-		QVector3D displaced = pos + QVector3D(m_rootNodeWorldSize,m_rootNodeWorldSize,m_rootNodeWorldSize);
+		IntVector3D displaced = pos + IntVector3D(m_rootNodeWorldSize,m_rootNodeWorldSize,m_rootNodeWorldSize);
 		uint64_t x = static_cast<uint64_t>(std::llround(displaced.x()));
 		uint64_t y = static_cast<uint64_t>(std::llround(displaced.y()));
 		uint64_t z = static_cast<uint64_t>(std::llround(displaced.z()));
@@ -163,16 +164,16 @@ namespace PMP
 		}
 	}
 
-	std::array<QVector3D, 6> getNeighborNodeCenters(const unsigned int nodeSize, const QVector3D nodeCenter, float epsilon = 0.5f)
+	// I wrote this code but I forgot why epsilon matters someone please leave a comment below -asd
+	std::array<IntVector3D, 6> getNeighborNodeCenters(const unsigned int nodeSize, const IntVector3D nodeCenter)
 	{
-		float s = nodeSize + epsilon;
 		return {
-			nodeCenter + QVector3D(s, 0.0f, 0.0f),  // +X
-			nodeCenter + QVector3D(-s, 0.0f, 0.0f),  // -X
-			nodeCenter + QVector3D(0.0f,  s, 0.0f),  // +Y
-			nodeCenter + QVector3D(0.0f, -s, 0.0f),  // -Y
-			nodeCenter + QVector3D(0.0f, 0.0f,  s),  // +Z
-			nodeCenter + QVector3D(0.0f, 0.0f, -s)   // -Z
+			nodeCenter + IntVector3D(nodeSize, 0.0f, 0.0f),  // +X
+			nodeCenter + IntVector3D(-nodeSize, 0.0f, 0.0f),  // -X
+			nodeCenter + IntVector3D(0.0f,  nodeSize, 0.0f),  // +Y
+			nodeCenter + IntVector3D(0.0f, -nodeSize, 0.0f),  // -Y
+			nodeCenter + IntVector3D(0.0f, 0.0f,  nodeSize),  // +Z
+			nodeCenter + IntVector3D(0.0f, 0.0f, -nodeSize)   // -Z
 		};
 	}
 
@@ -196,10 +197,11 @@ namespace PMP
 
 		m_nodeMap.at(node).m_active = active;
 		// Also need to make sure all adjacent nodes have matching size.
-		std::array<QVector3D, 6> outerCoords = getNeighborNodeCenters(m_nodeMap.at(node).m_size, m_nodeMap.at(node).m_center);
+		// TODO: now that we have IntVector3D, this can be optimized further
+		std::array<IntVector3D, 6> outerCoords = getNeighborNodeCenters(m_nodeMap.at(node).m_size, m_nodeMap.at(node).m_center);
 		for(const auto& coord : outerCoords)
 		{
-			subdivideNodeToCoord(coord, 0, m_nodeMap.at(node).m_size);
+			subdivideNodeToCoord(coord.toQVector3D(), 0, m_nodeMap.at(node).m_size);
 		}
 		return 1; // State of the node has changed
 	}
@@ -215,10 +217,11 @@ namespace PMP
 		// Match the sizes of adjacent nodes only after all nodes have had their active state set
 		for ( int i = 0; i < nodes.size(); i++ )
 		{
-			std::array<QVector3D, 6> outerCoords = getNeighborNodeCenters(m_nodeMap.at(nodes[i]).m_size, m_nodeMap.at(nodes[i]).m_center );
+			std::array<IntVector3D, 6> outerCoords = getNeighborNodeCenters(m_nodeMap.at(nodes[i]).m_size, m_nodeMap.at(nodes[i]).m_center);
 			for ( const auto& coord : outerCoords )
 			{
-				subdivideNodeToCoord( coord, m_rootNode, m_nodeMap.at(nodes[i]).m_size );
+				NodeID done = subdivideNodeToCoord( coord.toQVector3D(), m_rootNode, m_nodeMap.at(nodes[i]).m_size);
+				Debugger::instance().addDebugPoint(coord.toQVector3D(), { 1.0f, 1.0f, 0.0f } );
 			}
 		}
 		return nodesChanged; // State of the node has changed
@@ -264,32 +267,62 @@ namespace PMP
 	void TestChamber::getNeighborNodes(NodeID node, std::array<std::optional<NodeID>, 6>& out)
 	{
 		const TestChamberNode& currentNode = m_nodeMap.at(node);
-		std::array<QVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.m_size, currentNode.m_center);
+		std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.m_size, currentNode.m_center);
 
 		for (int i = 0; i < 6; ++i)
 		{
 			try {
-				NodeID neighborNodeID = getNodeOfSizeAtCoord(neighborCoords[i], currentNode.m_size);
+				NodeID neighborNodeID = getNodeOfSizeAtCoord(neighborCoords[i].toQVector3D(), currentNode.m_size);
 				out[i] = neighborNodeID;
 			} catch (const std::runtime_error&) {
 				out[i] = std::nullopt; // Out of bounds
 			}
 		}
 	}
-
+	//TODO optimize this by using the fact that the coordinates are IntVector3D
 	bool TestChamber::areNeighborsSameSize(NodeID node) {
 		const TestChamberNode& currentNode = m_nodeMap.at(node);
-		std::array<QVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.m_size, currentNode.m_center);
+		std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.m_size, currentNode.m_center);
+		bool success = true;
 		for (int i = 0; i < 6; ++i)
 		{
-			if (isPointOOB(neighborCoords[i])) continue;
-			auto r = tryGetNodeAtCoord(neighborCoords[i]);
-			if(r == std::nullopt) return false; // Neighbor does not exist
+			if (isPointOOB(neighborCoords[i].toQVector3D())) continue;
+			auto r = tryGetNodeAtCoord(neighborCoords[i].toQVector3D());
+			if (r == std::nullopt) {
+				success = false; // Neighbor does not exist
+				Debugger::instance().addDebugPoint(neighborCoords[i].toQVector3D(), { 1.0f,0.0f,0.0f });
+			}
+			else Debugger::instance().addDebugPoint(m_nodeMap.at(r.value()).m_center.toQVector3D(), { 0.0f,1.0f,0.0f });
 		}
-		return true;
+		return success;
+	}
+	//TODO optimize this by using the fact that the coordinates are IntVector3D
+	bool TestChamber::areNeighborsActive(NodeID node) {
+		const TestChamberNode& currentNode = m_nodeMap.at(node);
+		std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.m_size, currentNode.m_center);
+		bool success = true;
+		for (int i = 0; i < 6; ++i)
+		{
+			if (isPointOOB(neighborCoords[i].toQVector3D())) continue;
+			auto r = tryGetNodeAtCoord(neighborCoords[i].toQVector3D());
+			if (r == std::nullopt) {
+				
+				continue;
+			}
+			else {
+				if (m_nodeMap.at(r.value()).m_active) {
+					Debugger::instance().addDebugPoint(m_nodeMap.at(r.value()).m_center.toQVector3D(), {0.0f,1.0f,0.0f});
+				}
+				else {
+					Debugger::instance().addDebugPoint(m_nodeMap.at(r.value()).m_center.toQVector3D(), { 1.0f,0.0f,0.0f });
+					success = false; 
+				}
+			}
+		}
+		return success;
 	}
 
-	std::optional<NodeID> TestChamber::tryGetNodeAtCoord(QVector3D coord)
+	std::optional<NodeID> TestChamber::tryGetNodeAtCoord(IntVector3D coord)
 	{
 		NodeID hash = positionToNodeID(coord); 
 		auto r = m_nodeMap.find(hash); // Check if node exists at this hash
@@ -339,53 +372,54 @@ namespace PMP
 		return subdivideNodeToCoord(coord, m_nodeMap.at(parentID).m_childIDs.value()[i], size);
 	}
 
-	std::array<QVector3D, 4> TestChamber::getChamberSurfaceCorners(const ChamberSurface& surface)
+	std::array<IntVector3D, 4> TestChamber::getChamberSurfaceCorners(const ChamberSurface& surface)
 	{
 		const TestChamberNode& node = m_nodeMap.at(surface.parentNode);
 		float halfSize = node.m_size / 2.0f;
 
-		QVector3D normal = getWallNormal(surface.side);
-		QVector3D surfCenter = getWallFaceCenter(node.m_center, node.m_size, normal);
-		QVector3D up     = getWallUp(surface.side);
-		QVector3D right  = QVector3D::crossProduct(normal, up);
+		IntVector3D normal = getWallNormal(surface.side);
+		IntVector3D surfCenter = getWallFaceCenter(node.m_center, node.m_size, normal);
+		IntVector3D up     = getWallUp(surface.side);
+		IntVector3D right  = normal.cross(up);
 
 		// Quad corners: counter-clockwise
-		QVector3D p0 = surfCenter + (-right - up) * halfSize;  // bottom-left
-		QVector3D p1 = surfCenter + ( right - up) * halfSize;  // bottom-right
-		QVector3D p2 = surfCenter + ( right + up) * halfSize;  // top-right
-		QVector3D p3 = surfCenter + (-right + up) * halfSize;  // top-left
+		IntVector3D p0 = surfCenter + (-right - up) * halfSize;  // bottom-left
+		IntVector3D p1 = surfCenter + ( right - up) * halfSize;  // bottom-right
+		IntVector3D p2 = surfCenter + ( right + up) * halfSize;  // top-right
+		IntVector3D p3 = surfCenter + (-right + up) * halfSize;  // top-left
 
 		return {p0, p1, p2, p3};
 	}
 
-	QVector3D TestChamber::getSurfaceCenter(ChamberSurface surface)
+	IntVector3D TestChamber::getSurfaceCenter(ChamberSurface surface)
 	{
 		return m_nodeMap.at(surface.parentNode).m_size * 0.5f * getWallNormal(surface.side) * -1 + m_nodeMap.at(surface.parentNode).m_center;
 	}
 
 	//Given a wallside of a node, should this wall be drawn
+	//optimize this function by using IntVector3D
 	bool TestChamber::isSurface(WallSide side, NodeID node) const
 	{
-		const QVector3D center = m_nodeMap.at(node).m_center;
-		const float halfSize = m_nodeMap.at(node).m_size / 2.0f;
-		const float epsilon = 0.4f;
-		QVector3D offset;
+		const IntVector3D center = m_nodeMap.at(node).m_center;
+		assert(m_nodeMap.at(node).m_size % 2 == 0, "node size should be an even numer");
+		const int halfSize = m_nodeMap.at(node).m_size / 2;
+		IntVector3D offset;
 		using enum WallSide;
 		switch (side) {
-			case POS_X: offset = {+halfSize + epsilon, 0, 0}; break;
-			case NEG_X: offset = {-halfSize - epsilon, 0, 0}; break;
-			case POS_Y: offset = {0, +halfSize + epsilon, 0}; break;
-			case NEG_Y: offset = {0, -halfSize - epsilon, 0}; break;
-			case POS_Z: offset = {0, 0, +halfSize + epsilon}; break;
-			case NEG_Z: offset = {0, 0, -halfSize - epsilon}; break;
+			case POS_X: offset = {+halfSize+1, 0, 0}; break;
+			case NEG_X: offset = {-halfSize-1, 0, 0}; break;
+			case POS_Y: offset = {0, +halfSize+1, 0}; break;
+			case NEG_Y: offset = {0, -halfSize-1, 0}; break;
+			case POS_Z: offset = {0, 0, +halfSize+1}; break;
+			case NEG_Z: offset = {0, 0, -halfSize-1}; break;
 			case NONE: throw std::runtime_error("Invalid WallSide");
 		}
 
-		QVector3D neighborCoord = center + offset;
+		IntVector3D neighborCoord = center + offset;
 
 		bool isVisible = isPointOOB(neighborCoord); //if coordinate behind this surface is OOB, this surface should be drawn
 		if (!isVisible) { // the coordinate behind this surface is in bound
-			NodeID neighborId = searchNodeWithCoord(neighborCoord);
+			NodeID neighborId = searchNodeWithCoord(neighborCoord.toQVector3D());
 			isVisible = !isNodeActive(neighborId); // check if the node behind this surface is inactive
 		}
 		return isVisible;
@@ -407,20 +441,20 @@ namespace PMP
 
 				// Wall geometry
 				float halfSize = node.m_size / 2.0f;
-				QVector3D up = getWallUp(surface.side);
-				QVector3D normal = getWallNormal(surface.side);
-				QVector3D right = QVector3D::crossProduct(normal, up);
-				QVector3D center = getWallFaceCenter(node.m_center, node.m_size, normal);
+				IntVector3D up = getWallUp(surface.side);
+				IntVector3D normal = getWallNormal(surface.side);
+				IntVector3D right = normal.cross(up);
+				IntVector3D center = getWallFaceCenter(node.m_center, node.m_size, normal);
 
-				QVector3D p0 = center + (-right - up) * halfSize;
-				QVector3D p1 = center + ( right - up) * halfSize;
-				QVector3D p2 = center + ( right + up) * halfSize;
-				QVector3D p3 = center + (-right + up) * halfSize;
+				IntVector3D p0 = center + (-right - up) * halfSize;
+				IntVector3D p1 = center + ( right - up) * halfSize;
+				IntVector3D p2 = center + ( right + up) * halfSize;
+				IntVector3D p3 = center + (-right + up) * halfSize;
 
 				float tTemp;
 				QVector3D hitPosTemp;
 
-				if (rayIntersectsQuad(ray, p0, p1, p2, p3, tTemp, hitPosTemp) && tTemp > 0.0f && tTemp < closestT)
+				if (rayIntersectsQuad(ray, p0.toQVector3D(), p1.toQVector3D(), p2.toQVector3D(), p3.toQVector3D(), tTemp, hitPosTemp) && tTemp > 0.0f && tTemp < closestT)
 				{
 					closestT = tTemp;
 					closestHit = RayHitResult{surface.parentNode, hitPosTemp, surface};
@@ -432,6 +466,13 @@ namespace PMP
 
 	bool TestChamber::isPointOOB(QVector3D coord) const
 	{
+		assert(m_rootNodeWorldSize % 2 == 0);
+		int halfSize = m_rootNodeWorldSize / 2;
+		return std::abs(coord.x()) > halfSize || std::abs(coord.y()) > halfSize || std::abs(coord.z()) > halfSize;
+	}
+	bool TestChamber::isPointOOB(IntVector3D coord) const
+	{
+		assert(m_rootNodeWorldSize % 2 == 0);
 		int halfSize = m_rootNodeWorldSize / 2;
 		return std::abs(coord.x()) > halfSize || std::abs(coord.y()) > halfSize || std::abs(coord.z()) > halfSize;
 	}
@@ -450,14 +491,26 @@ namespace PMP
 		return searchNodeWithCoord(coord,  m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
 	}
 
-	const NodeID TestChamber::searchNodeWithCoordSize(QVector3D coord, unsigned int size) const
+	const NodeID TestChamber::searchNodeWithCoordSize(const QVector3D coord, unsigned int size) const
 	{
 		return searchNodeWithCoordSize(coord, size, m_rootNode);
 	}
-	const NodeID TestChamber::searchNodeWithCoordSize(QVector3D coord, unsigned int size, NodeID parentID) const
+	const NodeID TestChamber::searchNodeWithCoordSize(const QVector3D coord, unsigned int size, NodeID parentID) const
 	{
 		if(isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
 		if(m_nodeMap.at(parentID).m_size == size) return parentID; //found
+
+		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
+		return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
+	}
+	const NodeID TestChamber::searchNodeWithCoordSize(const IntVector3D coord, unsigned int size) const
+	{
+		return searchNodeWithCoordSize(coord, size, m_rootNode);
+	}
+	const NodeID TestChamber::searchNodeWithCoordSize(const IntVector3D coord, unsigned int size, NodeID parentID) const
+	{
+		if (isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
+		if (m_nodeMap.at(parentID).m_size == size) return parentID; //found
 
 		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
 		return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
@@ -558,7 +611,7 @@ namespace PMP
 			{
 				if(surface.side == WallSide::NONE) continue;
 				const NodeID nodeID = surface.parentNode;
-				out.push_back(generateQuadAt(m_nodeMap.at(nodeID).m_center, surface.side, m_nodeMap.at(nodeID).m_size));
+				out.push_back(generateQuadAt(m_nodeMap.at(nodeID).m_center.toQVector3D(), surface.side, m_nodeMap.at(nodeID).m_size));
 			}
 		}
 	}
@@ -572,7 +625,8 @@ namespace PMP
 			{
 				if(surface.side == WallSide::NONE) continue;
 				const NodeID nodeID = surface.parentNode;
-				out.push_back(generateTCQuadAt(m_nodeMap.at(nodeID).m_center, surface.side, m_nodeMap.at(nodeID).m_size, surfaceID, nodeID));
+				
+				out.push_back(generateTCQuadAt(m_nodeMap.at(nodeID).m_center.toQVector3D(), surface.side, m_nodeMap.at(nodeID).m_size, surfaceID, nodeID));
 			}
 		}
 	}
@@ -582,7 +636,6 @@ namespace PMP
 		m_surfaceMap.clear();
 		for (const auto& [id, node] : getNodeMap()) {
 			if (!isNodeActive(id) || nodeHasChild(id)) continue;
-			const QVector3D& center = node.m_center;
 			
 			std::array<ChamberSurface, 6>& walls = m_surfaceMap.defaultConstruct(id);
 			for (int i = 0; i < 6; ++i) {
@@ -595,25 +648,26 @@ namespace PMP
 		}
 	}
 
-	void TestChamber::calculateCenterPointsSurfaceDisplacement(const std::vector<ChamberSurface>& surfs, float dist, std::vector<QVector3D>& out)
+	void TestChamber::calculateCenterPointsSurfaceDisplacement(const std::vector<ChamberSurface>& surfs, float dist, std::vector<IntVector3D>& out)
 	{
 		for (const auto& s : surfs) {
 			// Get the center of the surface
 			const TestChamberNode& node = m_nodeMap.at(s.parentNode);
-			QVector3D center = node.m_center;
+			IntVector3D center = node.m_center;
 			float size = node.m_size;
 
 			// Get the normal of the surface
-			QVector3D normal = getWallNormal(s.side);
+			IntVector3D normal = getWallNormal(s.side);
 
 			// Calculate the new position
-			QVector3D newPos = center + normal * size * dist;
+			IntVector3D newPos = center + normal * size * dist;
 			out.push_back(newPos);
 		}
 	}
 
 	int TestChamber::extrudeSurfaces(Selector* selector)
 	{
+		Debugger::instance().clearDebugPoints();
 		QVector3D mins = selector->getMins();
 		QVector3D maxs = selector->getMaxs();
 		if ( !selector->isVolumeSelection() )
@@ -628,14 +682,20 @@ namespace PMP
 		std::vector<NodeID> touchingNodes;
 		subdivideNodesToBBox(mins, maxs, touchingNodes);
 		int nodesChanged = setNodesActive(touchingNodes, false);
+		for (int i = 0; i < touchingNodes.size(); i++)
+		{
+			Debugger::instance().addDebugPoint(m_nodeMap.at(touchingNodes[i]).m_center.toQVector3D(), {0.0f,0.0f,1.0f});
+		}
 
 		// TODO: Hook up to undo/redo
 		generateSurfaces();
+		Debugger::instance().drawDebugPoints();
 		return nodesChanged;
 	}
 
 	int TestChamber::recedeSurfaces(Selector* selector)
 	{
+		Debugger::instance().clearDebugPoints();
 		QVector3D mins = selector->getMins();
 		QVector3D maxs = selector->getMaxs();
 		if ( !selector->isVolumeSelection() )
@@ -649,10 +709,15 @@ namespace PMP
 		}
 		std::vector<NodeID> touchingNodes;
 		subdivideNodesToBBox(mins, maxs, touchingNodes);
+		for (int i = 0; i < touchingNodes.size(); i++)
+		{
+			Debugger::instance().addDebugPoint(m_nodeMap.at(touchingNodes[i]).m_center.toQVector3D(), {0.0f,0.0f,1.0f});
+		}
 		int nodesChanged = setNodesActive(touchingNodes, true);
 
 		// TODO: Hook up to undo/redo
 		generateSurfaces();
+		Debugger::instance().drawDebugPoints();
 		return nodesChanged;
 	}
 
@@ -692,7 +757,7 @@ namespace PMP
 			std::cout << (isLast ? "└── " : "├── ");
 		}
 #endif
-		std::cout << "Node " << id << " at " << printVector3D(m_nodeMap.at(id).m_center) << " with size " << m_nodeMap.at(id).m_size << "\n";
+		std::cout << "Node " << id << " at " << printVector3D(m_nodeMap.at(id).m_center.toQVector3D()) << " with size " << m_nodeMap.at(id).m_size << "\n";
 
 		const auto& childVec = children[id];
 		for (size_t i = 0; i < childVec.size(); ++i) {

@@ -11,6 +11,7 @@
 #include "test_chamber_types.h"
 #include "selection.h"
 
+#include "util/math.h"
 #include "util/3d/mesh.h"
 #include "util/3d/ray.h"
 #include "util/safemap.h"
@@ -29,7 +30,7 @@ namespace PMP
 	struct UniqueSurfaceIdentifer
 	{
 		uint size;
-		QVector3D nodeCord;
+		IntVector3D nodeCord;
 		WallSide side = WallSide::NONE;
 	};
 
@@ -59,20 +60,23 @@ namespace PMP
 		// Given a node, check if all its neighbors are the same size as itself
 		// very cheap operation Try to use this instead of getNeighborNodes whenever possible
 		bool areNeighborsSameSize(NodeID node);
+		// Given a node, check if all its neighbors are active
+		bool areNeighborsActive(NodeID node);
 
 		// Uses the hash function to try to locate the node at the given center coordinate
 		// Returns std::nullopt if there is no such node that has that exact center coordinate
 		// very cheap operation
 		// Will return the node even if it has children
-		std::optional<NodeID> tryGetNodeAtCoord(QVector3D coord);
+		std::optional<NodeID> tryGetNodeAtCoord(IntVector3D coord);
 
-		
-		std::array<QVector3D, 4> getChamberSurfaceCorners(const ChamberSurface& surface);
-		QVector3D getSurfaceCenter(ChamberSurface surface);
+		std::array<IntVector3D, 4> getChamberSurfaceCorners(const ChamberSurface& surface);
+		IntVector3D getSurfaceCenter(ChamberSurface surface);
 		const SafeUnorderedMap<NodeID, std::array<ChamberSurface, 6>>& getSurfaceMap() const {return m_surfaceMap; }
 		
 		// Is the given coordinate out of bounds?
 		bool isPointOOB(QVector3D coord) const;
+		bool isPointOOB(IntVector3D coord) const;
+		
 		// Is there surface on the given side of the node?
 		bool isSurface (WallSide side, NodeID node) const;
 		bool isNodeActive(NodeID node) const {return m_nodeMap.at(node).m_active;};
@@ -82,12 +86,13 @@ namespace PMP
 		// Recursive function that guarantees to find the node
 		const NodeID searchNodeWithCoord(QVector3D coord) const;
 		const NodeID searchNodeWithCoord(QVector3D coord, NodeID parentID) const;
-
-		
+		// Uses the hash function to try to locate the node that uses the given coord as the centere coordinate
+		//const std::optional<NodeID> searchNodeWithCoord(IntVector3D coord) const;
 
 		// Find the node with specified size that includes the give coordinate
 		// Recursive function that guarantees to find the node
-		const NodeID searchNodeWithCoordSize(QVector3D coord, unsigned int size) const;
+		const NodeID searchNodeWithCoordSize(const QVector3D coord, unsigned int size) const;
+		const NodeID searchNodeWithCoordSize(const IntVector3D coord, unsigned int size) const;
 		
 		std::optional<RayHitResult> rayCast(Ray ray) const;
 
@@ -127,12 +132,11 @@ namespace PMP
 		// USI should be the standard to long term description of a node to remove dependency on NodeID and SurfaceID
 		void makeUSI (NodeID node, UniqueSurfaceIdentifer& out, WallSide side = WallSide::NONE);
 		// Offsets each surface's parent node center along its normal by (node size * dist) and stores the results.
-		void calculateCenterPointsSurfaceDisplacement(const std::vector<ChamberSurface>& surfs, float dist, std::vector<QVector3D>& out);
+		void calculateCenterPointsSurfaceDisplacement(const std::vector<ChamberSurface>& surfs, float dist, std::vector<IntVector3D>& out);
 
 		// Debug
 		void printNodes();
 		void printNodesTree();
-		void testChildNodeGeneration();
 
 		void unsubdivideNode(NodeID node);
 
@@ -143,17 +147,18 @@ namespace PMP
 	private:
 		// Hash function to convert position to unique node ID
 		// The position must be a known center point of a node
-		NodeID positionToNodeID(QVector3D pos);
+		NodeID positionToNodeID(IntVector3D pos);
 		void findFreeIDs(std::array<NodeID,8>& out);
 		// std::nullopt for the parent ID means it's the root node
 		// - not making this a default value so it is a deliberate programming choice
-		void createOctreeNode(NodeID newID, std::optional<NodeID> parentID, QVector3D center, unsigned int size);
+		void createOctreeNode(NodeID newID, std::optional<NodeID> parentID, IntVector3D center, unsigned int size);
 		void _printNodesTree(std::map<NodeID, std::vector<NodeID>>& children, NodeID id, std::string prefix, bool isLast);
 
 		// TODO: shorten this name?
 		void checkChildrenTouchingBBox(NodeID parentID, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
 		
 		const NodeID searchNodeWithCoordSize(QVector3D coord, unsigned int size, NodeID parentID) const;
+		const NodeID searchNodeWithCoordSize(IntVector3D coord, unsigned int size, NodeID parentID) const;
 		
 		
 		void getNodesTouchingBBox(NodeID parentNode, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);

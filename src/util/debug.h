@@ -1,9 +1,14 @@
 #pragma once
 #include <QVector3D>
 #include "../widgets/viewport.h"
+#include <vector>
 
 namespace PMP
 {
+	struct DebugPoint {
+		QVector3D position;
+		QVector3D color; // color normalized between 0 and 1
+	};
 	// Singleton Debugger that displays on viewport
 	class Debugger
 	{
@@ -15,13 +20,15 @@ namespace PMP
 		void drawPoint(QVector3D point);
 		void drawPoints(std::vector<QVector3D> points);
 		// Add a point to the debug points list, which can be drawn later
-		void addDebugPoint(QVector3D point);
+		void addDebugPoint(QVector3D point, QVector3D color = {1.0,0,0});
 		// Draw all debug points that have been added
 		void drawDebugPoints();
+		// Clear all debug points that have been added
+		void clearDebugPoints();
 	private:
 		Debugger() = default;
 		Debugger(const Debugger&) = delete;
 		Viewport* m_viewport = nullptr;
-		std::vector<QVector3D> m_debugPoints;
+		std::vector<DebugPoint> m_debugPoints;
 	};
 }

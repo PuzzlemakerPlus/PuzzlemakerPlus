@@ -18,6 +18,8 @@
 #include "../selection.h"
 
 #include "../util/3d/mesh.h"
+#include "../util/debug.h"
+
 #include "viewport.h"
 
 namespace PMP
@@ -260,22 +262,39 @@ namespace PMP
 	}
 
 	// needs a list of points to draw
-	void Viewport::loadDots(std::vector<QVector3D> vertices)
+	void Viewport::loadDots(std::vector<DebugPoint> vertices)
 	{
 		m_dotCount = vertices.size();
 		this->makeCurrent();
 		m_dotVAO.bind();
-
 		m_dotVBO.bind();
-		m_dotVBO.allocate(vertices.data(),vertices.size() * sizeof(QVector3D));
 
+		m_dotVBO.allocate(vertices.data(), static_cast<int>(vertices.size() * sizeof(DebugPoint)));
+
+		// Position attribute
 		int posLoc = m_dotShader.attributeLocation("aPos");
 		m_dotShader.enableAttributeArray(posLoc);
-		m_dotShader.setAttributeBuffer(posLoc, GL_FLOAT, 0, 3, sizeof(QVector3D));
+		m_dotShader.setAttributeBuffer(
+			posLoc,
+			GL_FLOAT,
+			offsetof(DebugPoint, position),
+			3,
+			sizeof(DebugPoint)
+		);
+
+		// Color attribute
+		int colorLoc = m_dotShader.attributeLocation("aColor");
+		m_dotShader.enableAttributeArray(colorLoc);
+		m_dotShader.setAttributeBuffer(
+			colorLoc,
+			GL_FLOAT,
+			offsetof(DebugPoint, color),
+			3,
+			sizeof(DebugPoint)
+		);
 
 		m_dotVAO.release();
 		m_dotVBO.release();
-
 		this->doneCurrent();
 	}
 

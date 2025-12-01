@@ -1,3 +1,4 @@
+#pragma once
 #include "selection.h"
 #include "test_chamber.h"
 #include "test_chamber_types.h"

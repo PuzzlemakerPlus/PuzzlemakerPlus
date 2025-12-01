@@ -8,6 +8,7 @@
 #include <QOpenGLDebugLogger>
 #include <QOpenGLVertexArrayObject>
 #include <vector>
+#include "../math.h"
 
 namespace PMP
 {
@@ -83,8 +84,8 @@ namespace PMP
 	bool WallFacesDirection(WallSide side, const QVector3D& dir);
 
 	QVector3D Lerp(const QVector3D& a, const QVector3D& b, float t);
-	QVector3D getWallNormal(WallSide side);
-	QVector3D getWallUp(WallSide side);
+	IntVector3D getWallNormal(WallSide side);
+	IntVector3D getWallUp(WallSide side);
 
 	Quad generateCubeFace(WallSide side, float size=128.0f);
 	Quad generateQuadAt(QVector3D center, WallSide side, float size);

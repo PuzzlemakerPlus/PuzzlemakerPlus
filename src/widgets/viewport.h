@@ -31,7 +31,7 @@
 
 namespace PMP
 {
-	
+	struct DebugPoint;
 	const float cameraDistDefault = 512.0f;
 	const float cameraDistMin = 256.0f;
 	const float cameraDistMax = 14000.0f;
@@ -115,7 +115,7 @@ namespace PMP
 			m_frameTimer->start(10); // ~100 FPS
 		}
 
-		void loadDots(std::vector<QVector3D> vertices);
+		void loadDots(std::vector<DebugPoint> vertices);
 		void loadLines(std::vector<LineVertex> vertices);
 		//Load a single ray to draw
 		void loadLines(Ray ray, float length=20000.0f, QVector3D colStart=QVector3D(1.0f,0.0f,0.0f), QVector3D colEnd=QVector3D(0.0f,0.0f,1.0f));

@@ -10,34 +10,34 @@ namespace PMP
 
 	bool WallFacesDirection(WallSide side, const QVector3D& dir) 
 	{
-		QVector3D normal = getWallNormal(side);
-		return QVector3D::dotProduct(normal, dir) < 0.0f;
+		IntVector3D normal = getWallNormal(side);
+		return normal.dot(dir) < 0;
 	}
 
-	QVector3D getWallNormal(WallSide side)
+	IntVector3D getWallNormal(WallSide side)
 	{
 		using enum WallSide;
 		switch (side) {
-			case POS_X:   return QVector3D(-1,  0,  0);
-			case NEG_X:  return QVector3D( 1,  0,  0);
-			case POS_Y: return QVector3D( 0, -1,  0);
-			case NEG_Y:    return QVector3D( 0,  1,  0);
-			case POS_Z:   return QVector3D( 0,  0, -1);
-			case NEG_Z:  return QVector3D( 0,  0,  1);
-			default: return QVector3D(0, 0, 0); // default fallback
+			case POS_X:   return IntVector3D(-1,  0,  0);
+			case NEG_X:  return IntVector3D( 1,  0,  0);
+			case POS_Y: return IntVector3D( 0, -1,  0);
+			case NEG_Y:    return IntVector3D( 0,  1,  0);
+			case POS_Z:   return IntVector3D( 0,  0, -1);
+			case NEG_Z:  return IntVector3D( 0,  0,  1);
+			default: return IntVector3D(0, 0, 0); // default fallback
 		}
 	}
 
-	QVector3D getWallUp(WallSide side) {
+	IntVector3D getWallUp(WallSide side) {
 		using enum WallSide;
 		switch (side) {
-			case POS_X: return QVector3D(0, 1, 0); // +Y is up on +X face
-			case NEG_X: return QVector3D(0, 1, 0); // same for -X face
-			case POS_Y: return QVector3D(0, 0, 1); // +Z is out, so up is -Z
-			case NEG_Y: return QVector3D(0, 0, 1);  // -Z is out, up is +Z
-			case POS_Z: return QVector3D(0, 1, 0); // +Y is up on +Z face
-			case NEG_Z: return QVector3D(0, 1, 0); // +Y is up on -Z face
-			default: return QVector3D(0, 0, 0); // default fallback
+			case POS_X: return IntVector3D(0, 1, 0); // +Y is up on +X face
+			case NEG_X: return IntVector3D(0, 1, 0); // same for -X face
+			case POS_Y: return IntVector3D(0, 0, 1); // +Z is out, so up is -Z
+			case NEG_Y: return IntVector3D(0, 0, 1);  // -Z is out, up is +Z
+			case POS_Z: return IntVector3D(0, 1, 0); // +Y is up on +Z face
+			case NEG_Z: return IntVector3D(0, 1, 0); // +Y is up on -Z face
+			default: return IntVector3D(0, 0, 0); // default fallback
 		}
 	}
 
@@ -52,7 +52,7 @@ namespace PMP
 		const QVector3D p7(0.0f, size, size);
 
 		std::array<QVector3D, 4> quad;
-		QVector3D normal = getWallNormal(side);
+		IntVector3D normal = getWallNormal(side);
 
 		switch (side) {
 			case WallSide::NEG_Z: // Bottom
@@ -79,7 +79,7 @@ namespace PMP
 
 		std::array<Vertex, 4> face;
 		for (int i = 0; i < 4; ++i) {
-			face[i] = Vertex { quad[i], normal };
+			face[i] = Vertex { quad[i], normal.toQVector3D()};
 		}
 		return {face, {0,1,2,0,2,3}};
 	}

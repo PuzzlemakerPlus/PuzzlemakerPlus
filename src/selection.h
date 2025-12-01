@@ -35,6 +35,7 @@ namespace PMP
 		void clearSelection();
 		// Shift selection in world space
 		void shiftSelection(const QVector3D& offset);
+		void shiftSelection(const IntVector3D& offset);
 
 		QVector3D getMins() { return m_mins; }
 		QVector3D getMaxs() { return m_maxs; }
@@ -42,7 +43,7 @@ namespace PMP
 		bool isSelectionActive() { return m_selectionActive; }
 		bool isVolumeSelection() { return m_isVolumeSelection; }
 		
-		QVector3D getSurfaceNormal()
+		IntVector3D getSurfaceNormal()
 		{
 			Q_ASSERT(!m_isVolumeSelection);
 			return m_surfaceNormal;
@@ -62,6 +63,6 @@ namespace PMP
 
 		// Normal of the surface the selection was started from.
 		// Should ONLY be used for surface selections
-		QVector3D m_surfaceNormal; 
+		IntVector3D m_surfaceNormal; 
 	};
 }
