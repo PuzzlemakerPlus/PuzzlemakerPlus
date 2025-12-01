@@ -109,7 +109,7 @@ add_executable(octtreetest ${CMAKE_CURRENT_SOURCE_DIR}/tests/octtree_test.cpp
 	src/util/3d/mesh.h
 	src/util/3d/ray.cpp
 	src/util/3d/ray.h
-)
+ "src/util/safemap.h")
 set_target_properties(octtreetest
 	PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 	"${CMAKE_CURRENT_SOURCE_DIR}/bin")

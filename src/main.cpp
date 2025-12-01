@@ -43,16 +43,6 @@ int main(int argc, char* argv[])
 	mainViewport.show();
 	
 	PMP::TestChamber tc;
-	tc.createChildrenOfNode(0);
-	tc.createChildrenOfNode(6);
-	tc.createChildrenOfNode(2);
-	tc.setNodeActive(3, false);
-	//tc.SetNodeActive(13, false);
-	
-	tc.createChildrenOfNode(24);
-	tc.setNodeActive(31, false);
-	tc.setNodeActive(30, false);
-	tc.setNodeActive(29, false);
 
 	tc.printNodesTree();
 	tc.generateSurfaces();

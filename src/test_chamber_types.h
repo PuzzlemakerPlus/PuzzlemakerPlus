@@ -4,7 +4,10 @@
 
 namespace PMP
 {
-	using NodeID = unsigned int;
+	// spatial hash may collide if this is uint32_t
+	// for example, in a world of size 8192, there are 512 nodes of size 16 per axis
+	// 512^3 = 134,217,728 possible nodes
+	using NodeID = uint64_t;
 
 	//THE PLANKS OF TOMORROW
 	//Represents a physical wall of a node
