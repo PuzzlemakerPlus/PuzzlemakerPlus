@@ -13,6 +13,10 @@
 #include <QWheelEvent>
 #include <qvectornd.h>
 #include <QOpenGLExtraFunctions>
+#include <random>
+#include <chrono>
+#include <iostream>
+
 
 #include "../undo.h"
 #include "../selection.h"
@@ -346,6 +350,7 @@ namespace PMP
 		TestChamberMesh mesh;
 		CreateTCMesh(quads, mesh);
 		if (mesh.vertices.empty() || mesh.indices.empty()) throw std::runtime_error("Mesh has no vertices or indices to allocate");
+		// if you got an error around here, it is likely because for some reason the surface generation failed so opengl tried to draw 0 surfaces
 		this->makeCurrent();
 		m_chamberVAO.bind();
 		m_chamberVBO.bind();
@@ -601,6 +606,32 @@ namespace PMP
 				break;
 			case Qt::Key_F5: // force visual reload for debugging
 				actionPerformed = true;
+				break;
+			case Qt::Key_H: //debug key to test 
+				{
+					static thread_local std::mt19937 rng(std::random_device{}());
+					std::uniform_real_distribution<float> dist(-0.5f * m_testChamber->getRootNodeSizeInt(), 0.5f * m_testChamber->getRootNodeSizeInt());
+
+
+					float x = dist(rng);
+					float y = dist(rng);
+					float z = dist(rng);
+					Debugger::instance().clearDebugPoints();
+					Debugger::instance().addDebugPoint(QVector3D(x, y, z), QVector3D(0.0f, 0.5f, 0.5f));
+					
+					auto start2 = std::chrono::high_resolution_clock::now();
+					NodeID n2 = m_testChamber->getLeafNodeAtCoord(QVector3D(x, y, z));
+					auto end2 = std::chrono::high_resolution_clock::now();
+					auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(end2 - start2).count();
+					std::cout << "getLeafNodeAtCoord took "
+						<< duration2
+						<< " microseconds.\n";
+					//std::cout << "Closest node: " << n << " Leaf node at coord: " << n2 << "\n";
+					QVector3D center = m_testChamber->getNodeCenter(n2);
+					Debugger::instance().addDebugPoint(center, QVector3D(1.0f, 0.5f, 0.0f));
+					//std::cout << "correct pos: " << center.x() << " " << center.y() << " " << center.z() << " \n";
+					Debugger::instance().drawDebugPoints();
+				}
 				break;
 			default:
 				QWidget::keyPressEvent(event);

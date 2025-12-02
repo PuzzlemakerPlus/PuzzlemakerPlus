@@ -164,7 +164,6 @@ namespace PMP
 		}
 	}
 
-	// I wrote this code but I forgot why epsilon matters someone please leave a comment below -asd
 	std::array<IntVector3D, 6> getNeighborNodeCenters(const unsigned int nodeSize, const IntVector3D nodeCenter)
 	{
 		return {
@@ -201,7 +200,7 @@ namespace PMP
 		std::array<IntVector3D, 6> outerCoords = getNeighborNodeCenters(m_nodeMap.at(node).m_size, m_nodeMap.at(node).m_center);
 		for(const auto& coord : outerCoords)
 		{
-			subdivideNodeToCoord(coord.toQVector3D(), 0, m_nodeMap.at(node).m_size);
+			subdivideNodeToCoordOptimized(coord.toQVector3D(), 0, m_nodeMap.at(node).m_size);
 		}
 		return 1; // State of the node has changed
 	}
@@ -220,8 +219,8 @@ namespace PMP
 			std::array<IntVector3D, 6> outerCoords = getNeighborNodeCenters(m_nodeMap.at(nodes[i]).m_size, m_nodeMap.at(nodes[i]).m_center);
 			for ( const auto& coord : outerCoords )
 			{
-				NodeID done = subdivideNodeToCoord( coord.toQVector3D(), m_rootNode, m_nodeMap.at(nodes[i]).m_size);
-				Debugger::instance().addDebugPoint(coord.toQVector3D(), { 1.0f, 1.0f, 0.0f } );
+				NodeID done = subdivideNodeToCoordOptimized( coord.toQVector3D(), m_rootNode, m_nodeMap.at(nodes[i]).m_size);
+				//Debugger::instance().addDebugPoint(coord.toQVector3D(), { 1.0f, 1.0f, 0.0f } );
 			}
 		}
 		return nodesChanged; // State of the node has changed
@@ -362,8 +361,20 @@ namespace PMP
 		return getNodeOfSizeAtCoord(coord, m_nodeMap.at(parentID).m_childIDs.value()[i], size);
 	}
 
+	NodeID TestChamber::subdivideNodeToCoordOptimized(QVector3D coord, NodeID parentID, unsigned int size)
+	{
+		IntVector3D p = getClosestPossibleNodeCenterAtLevel(coord, size);
+		std::optional<NodeID> r = tryGetNodeAtCoord(p);
+		if (r.has_value()) {
+			//std::cout << "skipped\n";
+			return r.value();
+		}
+		return subdivideNodeToCoord(coord, parentID, size);
+	}
+
 	NodeID TestChamber::subdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size)
 	{
+		// this whole function call can be avoided by checking whether the target node is already subdivided
 		if(isPointOOB(coord)) return parentID;
 		if(m_nodeMap.at(parentID).m_size < size) throw std::runtime_error("Something went wrong trying to subdivide node");
 		if(m_nodeMap.at(parentID).m_size == size) return parentID;
@@ -516,6 +527,25 @@ namespace PMP
 		return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
 	}
 
+	IntVector3D TestChamber::getNodeBBoxMin(NodeID id)
+	{
+		const TestChamberNode& node = m_nodeMap.at(id);
+		assert(node.m_size % 2 == 0, "How is node size not divisible by 2?");
+		int half = node.m_size / 2;
+		return IntVector3D(node.m_center.x() - half,
+			node.m_center.y() - half,
+			node.m_center.z() - half);
+	}
+	IntVector3D TestChamber::getNodeBBoxMax(NodeID id)
+	{
+		const TestChamberNode& node = m_nodeMap.at(id);
+		assert(node.m_size % 2 == 0, "How is node size not divisible by 2?");
+		int half = node.m_size / 2;
+		return IntVector3D(node.m_center.x() + half,
+			node.m_center.y() + half,
+			node.m_center.z() + half);
+	}
+
 	void TestChamber::getNodeBBox(NodeID id, std::array<QVector3D, 2>& out)
 	{
 		const TestChamberNode& node = m_nodeMap.at(id);
@@ -547,9 +577,9 @@ namespace PMP
 			{
 				// okay, this can definitely be made more efficient, but whatever
 				auto vs = parent.m_childIDs.value();
-				std::array<QVector3D, 2> childBBox;
-				getNodeBBox( vs[i], childBBox);
-				if ( boundingBoxesIntersect( childBBox[0], childBBox[1], mins, maxs ) )
+				IntVector3D nodeMin = getNodeBBoxMin(vs[i]);
+				IntVector3D nodeMax = getNodeBBoxMax(vs[i]);
+				if ( boundingBoxesIntersect(nodeMin, nodeMax, mins, maxs ) )
 				{
 					checkChildrenTouchingBBox(vs[i], mins, maxs, out);
 				}
@@ -577,12 +607,12 @@ namespace PMP
 
 	void TestChamber::subdivideNodeToBBoxRecursive( NodeID node, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out )
 	{
-		std::array<QVector3D, 2> nodeBBox;
-		getNodeBBox(node, nodeBBox);
 		// check if bbox intersect
-		bool overlap = boundingBoxesIntersect(nodeBBox[0], nodeBBox[1], mins, maxs);
+		IntVector3D nodeMin = getNodeBBoxMin(node);
+		IntVector3D nodeMax = getNodeBBoxMax(node);
+		bool overlap = boundingBoxesIntersect(nodeMin, nodeMax, mins, maxs);
 		if (!overlap) return;
-		bool encapsulated = isBoxAInsideBoxB(nodeBBox[0], nodeBBox[1], mins, maxs);
+		bool encapsulated = isBoxAInsideBoxB(nodeMin, nodeMax, mins, maxs);
 		if (overlap && !encapsulated)
 		{
 			//std::cout << "first condition \n";
@@ -594,10 +624,8 @@ namespace PMP
 				subdivideNodeToBBoxRecursive( childID, mins, maxs, out );
 			}
 		}
-		// TODO: optimize this so we're not doing the intersection check twice
 		else if (overlap)
 		{
-			//std::cout << "second condition \n";
 			out.push_back(node);
 		}
 	}
@@ -667,7 +695,7 @@ namespace PMP
 
 	int TestChamber::extrudeSurfaces(Selector* selector)
 	{
-		Debugger::instance().clearDebugPoints();
+		//Debugger::instance().clearDebugPoints();
 		QVector3D mins = selector->getMins();
 		QVector3D maxs = selector->getMaxs();
 		if ( !selector->isVolumeSelection() )
@@ -682,20 +710,20 @@ namespace PMP
 		std::vector<NodeID> touchingNodes;
 		subdivideNodesToBBox(mins, maxs, touchingNodes);
 		int nodesChanged = setNodesActive(touchingNodes, false);
-		for (int i = 0; i < touchingNodes.size(); i++)
-		{
-			Debugger::instance().addDebugPoint(m_nodeMap.at(touchingNodes[i]).m_center.toQVector3D(), {0.0f,0.0f,1.0f});
-		}
+		//for (int i = 0; i < touchingNodes.size(); i++)
+		//{
+		//	Debugger::instance().addDebugPoint(m_nodeMap.at(touchingNodes[i]).m_center.toQVector3D(), {0.0f,0.0f,1.0f});
+		//}
 
 		// TODO: Hook up to undo/redo
 		generateSurfaces();
-		Debugger::instance().drawDebugPoints();
+		//Debugger::instance().drawDebugPoints();
 		return nodesChanged;
 	}
 
 	int TestChamber::recedeSurfaces(Selector* selector)
 	{
-		Debugger::instance().clearDebugPoints();
+		//Debugger::instance().clearDebugPoints();
 		QVector3D mins = selector->getMins();
 		QVector3D maxs = selector->getMaxs();
 		if ( !selector->isVolumeSelection() )
@@ -709,15 +737,15 @@ namespace PMP
 		}
 		std::vector<NodeID> touchingNodes;
 		subdivideNodesToBBox(mins, maxs, touchingNodes);
-		for (int i = 0; i < touchingNodes.size(); i++)
-		{
-			Debugger::instance().addDebugPoint(m_nodeMap.at(touchingNodes[i]).m_center.toQVector3D(), {0.0f,0.0f,1.0f});
-		}
+		//for (int i = 0; i < touchingNodes.size(); i++)
+		//{
+		//	Debugger::instance().addDebugPoint(m_nodeMap.at(touchingNodes[i]).m_center.toQVector3D(), {0.0f,0.0f,1.0f});
+		//}
 		int nodesChanged = setNodesActive(touchingNodes, true);
 
 		// TODO: Hook up to undo/redo
 		generateSurfaces();
-		Debugger::instance().drawDebugPoints();
+		//Debugger::instance().drawDebugPoints();
 		return nodesChanged;
 	}
 
@@ -784,6 +812,35 @@ namespace PMP
 
 		_printNodesTree(children, root, "", true);
 	}
+
+	
+	int snap(int x, int s) {
+		assert(s > 0 && "s must be positive");
+		int half = s / 2;
+		int sign = (int)(x >= 0) * 2 - 1;
+		return ((x + half * sign) / s) * s;
+	}
+
+	// level == 0 at root node
+	IntVector3D TestChamber::getClosestPossibleNodeCenterAtLevel(IntVector3D coord, unsigned int scale)
+	{
+		IntVector3D rel = coord + IntVector3D(scale * 0.5f, scale * 0.5f, scale * 0.5f); //shift to positive space
+		return IntVector3D(snap(rel.x(), scale)-scale * 0.5f, snap(rel.y(), scale) - scale * 0.5f, snap(rel.z(), scale) - scale * 0.5f);
+	}
+
+	NodeID TestChamber::getClosestNode(QVector3D coord)
+	{
+		for (unsigned int level = gridSizeMin; level <= m_rootNodeWorldSize; level*=2) {
+			IntVector3D center = getClosestPossibleNodeCenterAtLevel(coord, level);
+			auto r = tryGetNodeAtCoord(center);
+			if (r.has_value()) {
+				return r.value();
+			}
+		}
+		return m_rootNode;
+	}
+
+
 
 	// TODO finish this function
 	void TestChamber::unsubdivideNode(NodeID node) {

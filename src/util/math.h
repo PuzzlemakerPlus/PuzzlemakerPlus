@@ -258,10 +258,11 @@ namespace PMP
 
 	// Tests if two AABBs overlap
 	bool boundingBoxesIntersect( const QVector3D& mins1, const QVector3D& maxs1, const QVector3D& mins2, const QVector3D& maxs2 );
+	bool boundingBoxesIntersect(const IntVector3D& mins1, const IntVector3D& maxs1, const IntVector3D& mins2, const IntVector3D& maxs2);
 	bool isBoxAInsideBoxB(const QVector3D& minsA, const QVector3D& maxsA, const QVector3D& minsB, const QVector3D& maxsB);
+	bool isBoxAInsideBoxB(const IntVector3D& minsA, const IntVector3D& maxsA, const IntVector3D& minsB, const IntVector3D& maxsB);
 	// Returns true if bbox1's volume touches bbox2's edges - the order of these matters!
 	bool boundingBoxEdgesIntersect( const QVector3D& mins1, const QVector3D& maxs1, const QVector3D& mins2, const QVector3D& maxs2 );
-
 	// Check if two floats are close enough to effectively be considered equal.
 	// The default epsilon is designed for world coordinates, you may want to change this dependong on your use case.
 	template<typename T>

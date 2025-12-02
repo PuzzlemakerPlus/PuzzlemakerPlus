@@ -19,6 +19,7 @@
 namespace PMP
 {
 	// DO NOT USE THIS DIRECTLY, this is just used to initialize the value in the test chamber class
+	// Actually this can totally be used directly pretty sure I wrote the comment above but idk why -asd
 	// Kelsey: Lowered for now because 1024 is an easier value to work with
 	const unsigned int defaultRootNodeSize = 1024; // was 8192
 
@@ -50,7 +51,7 @@ namespace PMP
 		std::optional<ChamberSurface> getSurface(NodeID node, WallSide side);
 		void getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WallSide side);
 		bool coordInNode(QVector3D coord, NodeID nodeID);
-
+		QVector3D getNodeCenter(NodeID nodeID) const {return m_nodeMap.at(nodeID).m_center.toQVector3D();}
 		// Find the neighboring nodes of the given node in all 6 directions
 		// The neighbors may be nullopt if they do not exist (if the node is at the edge of the octree)
 		// The neighbors will either be the same size as the given node, or larger
@@ -110,9 +111,19 @@ namespace PMP
 		//Will return the smallest node that contains the coord if the node of exact size does not exist at the coordinate
 		NodeID getNodeOfSizeAtCoord(QVector3D coord, unsigned int size);
 		NodeID getNodeOfSizeAtCoord(QVector3D coord, NodeID parentID, unsigned int size);
+		NodeID subdivideNodeToCoordOptimized(QVector3D coord, NodeID parentID, unsigned int size);
 		// Returned node will always be a leaf node
 		NodeID getLeafNodeAtCoord(QVector3D coord);
 		NodeID getLeafNodeAtCoord(QVector3D coord, NodeID parentID);
+
+		// Calculates the potential coordinate for the center of a node at the given size that is closest to the given coordinate
+		// The returned coordinate may not correspond to an actual node
+		IntVector3D getClosestPossibleNodeCenterAtLevel(IntVector3D coord, unsigned int nodeSize);
+
+		// Finds the smallest node whose center is closest to the given coordinate
+		// This is about 3 times slower than getLeafNodeAtCoord in almost all cases for large octrees
+		NodeID getClosestNode(QVector3D coord);
+
 		// Expand the tree until the coordinate is enclosed by a node of given size
 		NodeID subdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size);
 		int setNodeActive(NodeID node, bool active);
@@ -138,6 +149,8 @@ namespace PMP
 		void printNodes();
 		void printNodesTree();
 
+
+
 		void unsubdivideNode(NodeID node);
 
 		void increaseGridSize();
@@ -159,6 +172,9 @@ namespace PMP
 		
 		const NodeID searchNodeWithCoordSize(QVector3D coord, unsigned int size, NodeID parentID) const;
 		const NodeID searchNodeWithCoordSize(IntVector3D coord, unsigned int size, NodeID parentID) const;
+
+		IntVector3D getNodeBBoxMin(NodeID id);
+		IntVector3D getNodeBBoxMax(NodeID id);
 		
 		
 		void getNodesTouchingBBox(NodeID parentNode, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);

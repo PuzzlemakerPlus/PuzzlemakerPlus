@@ -25,8 +25,25 @@ namespace PMP
 		       mins1.y() < maxs2.y() && maxs1.y() > mins2.y() &&
 		       mins1.z() < maxs2.z() && maxs1.z() > mins2.z();
 	}
+	bool boundingBoxesIntersect(const IntVector3D& mins1, const IntVector3D& maxs1, const IntVector3D& mins2, const IntVector3D& maxs2)
+	{
+		return mins1.x() < maxs2.x() && maxs1.x() > mins2.x() &&
+			mins1.y() < maxs2.y() && maxs1.y() > mins2.y() &&
+			mins1.z() < maxs2.z() && maxs1.z() > mins2.z();
+	}
 	// Returns true if box A is completely inside box B
 	bool isBoxAInsideBoxB(const QVector3D& minsA, const QVector3D& maxsA, const QVector3D& minsB, const QVector3D& maxsB)
+	{
+		// A is inside B if A's min point is >= B's min
+		// AND A's max point is <= B's max, on all axes.
+		return  minsA.x() >= minsB.x() &&
+			minsA.y() >= minsB.y() &&
+			minsA.z() >= minsB.z() &&
+			maxsA.x() <= maxsB.x() &&
+			maxsA.y() <= maxsB.y() &&
+			maxsA.z() <= maxsB.z();
+	}
+	bool isBoxAInsideBoxB(const IntVector3D& minsA, const IntVector3D& maxsA, const IntVector3D& minsB, const IntVector3D& maxsB)
 	{
 		// A is inside B if A's min point is >= B's min
 		// AND A's max point is <= B's max, on all axes.
