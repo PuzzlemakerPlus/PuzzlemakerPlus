@@ -124,6 +124,8 @@ namespace PMP
 		// This is about 3 times slower than getLeafNodeAtCoord in almost all cases for large octrees
 		NodeID getClosestNode(QVector3D coord);
 
+		bool canUnsubdivide(NodeID node);
+
 		// Expand the tree until the coordinate is enclosed by a node of given size
 		NodeID subdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size);
 		int setNodeActive(NodeID node, bool active);
