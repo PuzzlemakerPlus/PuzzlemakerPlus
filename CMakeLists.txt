@@ -79,6 +79,8 @@ qt_add_executable(PuzzlemakerPlus
 
 	# Resources
 	res/resources.qrc
+		src/util/file_handler.cpp
+		src/util/file_handler.h
 )
 set_target_properties(PuzzlemakerPlus
 	PROPERTIES RUNTIME_OUTPUT_DIRECTORY
