@@ -747,7 +747,11 @@ namespace PMP
 		for (int i = 0; i < touchingNodes.size(); i++)
 		{
 			NodeID parent = m_nodeMap.at(touchingNodes[i]).m_parentID.value();
-			parentsToCheck.insert(parent);
+			// Without the recursive child destruction, we can only unsubdivide parents of minimum size nodes
+			if(m_nodeMap.at(parent).m_size == gridSizeMin * 2) parentsToCheck.insert(parent);
+
+			//uncomment this if we implement fix above
+			//parentsToCheck.insert(parent);
 		}
 		for (const auto& parentID : parentsToCheck)
 		{
@@ -756,6 +760,7 @@ namespace PMP
 			// TODO: Can we come up with a method to check for parents to unsubdivide before generating surfaces?
 			if (canUnsubdivide(parentID)) // detecting the nodes to unsubdivide seem to work properly
 			{
+				// TODO: need to recursively destroy child nodes
 				// TODO: This part is not correctly implemented yet
 				std::cout << "Unsubdividing node " << parentID << "\n";
 				for (NodeID j : m_nodeMap.at(parentID).m_childIDs.valueRead())
@@ -884,8 +889,10 @@ namespace PMP
 		{
 			WallSide childSide = static_cast<WallSide>(i);
 			int count = 0;
+			int activeChild = 0;
 			for (const auto& childID : m_nodeMap.at(node).m_childIDs.valueRead())
 			{
+				m_nodeMap.at(childID).m_active ? activeChild++ : activeChild;
 				try {
 					if (m_surfaceMap.at(childID)[i].side == childSide) //check if the side is active
 					{
@@ -897,7 +904,7 @@ namespace PMP
 					continue; // child has no surface on this side
 				}
 			}
-			if (count % 4 != 0)
+			if (count % 4 != 0 || activeChild % 8 != 0) // either not all children have this side active, or not all children are active
 			{
 				return false;
 			}
