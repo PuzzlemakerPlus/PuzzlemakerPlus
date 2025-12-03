@@ -667,7 +667,9 @@ namespace PMP
 			
 			std::array<ChamberSurface, 6>& walls = m_surfaceMap.defaultConstruct(id);
 			for (int i = 0; i < 6; ++i) {
-				WallSide side = static_cast<WallSide>(i);
+				WallSide side = static_cast<WallSide>(i); 
+				// notice how WallSide indices are used for surface side
+				// so you can access the respective side by walls[static_cast<int>(WallSide::POS_X)] etc.
 				if(isSurface(side,id))
 				{
 					walls[i] = {id,side};
@@ -723,7 +725,7 @@ namespace PMP
 
 	int TestChamber::recedeSurfaces(Selector* selector)
 	{
-		//Debugger::instance().clearDebugPoints();
+		Debugger::instance().clearDebugPoints();
 		QVector3D mins = selector->getMins();
 		QVector3D maxs = selector->getMaxs();
 		if ( !selector->isVolumeSelection() )
@@ -737,15 +739,38 @@ namespace PMP
 		}
 		std::vector<NodeID> touchingNodes;
 		subdivideNodesToBBox(mins, maxs, touchingNodes);
-		//for (int i = 0; i < touchingNodes.size(); i++)
-		//{
-		//	Debugger::instance().addDebugPoint(m_nodeMap.at(touchingNodes[i]).m_center.toQVector3D(), {0.0f,0.0f,1.0f});
-		//}
 		int nodesChanged = setNodesActive(touchingNodes, true);
-
 		// TODO: Hook up to undo/redo
 		generateSurfaces();
-		//Debugger::instance().drawDebugPoints();
+		std::unordered_set<NodeID> parentsToCheck;
+
+		for (int i = 0; i < touchingNodes.size(); i++)
+		{
+			NodeID parent = m_nodeMap.at(touchingNodes[i]).m_parentID.value();
+			parentsToCheck.insert(parent);
+		}
+		for (const auto& parentID : parentsToCheck)
+		{
+			std::cout << "Checking parent node " << parentID << " for unsubdivision\n";
+			// At the moment, this needs to be called after the generateSurfaces call above which makes things a bit messy
+			// TODO: Can we come up with a method to check for parents to unsubdivide before generating surfaces?
+			if (canUnsubdivide(parentID)) // detecting the nodes to unsubdivide seem to work properly
+			{
+				// TODO: This part is not correctly implemented yet
+				std::cout << "Unsubdividing node " << parentID << "\n";
+				for (NodeID j : m_nodeMap.at(parentID).m_childIDs.valueRead())
+				{
+					m_nodeMap.erase(j);
+				}
+				m_nodeMap.at(parentID).m_childIDs.reset();
+				// we know that canUnsubdivide works properly as indicated by the green dots
+				Debugger::instance().addDebugPoint(m_nodeMap.at(parentID).m_center.toQVector3D(), { 0.0f,1.0f,0.0f });
+			}
+		}
+		generateSurfaces();
+
+		
+		Debugger::instance().drawDebugPoints();
 		return nodesChanged;
 	}
 
@@ -840,6 +865,47 @@ namespace PMP
 		return m_rootNode;
 	}
 
+	bool TestChamber::canUnsubdivide(NodeID node)
+	{
+		try {
+			if (!m_nodeMap.at(node).m_childIDs.has_value())
+			{
+				// node has no children to unsubdivide
+				// maybe the parent node of this node can be unsubdivided
+				Debugger::instance().addDebugPoint(m_nodeMap.at(node).m_center.toQVector3D(), { 1.0f,1.0f,0.0f });
+				return false;
+			}
+		} catch (const std::out_of_range&) {
+			// node does not exist. likely already destroyed by another unsubdivide operation?
+			return false;
+		}
+		//for its sides:
+		for (int i = 0; i < 6; i++)
+		{
+			WallSide childSide = static_cast<WallSide>(i);
+			int count = 0;
+			for (const auto& childID : m_nodeMap.at(node).m_childIDs.valueRead())
+			{
+				try {
+					if (m_surfaceMap.at(childID)[i].side == childSide) //check if the side is active
+					{
+						Debugger::instance().addDebugPoint(m_nodeMap.at(childID).m_center.toQVector3D(), { 0.0f,0.0f,1.0f });
+						std::cout << "Added Side " << i << "\n";
+						count++;
+					}
+				} catch (const std::out_of_range&) {
+					continue; // child has no surface on this side
+				}
+			}
+			if (count % 4 != 0)
+			{
+				return false;
+			}
+			// if count % 4 == 0, then all 4 children have the same active state on this side
+			// if any one side isn't "full", we cannot unsubdivide
+		}
+		return true;
+	}
 
 
 	// TODO finish this function
