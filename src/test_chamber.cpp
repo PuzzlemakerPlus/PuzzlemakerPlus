@@ -719,6 +719,7 @@ namespace PMP
 
 		// TODO: Hook up to undo/redo
 		generateSurfaces();
+
 		//Debugger::instance().drawDebugPoints();
 		return nodesChanged;
 	}
@@ -742,41 +743,115 @@ namespace PMP
 		int nodesChanged = setNodesActive(touchingNodes, true);
 		// TODO: Hook up to undo/redo
 		generateSurfaces();
-		std::unordered_set<NodeID> parentsToCheck;
-
-		for (int i = 0; i < touchingNodes.size(); i++)
+		// Optimize this:
+		unsubdivideNodes(touchingNodes.data(), touchingNodes.size());
+		generateSurfaces();
+		
+		Debugger::instance().drawDebugPoints();
+		return nodesChanged;
+	}
+	//does destroy the given node
+	void TestChamber::destroyBranch(NodeID nodeID)
+	{
+		auto& n = m_nodeMap.at(nodeID);
+		if (!n.m_childIDs.has_value())
 		{
-			NodeID parent = m_nodeMap.at(touchingNodes[i]).m_parentID.value();
-			// Without the recursive child destruction, we can only unsubdivide parents of minimum size nodes
-			if(m_nodeMap.at(parent).m_size == gridSizeMin * 2) parentsToCheck.insert(parent);
-
-			//uncomment this if we implement fix above
-			//parentsToCheck.insert(parent);
+			m_nodeMap.erase(nodeID);
+			return;
 		}
+		for (int i = 0; i < 8; i++)
+		{
+			destroyBranch(n.m_childIDs.valueRead()[i]);
+		}
+		m_nodeMap.erase(nodeID);
+	}
+
+	void TestChamber::unsubdivideNodes(NodeID* touchingNodes, int count)
+	{
+		std::unordered_set<NodeID> parentsToCheck;
+		
+		for (int i = 0; i < count; i++)
+		{
+			try {
+				NodeID parent = m_nodeMap.at(touchingNodes[i]).m_parentID.value();
+				// Without the recursive child destruction, we can only unsubdivide parents of minimum size nodes
+				if (m_nodeMap.at(parent).m_size == gridSizeMin * 2) parentsToCheck.insert(parent);
+
+				//uncomment this if we implement fix above
+				//parentsToCheck.insert(parent);
+			}
+			catch (const std::out_of_range&) {
+				continue;
+			}
+		}
+		
 		for (const auto& parentID : parentsToCheck)
 		{
-			std::cout << "Checking parent node " << parentID << " for unsubdivision\n";
+			//std::cout << "Checking parent node " << parentID << " for unsubdivision\n";
 			// At the moment, this needs to be called after the generateSurfaces call above which makes things a bit messy
 			// TODO: Can we come up with a method to check for parents to unsubdivide before generating surfaces?
+			// TODO: need to fix: if a surface was not generated in the first generateSurfaces() than it might calculate wrong
 			if (canUnsubdivide(parentID)) // detecting the nodes to unsubdivide seem to work properly
 			{
-				// TODO: need to recursively destroy child nodes
-				// TODO: This part is not correctly implemented yet
-				std::cout << "Unsubdividing node " << parentID << "\n";
+
 				for (NodeID j : m_nodeMap.at(parentID).m_childIDs.valueRead())
 				{
-					m_nodeMap.erase(j);
+					destroyBranch(j);
+					//m_nodeMap.erase(j);
 				}
 				m_nodeMap.at(parentID).m_childIDs.reset();
 				// we know that canUnsubdivide works properly as indicated by the green dots
 				Debugger::instance().addDebugPoint(m_nodeMap.at(parentID).m_center.toQVector3D(), { 0.0f,1.0f,0.0f });
 			}
+			//unsubdivideRecursive(parentID);
 		}
-		generateSurfaces();
+	}
 
-		
-		Debugger::instance().drawDebugPoints();
-		return nodesChanged;
+
+	bool TestChamber::canUnsubdivide(NodeID node)
+	{
+		try {
+			if (!m_nodeMap.at(node).m_childIDs.has_value())
+			{
+				// node has no children to unsubdivide
+				// maybe the parent node of this node can be unsubdivided
+				Debugger::instance().addDebugPoint(m_nodeMap.at(node).m_center.toQVector3D(), { 1.0f,1.0f,0.0f });
+				return false;
+			}
+		}
+		catch (const std::out_of_range&) {
+			// node does not exist. likely already destroyed by another unsubdivide operation?
+			return false;
+		}
+		//for its sides:
+		for (int i = 0; i < 6; i++)
+		{
+			WallSide childSide = static_cast<WallSide>(i);
+			int count = 0;
+			int activeChild = 0;
+			for (const auto& childID : m_nodeMap.at(node).m_childIDs.valueRead())
+			{
+				m_nodeMap.at(childID).m_active ? activeChild++ : activeChild;
+				try {
+					if (m_surfaceMap.at(childID)[i].side == childSide) //check if the side is active
+					{
+						Debugger::instance().addDebugPoint(m_nodeMap.at(childID).m_center.toQVector3D(), { 0.0f,0.0f,1.0f });
+						//std::cout << "Added Side " << i << "\n";
+						count++;
+					}
+				}
+				catch (const std::out_of_range&) {
+					continue; // child has no surface on this side
+				}
+			}
+			if (count % 4 != 0 || activeChild % 8 != 0) // either not all children have this side active, or not all children are active
+			{
+				return false;
+			}
+			// if count % 4 == 0, then all 4 children have the same active state on this side
+			// if any one side isn't "full", we cannot unsubdivide
+		}
+		return true;
 	}
 
 	void TestChamber::makeUSI(NodeID nodeID, UniqueSurfaceIdentifer& out, WallSide side)
@@ -868,62 +943,6 @@ namespace PMP
 			}
 		}
 		return m_rootNode;
-	}
-
-	bool TestChamber::canUnsubdivide(NodeID node)
-	{
-		try {
-			if (!m_nodeMap.at(node).m_childIDs.has_value())
-			{
-				// node has no children to unsubdivide
-				// maybe the parent node of this node can be unsubdivided
-				Debugger::instance().addDebugPoint(m_nodeMap.at(node).m_center.toQVector3D(), { 1.0f,1.0f,0.0f });
-				return false;
-			}
-		} catch (const std::out_of_range&) {
-			// node does not exist. likely already destroyed by another unsubdivide operation?
-			return false;
-		}
-		//for its sides:
-		for (int i = 0; i < 6; i++)
-		{
-			WallSide childSide = static_cast<WallSide>(i);
-			int count = 0;
-			int activeChild = 0;
-			for (const auto& childID : m_nodeMap.at(node).m_childIDs.valueRead())
-			{
-				m_nodeMap.at(childID).m_active ? activeChild++ : activeChild;
-				try {
-					if (m_surfaceMap.at(childID)[i].side == childSide) //check if the side is active
-					{
-						Debugger::instance().addDebugPoint(m_nodeMap.at(childID).m_center.toQVector3D(), { 0.0f,0.0f,1.0f });
-						std::cout << "Added Side " << i << "\n";
-						count++;
-					}
-				} catch (const std::out_of_range&) {
-					continue; // child has no surface on this side
-				}
-			}
-			if (count % 4 != 0 || activeChild % 8 != 0) // either not all children have this side active, or not all children are active
-			{
-				return false;
-			}
-			// if count % 4 == 0, then all 4 children have the same active state on this side
-			// if any one side isn't "full", we cannot unsubdivide
-		}
-		return true;
-	}
-
-
-	// TODO finish this function
-	void TestChamber::unsubdivideNode(NodeID node) {
-		// a node can be unsubdivided only all its children have 
-		//  1. same number of children (either they all have or none)
-		//  2. same active state
-		//  3. its neighbor nodes have same active state
-		int size = m_nodeMap.at(node).m_size;
-		std::optional<NodeID> parentID = m_nodeMap.at(node).m_parentID;
-		if (!parentID) return;
 	}
 
 	void TestChamber::increaseGridSize()

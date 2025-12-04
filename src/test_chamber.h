@@ -124,7 +124,11 @@ namespace PMP
 		// This is about 3 times slower than getLeafNodeAtCoord in almost all cases for large octrees
 		NodeID getClosestNode(QVector3D coord);
 
+
 		bool canUnsubdivide(NodeID node);
+		// pass in a possible candidates of nodes that needs to be checked for unsubdividing.
+		// needs a contiguous list of NodeIDs that may or may not repeat
+		void unsubdivideNodes(NodeID* touchingNodes, int size);
 
 		// Expand the tree until the coordinate is enclosed by a node of given size
 		NodeID subdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size);
@@ -141,6 +145,8 @@ namespace PMP
 		int extrudeSurfaces(Selector* selector);
 		// Receve all surfaces selected
 		int recedeSurfaces(Selector* selector);
+		// Recursively destroy a node and all its children
+		void destroyBranch(NodeID nodeID);
 		// Creates a UniqueSurfaceIdentifer for the given node and side.
 		// USI should be the standard to long term description of a node to remove dependency on NodeID and SurfaceID
 		void makeUSI (NodeID node, UniqueSurfaceIdentifer& out, WallSide side = WallSide::NONE);
