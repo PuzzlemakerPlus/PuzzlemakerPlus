@@ -120,11 +120,7 @@ namespace PMP
 		// USI should be the standard to long term description of a node to remove dependency on NodeID and SurfaceID
 		void makeUSI(NodeID node, UniqueSurfaceIdentifer& out, WallSide side = WallSide::NONE) const;
 		// Based on generated surfaces, generate quads for rendering. This is to separate rendering logic with octree logic
-		void generateQuads(std::vector<Quad>& out) const;
-		void generateTCQuads(std::vector<TestChamberQuad>& out) const;
-		// Creates a UniqueSurfaceIdentifer for the given node and side.
-		// USI should be the standard to long term description of a node to remove dependency on NodeID and SurfaceID
-		void makeUSI(NodeID node, UniqueSurfaceIdentifer& out, WallSide side = WallSide::NONE) const;
+
 		bool canUnsubdivide(NodeID node) const;
 		// pass in a possible candidates of nodes that needs to be checked for unsubdividing.
 		// needs a contiguous list of NodeIDs that may or may not repeat
