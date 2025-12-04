@@ -48,9 +48,9 @@ namespace PMP
 		int getRootNodeSizeInt() const {return static_cast<int>(m_rootNodeWorldSize);};
 		const SafeUnorderedMap<NodeID, TestChamberNode>& getNodeMap() const {return m_nodeMap;};
 
-		std::optional<ChamberSurface> getSurface(NodeID node, WallSide side);
+		std::optional<ChamberSurface> getSurface(NodeID node, WallSide side) const;
 		void getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WallSide side);
-		bool coordInNode(QVector3D coord, NodeID nodeID);
+		bool coordInNode(QVector3D coord, NodeID nodeID) const;
 		QVector3D getNodeCenter(NodeID nodeID) const {return m_nodeMap.at(nodeID).m_center.toQVector3D();}
 		// Find the neighboring nodes of the given node in all 6 directions
 		// The neighbors may be nullopt if they do not exist (if the node is at the edge of the octree)
@@ -68,7 +68,7 @@ namespace PMP
 		// Returns std::nullopt if there is no such node that has that exact center coordinate
 		// very cheap operation
 		// Will return the node even if it has children
-		std::optional<NodeID> tryGetNodeAtCoord(IntVector3D coord);
+		std::optional<NodeID> tryGetNodeAtCoord(IntVector3D coord) const;
 
 		std::array<IntVector3D, 4> getChamberSurfaceCorners(const ChamberSurface& surface);
 		IntVector3D getSurfaceCenter(ChamberSurface surface);
@@ -98,7 +98,9 @@ namespace PMP
 		std::optional<RayHitResult> rayCast(Ray ray) const;
 
 		// Returns mins and maxs of the node's bounding box: (-,-,-) and (+,+,+)
-		void getNodeBBox(NodeID id, std::array<QVector3D, 2>& out);
+		// replaced with getNodeBBoxMin and getNodeBBoxMax
+		// it's better not to initialize std::array every time we want this
+		//void getNodeBBox(NodeID id, std::array<QVector3D, 2>& out);
 
 		// Returns leaf nodes which touch the specified bbox
 		void getNodesTouchingBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
@@ -118,11 +120,11 @@ namespace PMP
 
 		// Calculates the potential coordinate for the center of a node at the given size that is closest to the given coordinate
 		// The returned coordinate may not correspond to an actual node
-		IntVector3D getClosestPossibleNodeCenterAtLevel(IntVector3D coord, unsigned int nodeSize);
+		IntVector3D getClosestPossibleNodeCenterAtLevel(IntVector3D coord, unsigned int nodeSize) const;
 
 		// Finds the smallest node whose center is closest to the given coordinate
 		// This is about 3 times slower than getLeafNodeAtCoord in almost all cases for large octrees
-		NodeID getClosestNode(QVector3D coord);
+		NodeID getClosestNode(QVector3D coord) const;
 
 
 		bool canUnsubdivide(NodeID node);
@@ -150,16 +152,10 @@ namespace PMP
 		// Creates a UniqueSurfaceIdentifer for the given node and side.
 		// USI should be the standard to long term description of a node to remove dependency on NodeID and SurfaceID
 		void makeUSI (NodeID node, UniqueSurfaceIdentifer& out, WallSide side = WallSide::NONE);
-		// Offsets each surface's parent node center along its normal by (node size * dist) and stores the results.
-		void calculateCenterPointsSurfaceDisplacement(const std::vector<ChamberSurface>& surfs, float dist, std::vector<IntVector3D>& out);
 
 		// Debug
 		void printNodes();
 		void printNodesTree();
-
-
-
-		void unsubdivideNode(NodeID node);
 
 		void increaseGridSize();
 		void decreaseGridSize();
@@ -168,8 +164,8 @@ namespace PMP
 	private:
 		// Hash function to convert position to unique node ID
 		// The position must be a known center point of a node
-		NodeID positionToNodeID(IntVector3D pos);
-		void findFreeIDs(std::array<NodeID,8>& out);
+		NodeID positionToNodeID(IntVector3D pos) const;
+
 		// std::nullopt for the parent ID means it's the root node
 		// - not making this a default value so it is a deliberate programming choice
 		void createOctreeNode(NodeID newID, std::optional<NodeID> parentID, IntVector3D center, unsigned int size);
@@ -181,8 +177,8 @@ namespace PMP
 		const NodeID searchNodeWithCoordSize(QVector3D coord, unsigned int size, NodeID parentID) const;
 		const NodeID searchNodeWithCoordSize(IntVector3D coord, unsigned int size, NodeID parentID) const;
 
-		IntVector3D getNodeBBoxMin(NodeID id);
-		IntVector3D getNodeBBoxMax(NodeID id);
+		IntVector3D getNodeBBoxMin(NodeID id) const;
+		IntVector3D getNodeBBoxMax(NodeID id) const;
 		
 		
 		void getNodesTouchingBBox(NodeID parentNode, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
@@ -196,5 +192,37 @@ namespace PMP
 
 		int m_gridSize;
 	};
+
+	inline IntVector3D getWallFaceCenter(IntVector3D center, unsigned int size, IntVector3D normal)
+	{
+		assert(size % 2 == 0 && "Node size must be even");
+		return center + (int)(size / 2) * -normal;
+	}
+
+	inline std::array<IntVector3D, 6> getNeighborNodeCenters(const unsigned int nodeSize, const IntVector3D nodeCenter)
+	{
+		return {
+			nodeCenter + IntVector3D(nodeSize, 0.0f, 0.0f),  // +X
+			nodeCenter + IntVector3D(-nodeSize, 0.0f, 0.0f),  // -X
+			nodeCenter + IntVector3D(0.0f,  nodeSize, 0.0f),  // +Y
+			nodeCenter + IntVector3D(0.0f, -nodeSize, 0.0f),  // -Y
+			nodeCenter + IntVector3D(0.0f, 0.0f,  nodeSize),  // +Z
+			nodeCenter + IntVector3D(0.0f, 0.0f, -nodeSize)   // -Z
+		};
+	}
+
+	inline std::array<QVector3D, 6> getOuterFaceCoords(const unsigned int nodeSize, const QVector3D nodeCenter, float epsilon = 0.5f)
+	{
+		float halfSize = nodeSize / 2.0f + epsilon;
+
+		return {
+			nodeCenter + QVector3D(halfSize, 0.0f, 0.0f),  // +X
+			nodeCenter + QVector3D(-halfSize, 0.0f, 0.0f),  // -X
+			nodeCenter + QVector3D(0.0f,  halfSize, 0.0f),  // +Y
+			nodeCenter + QVector3D(0.0f, -halfSize, 0.0f),  // -Y
+			nodeCenter + QVector3D(0.0f, 0.0f,  halfSize),  // +Z
+			nodeCenter + QVector3D(0.0f, 0.0f, -halfSize)   // -Z
+		};
+	}
 
 }
