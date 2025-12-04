@@ -4,6 +4,163 @@
 // please keep all functions in this source file const or functions that dont change values inside the test chamber class
 namespace PMP
 {
+	bool TestChamber::canUnsubdivide(NodeID node) const
+	{
+		try {
+			if (!m_nodeMap.at(node).m_childIDs.has_value())
+			{
+				// node has no children to unsubdivide
+				// maybe the parent node of this node can be unsubdivided
+				//Debugger::instance().addDebugPoint(m_nodeMap.at(node).m_center.toQVector3D(), { 1.0f,1.0f,0.0f });
+				return false;
+			}
+		}
+		catch (const std::out_of_range&) {
+			// node does not exist. likely already destroyed by another unsubdivide operation?
+			return false;
+		}
+		//for its sides:
+		for (int i = 0; i < 6; i++)
+		{
+			WallSide childSide = static_cast<WallSide>(i);
+			int count = 0;
+			int activeChild = 0;
+			for (const auto& childID : m_nodeMap.at(node).m_childIDs.valueRead())
+			{
+				m_nodeMap.at(childID).m_active ? activeChild++ : activeChild;
+				try {
+					if (m_surfaceMap.at(childID)[i].side == childSide) //check if the side is active
+					{
+						//Debugger::instance().addDebugPoint(m_nodeMap.at(childID).m_center.toQVector3D(), { 0.0f,0.0f,1.0f });
+						//std::cout << "Added Side " << i << "\n";
+						count++;
+					}
+				}
+				catch (const std::out_of_range&) {
+					continue; // child has no surface on this side
+				}
+			}
+			if (count % 4 != 0 || activeChild % 8 != 0) // either not all children have this side active, or not all children are active
+			{
+				return false;
+			}
+			// if count % 4 == 0, then all 4 children have the same active state on this side
+			// if any one side isn't "full", we cannot unsubdivide
+		}
+		return true;
+	}
+
+	bool TestChamber::areNeighborsSameSize(NodeID node) const {
+		const TestChamberNode& currentNode = m_nodeMap.at(node);
+		std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.m_size, currentNode.m_center);
+		bool success = true;
+		for (int i = 0; i < 6; ++i)
+		{
+			if (isPointOOB(neighborCoords[i].toQVector3D())) continue;
+			auto r = tryGetNodeAtCoord(neighborCoords[i].toQVector3D());
+			if (r == std::nullopt) {
+				success = false; // Neighbor does not exist
+				//Debugger::instance().addDebugPoint(neighborCoords[i].toQVector3D(), { 1.0f,0.0f,0.0f });
+			}
+			//else Debugger::instance().addDebugPoint(m_nodeMap.at(r.value()).m_center.toQVector3D(), { 0.0f,1.0f,0.0f });
+		}
+		return success;
+	}
+	bool TestChamber::areNeighborsActive(NodeID node) const {
+		const TestChamberNode& currentNode = m_nodeMap.at(node);
+		std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.m_size, currentNode.m_center);
+		bool success = true;
+		for (int i = 0; i < 6; ++i)
+		{
+			if (isPointOOB(neighborCoords[i].toQVector3D())) continue;
+			auto r = tryGetNodeAtCoord(neighborCoords[i]);
+			if (r == std::nullopt) {
+
+				continue;
+			}
+			else {
+				if (m_nodeMap.at(r.value()).m_active) {
+					//Debugger::instance().addDebugPoint(m_nodeMap.at(r.value()).m_center.toQVector3D(), {0.0f,1.0f,0.0f});
+				}
+				else {
+					//Debugger::instance().addDebugPoint(m_nodeMap.at(r.value()).m_center.toQVector3D(), { 1.0f,0.0f,0.0f });
+					success = false;
+				}
+			}
+		}
+		return success;
+	}
+
+	int snap(int x, int s) {
+		assert(s > 0 && "s must be positive");
+		int half = s / 2;
+		int sign = (int)(x >= 0) * 2 - 1;
+		return ((x + half * sign) / s) * s;
+	}
+
+	// level == 0 at root node
+	IntVector3D TestChamber::getClosestPossibleNodeCenterAtLevel(IntVector3D coord, unsigned int scale) const
+	{
+		IntVector3D rel = coord + IntVector3D(scale * 0.5f, scale * 0.5f, scale * 0.5f); //shift to positive space
+		return IntVector3D(snap(rel.x(), scale) - scale * 0.5f, snap(rel.y(), scale) - scale * 0.5f, snap(rel.z(), scale) - scale * 0.5f);
+	}
+
+	NodeID TestChamber::getNodeOfSizeAtCoord(QVector3D coord, unsigned int size) const {
+		return getNodeOfSizeAtCoord(coord, m_rootNode, size);
+	}
+
+	NodeID TestChamber::getNodeOfSizeAtCoord(QVector3D coord, NodeID parentID, unsigned int size) const {
+		if (isPointOOB(coord)) return parentID;
+		if (m_nodeMap.at(parentID).m_size == size) return parentID; //found
+		if (!m_nodeMap.at(parentID).m_childIDs.has_value()) return parentID; //no more children to search. return this node
+
+		// This should never fire because the search starts from the root node
+		// The only way this can be fired is if the requested size is larger than the root node size
+		if (m_nodeMap.at(parentID).m_size < size) throw std::runtime_error("Something went wrong trying to find node of specific size at the given coord. Did you try to find node larger than the root node?");
+		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
+		NodeID id = m_nodeMap.at(parentID).m_childIDs.valueRead().at(i);
+		return getNodeOfSizeAtCoord(coord, id, size);
+	}
+
+	const NodeID TestChamber::searchNodeWithCoord(QVector3D coord) const
+	{
+		return searchNodeWithCoord(coord, m_rootNode);
+	}
+
+	const NodeID TestChamber::searchNodeWithCoord(QVector3D coord, NodeID parentID) const
+	{
+		if (isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
+		if (!m_nodeMap.at(parentID).m_childIDs.has_value()) return parentID; //found
+
+		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
+		return searchNodeWithCoord(coord, m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
+	}
+
+	const NodeID TestChamber::searchNodeWithCoordSize(const QVector3D coord, unsigned int size) const
+	{
+		return searchNodeWithCoordSize(coord, size, m_rootNode);
+	}
+	const NodeID TestChamber::searchNodeWithCoordSize(const QVector3D coord, unsigned int size, NodeID parentID) const
+	{
+		if (isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
+		if (m_nodeMap.at(parentID).m_size == size) return parentID; //found
+
+		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
+		return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
+	}
+	const NodeID TestChamber::searchNodeWithCoordSize(const IntVector3D coord, unsigned int size) const
+	{
+		return searchNodeWithCoordSize(coord, size, m_rootNode);
+	}
+	const NodeID TestChamber::searchNodeWithCoordSize(const IntVector3D coord, unsigned int size, NodeID parentID) const
+	{
+		if (isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
+		if (m_nodeMap.at(parentID).m_size == size) return parentID; //found
+
+		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
+		return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
+	}
+
 	IntVector3D TestChamber::getNodeBBoxMin(NodeID id) const
 	{
 		const TestChamberNode& node = m_nodeMap.at(id);
@@ -138,6 +295,19 @@ namespace PMP
 		assert(m_rootNodeWorldSize % 2 == 0);
 		int halfSize = m_rootNodeWorldSize / 2;
 		return std::abs(coord.x()) > halfSize || std::abs(coord.y()) > halfSize || std::abs(coord.z()) > halfSize;
+	}
+
+	IntVector3D TestChamber::getSurfaceCenter(ChamberSurface surface) const
+	{
+		return m_nodeMap.at(surface.parentNode).m_size * 0.5f * getWallNormal(surface.side) * -1 + m_nodeMap.at(surface.parentNode).m_center;
+	}
+
+	void TestChamber::makeUSI(NodeID nodeID, UniqueSurfaceIdentifer& out, WallSide side) const
+	{
+		const TestChamberNode& node = m_nodeMap.at(nodeID);
+		out.size = node.m_size;
+		out.nodeCord = node.m_center;
+		out.side = side;
 	}
 
 	void TestChamber::printNodes()

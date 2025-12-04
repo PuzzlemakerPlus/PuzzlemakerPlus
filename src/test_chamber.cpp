@@ -33,35 +33,6 @@ namespace PMP
 		createOctreeNode(m_rootNode, std::nullopt, {0,0,0}, m_rootNodeWorldSize);
 	}
 
-	// Given a coordinate, compare against the parent coordinate to find the order at which the child node is placed in the child array
-	unsigned int getChildOrder(IntVector3D coord, IntVector3D parentCenter)
-	{
-		IntVector3D delta = coord - parentCenter;
-
-		// Determine sign bits: 0 for negative, 1 for positive
-		unsigned int xBit = (delta.x() >= 0) ? 1 : 0;
-		unsigned int yBit = (delta.y() >= 0) ? 1 : 0;
-		unsigned int zBit = (delta.z() >= 0) ? 1 : 0;
-
-		// Bit pattern: xBit (LSB), yBit, zBit (MSB)
-		return (zBit << 2) | (yBit << 1) | xBit;
-	}
-
-	IntVector3D getChildCenter(unsigned int order, unsigned int parentSize, IntVector3D parentCenter)
-	{
-		//std::cout << parentSize << std::endl;
-		if (parentSize % 4 != 0) throw std::runtime_error("Parent node size must be divisible by 4");
-		if (order > 7) throw std::runtime_error("Order can not be greater than 7");
-
-		int offset = parentSize / 4;
-		// Branchless calculation
-		int xSign = ((order & 1) << 1) - 1;               // 1 if odd, -1 if even
-		int ySign = (((order >> 1) & 1) << 1) - 1;        // 1 if bit 1 is 0, -1 if 1
-		int zSign = (((order >> 2) & 1) << 1) - 1;        // 1 if bit 2 is 0, -1 if 1
-
-		return parentCenter + IntVector3D(offset * xSign, offset * ySign, offset * zSign);
-	}
-
 	void TestChamber::createChildrenOfNode( NodeID parentID )
 	{
 		TestChamberNode& parentNode = m_nodeMap.at(parentID);
@@ -153,7 +124,7 @@ namespace PMP
 	}
 
 	//Assumes out is empty during non-recursive calls
-	void TestChamber::getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WallSide side)
+	void TestChamber::getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WallSide side) const
 	{
 		// Node has children 
 		if (m_nodeMap.at(node).m_childIDs.has_value())
@@ -173,7 +144,7 @@ namespace PMP
 	}
 
 
-	void TestChamber::getNeighborNodes(NodeID node, std::array<std::optional<NodeID>, 6>& out)
+	void TestChamber::getNeighborNodes(NodeID node, std::array<std::optional<NodeID>, 6>& out) const
 	{
 		const TestChamberNode& currentNode = m_nodeMap.at(node);
 		std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.m_size, currentNode.m_center);
@@ -187,47 +158,6 @@ namespace PMP
 				out[i] = std::nullopt; // Out of bounds
 			}
 		}
-	}
-	//TODO optimize this by using the fact that the coordinates are IntVector3D
-	bool TestChamber::areNeighborsSameSize(NodeID node) {
-		const TestChamberNode& currentNode = m_nodeMap.at(node);
-		std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.m_size, currentNode.m_center);
-		bool success = true;
-		for (int i = 0; i < 6; ++i)
-		{
-			if (isPointOOB(neighborCoords[i].toQVector3D())) continue;
-			auto r = tryGetNodeAtCoord(neighborCoords[i].toQVector3D());
-			if (r == std::nullopt) {
-				success = false; // Neighbor does not exist
-				//Debugger::instance().addDebugPoint(neighborCoords[i].toQVector3D(), { 1.0f,0.0f,0.0f });
-			}
-			//else Debugger::instance().addDebugPoint(m_nodeMap.at(r.value()).m_center.toQVector3D(), { 0.0f,1.0f,0.0f });
-		}
-		return success;
-	}
-	bool TestChamber::areNeighborsActive(NodeID node) {
-		const TestChamberNode& currentNode = m_nodeMap.at(node);
-		std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.m_size, currentNode.m_center);
-		bool success = true;
-		for (int i = 0; i < 6; ++i)
-		{
-			if (isPointOOB(neighborCoords[i].toQVector3D())) continue;
-			auto r = tryGetNodeAtCoord(neighborCoords[i]);
-			if (r == std::nullopt) {
-				
-				continue;
-			}
-			else {
-				if (m_nodeMap.at(r.value()).m_active) {
-					//Debugger::instance().addDebugPoint(m_nodeMap.at(r.value()).m_center.toQVector3D(), {0.0f,1.0f,0.0f});
-				}
-				else {
-					//Debugger::instance().addDebugPoint(m_nodeMap.at(r.value()).m_center.toQVector3D(), { 1.0f,0.0f,0.0f });
-					success = false; 
-				}
-			}
-		}
-		return success;
 	}
 
 	std::optional<NodeID> TestChamber::tryGetNodeAtCoord(IntVector3D coord) const
@@ -254,21 +184,6 @@ namespace PMP
 		return getLeafNodeAtCoord(coord, m_nodeMap.at(parentID).m_childIDs.value()[i]);
 	}
 
-	NodeID TestChamber::getNodeOfSizeAtCoord(QVector3D coord, unsigned int size) {
-		return getNodeOfSizeAtCoord(coord, m_rootNode, size);
-	}
-	
-	NodeID TestChamber::getNodeOfSizeAtCoord(QVector3D coord, NodeID parentID, unsigned int size) {
-		if (isPointOOB(coord)) return parentID;
-		if (m_nodeMap.at(parentID).m_size == size) return parentID; //found
-		if (!m_nodeMap.at(parentID).m_childIDs.has_value()) return parentID; //no more children to search. return this node
-
-		// This should never fire because the search starts from the root node
-		// The only way this can be fired is if the requested size is larger than the root node size
-		if (m_nodeMap.at(parentID).m_size < size) throw std::runtime_error("Something went wrong trying to find node of specific size at the given coord. Did you try to find node larger than the root node?");
-		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
-		return getNodeOfSizeAtCoord(coord, m_nodeMap.at(parentID).m_childIDs.value()[i], size);
-	}
 
 	NodeID TestChamber::subdivideNodeToCoordOptimized(QVector3D coord, NodeID parentID, unsigned int size)
 	{
@@ -311,55 +226,9 @@ namespace PMP
 		return {p0, p1, p2, p3};
 	}
 
-	IntVector3D TestChamber::getSurfaceCenter(ChamberSurface surface)
+	void TestChamber::checkChildrenTouchingBBox( NodeID parentID, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out ) const
 	{
-		return m_nodeMap.at(surface.parentNode).m_size * 0.5f * getWallNormal(surface.side) * -1 + m_nodeMap.at(surface.parentNode).m_center;
-	}
-
-
-	const NodeID TestChamber::searchNodeWithCoord(QVector3D coord) const
-	{
-		return searchNodeWithCoord(coord, m_rootNode);
-	}
-	
-	const NodeID TestChamber::searchNodeWithCoord(QVector3D coord, NodeID parentID) const
-	{
-		if(isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
-		if(!m_nodeMap.at(parentID).m_childIDs.has_value()) return parentID; //found
-
-		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
-		return searchNodeWithCoord(coord,  m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
-	}
-
-	const NodeID TestChamber::searchNodeWithCoordSize(const QVector3D coord, unsigned int size) const
-	{
-		return searchNodeWithCoordSize(coord, size, m_rootNode);
-	}
-	const NodeID TestChamber::searchNodeWithCoordSize(const QVector3D coord, unsigned int size, NodeID parentID) const
-	{
-		if(isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
-		if(m_nodeMap.at(parentID).m_size == size) return parentID; //found
-
-		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
-		return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
-	}
-	const NodeID TestChamber::searchNodeWithCoordSize(const IntVector3D coord, unsigned int size) const
-	{
-		return searchNodeWithCoordSize(coord, size, m_rootNode);
-	}
-	const NodeID TestChamber::searchNodeWithCoordSize(const IntVector3D coord, unsigned int size, NodeID parentID) const
-	{
-		if (isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
-		if (m_nodeMap.at(parentID).m_size == size) return parentID; //found
-
-		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
-		return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
-	}
-
-
-	void TestChamber::checkChildrenTouchingBBox( NodeID parentID, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out )
-	{
-		TestChamberNode& parent = m_nodeMap.at(parentID);
+		const TestChamberNode& parent = m_nodeMap.at(parentID);
 
 		if ( !parent.m_childIDs.has_value() )
 		{
@@ -372,7 +241,7 @@ namespace PMP
 			for ( int i = 0; i < 8; i++ )
 			{
 				// okay, this can definitely be made more efficient, but whatever
-				auto vs = parent.m_childIDs.value();
+				auto vs = parent.m_childIDs.valueRead();
 				IntVector3D nodeMin = getNodeBBoxMin(vs[i]);
 				IntVector3D nodeMax = getNodeBBoxMax(vs[i]);
 				if ( boundingBoxesIntersect(nodeMin, nodeMax, mins, maxs ) )
@@ -383,7 +252,7 @@ namespace PMP
 		}
 	}
 
-	void TestChamber::getNodesTouchingBBox( const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out )
+	void TestChamber::getNodesTouchingBBox( const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out ) const
 	{
 		out.clear();
 		checkChildrenTouchingBBox(m_rootNode, mins, maxs, out);
@@ -556,87 +425,6 @@ namespace PMP
 			//unsubdivideRecursive(parentID);
 		}
 	}
-
-	bool TestChamber::canUnsubdivide(NodeID node)
-	{
-		try {
-			if (!m_nodeMap.at(node).m_childIDs.has_value())
-			{
-				// node has no children to unsubdivide
-				// maybe the parent node of this node can be unsubdivided
-				//Debugger::instance().addDebugPoint(m_nodeMap.at(node).m_center.toQVector3D(), { 1.0f,1.0f,0.0f });
-				return false;
-			}
-		}
-		catch (const std::out_of_range&) {
-			// node does not exist. likely already destroyed by another unsubdivide operation?
-			return false;
-		}
-		//for its sides:
-		for (int i = 0; i < 6; i++)
-		{
-			WallSide childSide = static_cast<WallSide>(i);
-			int count = 0;
-			int activeChild = 0;
-			for (const auto& childID : m_nodeMap.at(node).m_childIDs.valueRead())
-			{
-				m_nodeMap.at(childID).m_active ? activeChild++ : activeChild;
-				try {
-					if (m_surfaceMap.at(childID)[i].side == childSide) //check if the side is active
-					{
-						//Debugger::instance().addDebugPoint(m_nodeMap.at(childID).m_center.toQVector3D(), { 0.0f,0.0f,1.0f });
-						//std::cout << "Added Side " << i << "\n";
-						count++;
-					}
-				}
-				catch (const std::out_of_range&) {
-					continue; // child has no surface on this side
-				}
-			}
-			if (count % 4 != 0 || activeChild % 8 != 0) // either not all children have this side active, or not all children are active
-			{
-				return false;
-			}
-			// if count % 4 == 0, then all 4 children have the same active state on this side
-			// if any one side isn't "full", we cannot unsubdivide
-		}
-		return true;
-	}
-
-	void TestChamber::makeUSI(NodeID nodeID, UniqueSurfaceIdentifer& out, WallSide side)
-	{
-		const TestChamberNode& node = m_nodeMap.at(nodeID);
-		out.size = node.m_size;
-		out.nodeCord = node.m_center;
-		out.side = side;
-	}
-
-	int snap(int x, int s) {
-		assert(s > 0 && "s must be positive");
-		int half = s / 2;
-		int sign = (int)(x >= 0) * 2 - 1;
-		return ((x + half * sign) / s) * s;
-	}
-
-	// level == 0 at root node
-	IntVector3D TestChamber::getClosestPossibleNodeCenterAtLevel(IntVector3D coord, unsigned int scale) const
-	{
-		IntVector3D rel = coord + IntVector3D(scale * 0.5f, scale * 0.5f, scale * 0.5f); //shift to positive space
-		return IntVector3D(snap(rel.x(), scale)-scale * 0.5f, snap(rel.y(), scale) - scale * 0.5f, snap(rel.z(), scale) - scale * 0.5f);
-	}
-
-	NodeID TestChamber::getClosestNode(QVector3D coord) const
-	{
-		for (unsigned int level = gridSizeMin; level <= m_rootNodeWorldSize; level*=2) {
-			IntVector3D center = getClosestPossibleNodeCenterAtLevel(coord, level);
-			auto r = tryGetNodeAtCoord(center);
-			if (r.has_value()) {
-				return r.value();
-			}
-		}
-		return m_rootNode;
-	}
-
 	void TestChamber::increaseGridSize()
 	{
 		m_gridSize *= 2;

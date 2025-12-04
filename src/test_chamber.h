@@ -44,25 +44,25 @@ namespace PMP
 		// Recursively destroys child of a node
 		void destroyChildrenOfNode( NodeID parentID );
 
-		unsigned int getRootNodeSize() const {return m_rootNodeWorldSize;};
 		int getRootNodeSizeInt() const {return static_cast<int>(m_rootNodeWorldSize);};
+		unsigned int getRootNodeSize() const {return m_rootNodeWorldSize;};
+		QVector3D getNodeCenter(NodeID nodeID) const {return m_nodeMap.at(nodeID).m_center.toQVector3D();}
 		const SafeUnorderedMap<NodeID, TestChamberNode>& getNodeMap() const {return m_nodeMap;};
 
 		std::optional<ChamberSurface> getSurface(NodeID node, WallSide side) const;
-		void getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WallSide side);
+		void getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WallSide side) const;
 		bool coordInNode(QVector3D coord, NodeID nodeID) const;
-		QVector3D getNodeCenter(NodeID nodeID) const {return m_nodeMap.at(nodeID).m_center.toQVector3D();}
 		// Find the neighboring nodes of the given node in all 6 directions
 		// The neighbors may be nullopt if they do not exist (if the node is at the edge of the octree)
 		// The neighbors will either be the same size as the given node, or larger
 		// Recursive function that guarantees to find neighbors
-		void getNeighborNodes(NodeID node, std::array<std::optional<NodeID>, 6>& out);
+		void getNeighborNodes(NodeID node, std::array<std::optional<NodeID>, 6>& out) const;
 
 		// Given a node, check if all its neighbors are the same size as itself
 		// very cheap operation Try to use this instead of getNeighborNodes whenever possible
-		bool areNeighborsSameSize(NodeID node);
+		bool areNeighborsSameSize(NodeID node) const;
 		// Given a node, check if all its neighbors are active
-		bool areNeighborsActive(NodeID node);
+		bool areNeighborsActive(NodeID node) const;
 
 		// Uses the hash function to try to locate the node at the given center coordinate
 		// Returns std::nullopt if there is no such node that has that exact center coordinate
@@ -71,7 +71,7 @@ namespace PMP
 		std::optional<NodeID> tryGetNodeAtCoord(IntVector3D coord) const;
 
 		std::array<IntVector3D, 4> getChamberSurfaceCorners(const ChamberSurface& surface);
-		IntVector3D getSurfaceCenter(ChamberSurface surface);
+		IntVector3D getSurfaceCenter(ChamberSurface surface) const;
 		const SafeUnorderedMap<NodeID, std::array<ChamberSurface, 6>>& getSurfaceMap() const {return m_surfaceMap; }
 		
 		// Is the given coordinate out of bounds?
@@ -94,6 +94,11 @@ namespace PMP
 		// Recursive function that guarantees to find the node
 		const NodeID searchNodeWithCoordSize(const QVector3D coord, unsigned int size) const;
 		const NodeID searchNodeWithCoordSize(const IntVector3D coord, unsigned int size) const;
+		//Returned node may or may not have children
+		//Returned node may be larger than the requested size if it does not have any child
+		//Will return the smallest node that contains the coord if the node of exact size does not exist at the coordinate
+		NodeID getNodeOfSizeAtCoord(QVector3D coord, unsigned int size) const;
+		NodeID getNodeOfSizeAtCoord(QVector3D coord, NodeID parentID, unsigned int size) const;
 		
 		std::optional<RayHitResult> rayCast(Ray ray) const;
 
@@ -103,31 +108,24 @@ namespace PMP
 		//void getNodeBBox(NodeID id, std::array<QVector3D, 2>& out);
 
 		// Returns leaf nodes which touch the specified bbox
-		void getNodesTouchingBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
-		// Given a bounding box, subdivide all nodes within in so that their sides lie along the bounding box sides
-		// - out will be set to the resulting nodes inside the bbox
-		void subdivideNodesToBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
-		void subdivideNodeToBBoxRecursive(NodeID node, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
-		//Returned node may or may not have children
-		//Returned node may be larger than the requested size if it does not have any child
-		//Will return the smallest node that contains the coord if the node of exact size does not exist at the coordinate
-		NodeID getNodeOfSizeAtCoord(QVector3D coord, unsigned int size);
-		NodeID getNodeOfSizeAtCoord(QVector3D coord, NodeID parentID, unsigned int size);
-		NodeID subdivideNodeToCoordOptimized(QVector3D coord, NodeID parentID, unsigned int size);
-		// Returned node will always be a leaf node
-		NodeID getLeafNodeAtCoord(QVector3D coord);
-		NodeID getLeafNodeAtCoord(QVector3D coord, NodeID parentID);
-
+		void getNodesTouchingBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out) const;
 		// Calculates the potential coordinate for the center of a node at the given size that is closest to the given coordinate
 		// The returned coordinate may not correspond to an actual node
 		IntVector3D getClosestPossibleNodeCenterAtLevel(IntVector3D coord, unsigned int nodeSize) const;
 
-		// Finds the smallest node whose center is closest to the given coordinate
-		// This is about 3 times slower than getLeafNodeAtCoord in almost all cases for large octrees
-		NodeID getClosestNode(QVector3D coord) const;
-
-
-		bool canUnsubdivide(NodeID node);
+		// Based on generated surfaces, generate quads for rendering. This is to separate rendering logic with octree logic
+		void generateQuads(std::vector<Quad>& out) const;
+		void generateTCQuads(std::vector<TestChamberQuad>& out) const;
+		// Creates a UniqueSurfaceIdentifer for the given node and side.
+		// USI should be the standard to long term description of a node to remove dependency on NodeID and SurfaceID
+		void makeUSI(NodeID node, UniqueSurfaceIdentifer& out, WallSide side = WallSide::NONE) const;
+		// Based on generated surfaces, generate quads for rendering. This is to separate rendering logic with octree logic
+		void generateQuads(std::vector<Quad>& out) const;
+		void generateTCQuads(std::vector<TestChamberQuad>& out) const;
+		// Creates a UniqueSurfaceIdentifer for the given node and side.
+		// USI should be the standard to long term description of a node to remove dependency on NodeID and SurfaceID
+		void makeUSI(NodeID node, UniqueSurfaceIdentifer& out, WallSide side = WallSide::NONE) const;
+		bool canUnsubdivide(NodeID node) const;
 		// pass in a possible candidates of nodes that needs to be checked for unsubdividing.
 		// needs a contiguous list of NodeIDs that may or may not repeat
 		void unsubdivideNodes(NodeID* touchingNodes, int size);
@@ -139,9 +137,7 @@ namespace PMP
 
 		// Based on the octree structure, generate surfaces
 		void generateSurfaces();
-		// Based on generated surfaces, generate quads for rendering. This is to separate rendering logic with octree logic
-		void generateQuads(std::vector<Quad>& out) const;
-		void generateTCQuads(std::vector<TestChamberQuad>& out) const;
+		
 
 		// Extrude all surfaces selected
 		int extrudeSurfaces(Selector* selector);
@@ -149,9 +145,18 @@ namespace PMP
 		int recedeSurfaces(Selector* selector);
 		// Recursively destroy a node and all its children
 		void destroyBranch(NodeID nodeID);
-		// Creates a UniqueSurfaceIdentifer for the given node and side.
-		// USI should be the standard to long term description of a node to remove dependency on NodeID and SurfaceID
-		void makeUSI (NodeID node, UniqueSurfaceIdentifer& out, WallSide side = WallSide::NONE);
+
+		// Given a bounding box, subdivide all nodes within in so that their sides lie along the bounding box sides
+		// - out will be set to the resulting nodes inside the bbox
+		void subdivideNodesToBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
+		void subdivideNodeToBBoxRecursive(NodeID node, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
+
+		NodeID subdivideNodeToCoordOptimized(QVector3D coord, NodeID parentID, unsigned int size);
+		// Returned node will always be a leaf node
+		NodeID getLeafNodeAtCoord(QVector3D coord);
+		NodeID getLeafNodeAtCoord(QVector3D coord, NodeID parentID);
+
+
 
 		// Debug
 		void printNodes();
@@ -172,7 +177,7 @@ namespace PMP
 		void _printNodesTree(std::map<NodeID, std::vector<NodeID>>& children, NodeID id, std::string prefix, bool isLast);
 
 		// TODO: shorten this name?
-		void checkChildrenTouchingBBox(NodeID parentID, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
+		void checkChildrenTouchingBBox(NodeID parentID, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out) const;
 		
 		const NodeID searchNodeWithCoordSize(QVector3D coord, unsigned int size, NodeID parentID) const;
 		const NodeID searchNodeWithCoordSize(IntVector3D coord, unsigned int size, NodeID parentID) const;
@@ -180,8 +185,7 @@ namespace PMP
 		IntVector3D getNodeBBoxMin(NodeID id) const;
 		IntVector3D getNodeBBoxMax(NodeID id) const;
 		
-		
-		void getNodesTouchingBBox(NodeID parentNode, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
+		void getNodesTouchingBBox(NodeID parentNode, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out) const;
 
 		NodeID m_rootNode;
 		// Size of the root node in hammer units - this is effectively the internal max map size
@@ -223,6 +227,35 @@ namespace PMP
 			nodeCenter + QVector3D(0.0f, 0.0f,  halfSize),  // +Z
 			nodeCenter + QVector3D(0.0f, 0.0f, -halfSize)   // -Z
 		};
+	}
+
+	// Given a coordinate, compare against the parent coordinate to find the order at which the child node is placed in the child array
+	inline unsigned int getChildOrder(IntVector3D coord, IntVector3D parentCenter)
+	{
+		IntVector3D delta = coord - parentCenter;
+
+		// Determine sign bits: 0 for negative, 1 for positive
+		unsigned int xBit = (delta.x() >= 0) ? 1 : 0;
+		unsigned int yBit = (delta.y() >= 0) ? 1 : 0;
+		unsigned int zBit = (delta.z() >= 0) ? 1 : 0;
+
+		// Bit pattern: xBit (LSB), yBit, zBit (MSB)
+		return (zBit << 2) | (yBit << 1) | xBit;
+	}
+
+	inline IntVector3D getChildCenter(unsigned int order, unsigned int parentSize, IntVector3D parentCenter)
+	{
+		//std::cout << parentSize << std::endl;
+		if (parentSize % 4 != 0) throw std::runtime_error("Parent node size must be divisible by 4");
+		if (order > 7) throw std::runtime_error("Order can not be greater than 7");
+
+		int offset = parentSize / 4;
+		// Branchless calculation
+		int xSign = ((order & 1) << 1) - 1;               // 1 if odd, -1 if even
+		int ySign = (((order >> 1) & 1) << 1) - 1;        // 1 if bit 1 is 0, -1 if 1
+		int zSign = (((order >> 2) & 1) << 1) - 1;        // 1 if bit 2 is 0, -1 if 1
+
+		return parentCenter + IntVector3D(offset * xSign, offset * ySign, offset * zSign);
 	}
 
 }
