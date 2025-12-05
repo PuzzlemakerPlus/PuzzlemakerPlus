@@ -2,12 +2,13 @@
 // Implements the class that represents the test chamber itself and the octree nodes
 #include "undo.h"
 #include "selection.h"
+#include "util/math.h"
 #include "util/debug.h"
 #include "util/3d/mesh.h" 
 #include "test_chamber.h"
 #include "test_chamber_types.h"
 #include "test_chamber_actions.h"
-#include "util/math.h"
+
 
 #include <array>
 #include <memory>

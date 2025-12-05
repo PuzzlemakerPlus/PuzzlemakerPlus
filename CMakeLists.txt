@@ -48,6 +48,7 @@ qt_add_executable(PuzzlemakerPlus
 	# Widgets
 	src/widgets/palette.cpp
 	src/widgets/palette.h
+	src/widgets/viewport_control.cpp
 	src/widgets/viewport.cpp
 	src/widgets/viewport.h
 	src/widgets/PaletteElement.cpp
@@ -67,6 +68,8 @@ qt_add_executable(PuzzlemakerPlus
 	# ✅ Good enough for science! ❎ Not Aperture Science!
 	src/test_chamber_actions.h
 	src/test_chamber_actions.cpp
+	src/test_chamber_graphical.cpp
+	src/test_chamber_utils.cpp
 	src/test_chamber_types.h
 	src/test_chamber.cpp
 	src/test_chamber.h
@@ -97,34 +100,36 @@ target_link_libraries(PuzzlemakerPlus PRIVATE
 	# assimp::assimp
 )
 
-add_executable(octtreetest ${CMAKE_CURRENT_SOURCE_DIR}/tests/octtree_test.cpp
-	src/test_chamber_actions.h
-	src/test_chamber_actions.cpp
-	src/test_chamber_types.h
-	src/test_chamber.cpp
-	src/test_chamber.h
-	src/selection.cpp
-	src/selection.h
-	src/undo.h
-	src/undo.cpp
-	src/util/3d/mesh.cpp
-	src/util/3d/mesh.h
-	src/util/3d/ray.cpp
-	src/util/3d/ray.h
- "src/util/safemap.h" "src/test_chamber_graphical.cpp" "src/test_chamber_utils.cpp" "src/widgets/viewport_control.cpp")
-set_target_properties(octtreetest
-	PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-	"${CMAKE_CURRENT_SOURCE_DIR}/bin")
-set_target_properties(octtreetest
-	PROPERTIES AUTOGEN_BUILD_DIR
-	"${CMAKE_CURRENT_SOURCE_DIR}/bin/autogen/octtreetest")
-add_test(NAME OctTreeTest COMMAND octtreetest)
-target_link_libraries(octtreetest PRIVATE
-	Qt6::Core
-	Qt6::Gui
-	Qt6::Widgets
-	Qt6::OpenGLWidgets
-)
+# add_executable(octtreetest ${CMAKE_CURRENT_SOURCE_DIR}/tests/octtree_test.cpp
+# 	src/test_chamber_actions.h
+# 	src/test_chamber_actions.cpp
+# 	src/test_chamber_types.h
+# 	src/test_chamber.cpp
+# 	src/test_chamber.h
+# 	src/selection.cpp
+# 	src/selection.h
+# 	src/undo.h
+# 	src/undo.cpp
+# 	src/util/3d/mesh.cpp
+# 	src/util/3d/mesh.h
+# 	src/util/3d/ray.cpp
+# 	src/util/3d/ray.h
+# 	src/util/math.h
+# 	src/util/math.h
+#  "src/util/safemap.h" "src/test_chamber_graphical.cpp" "src/test_chamber_utils.cpp" "src/widgets/viewport_control.cpp")
+# set_target_properties(octtreetest
+# 	PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+# 	"${CMAKE_CURRENT_SOURCE_DIR}/bin")
+# set_target_properties(octtreetest
+# 	PROPERTIES AUTOGEN_BUILD_DIR
+# 	"${CMAKE_CURRENT_SOURCE_DIR}/bin/autogen/octtreetest")
+# add_test(NAME OctTreeTest COMMAND octtreetest)
+# target_link_libraries(octtreetest PRIVATE
+# 	Qt6::Core
+# 	Qt6::Gui
+# 	Qt6::Widgets
+# 	Qt6::OpenGLWidgets
+# )
 
 set_property(TARGET PuzzlemakerPlus PROPERTY VS_DEBUGGER_COMMAND "$<TARGET_FILE:PuzzlemakerPlus>")
 

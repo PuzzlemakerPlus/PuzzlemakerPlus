@@ -1,6 +1,7 @@
 #include "test_chamber.h"
 #include "util/debug.h"
 #include <iostream>
+#include <cassert>
 // source file for simple test chamber operations with no side effects
 // please keep all functions in this source file const or functions that dont change values inside the test chamber class
 namespace PMP
@@ -165,7 +166,7 @@ namespace PMP
 	IntVector3D TestChamber::getNodeBBoxMin(NodeID id) const
 	{
 		const TestChamberNode& node = m_nodeMap.at(id);
-		assert(node.m_size % 2 == 0, "How is node size not divisible by 2?");
+		assert(node.m_size % 2 == 0 && "How is node size not divisible by 2?");
 		int half = node.m_size / 2;
 		return IntVector3D(node.m_center.x() - half,
 			node.m_center.y() - half,
@@ -174,7 +175,7 @@ namespace PMP
 	IntVector3D TestChamber::getNodeBBoxMax(NodeID id) const
 	{
 		const TestChamberNode& node = m_nodeMap.at(id);
-		assert(node.m_size % 2 == 0, "How is node size not divisible by 2?");
+		assert(node.m_size % 2 == 0 && "How is node size not divisible by 2?");
 		int half = node.m_size / 2;
 		return IntVector3D(node.m_center.x() + half,
 			node.m_center.y() + half,
@@ -226,7 +227,7 @@ namespace PMP
 	bool TestChamber::isSurface(WallSide side, NodeID node) const
 	{
 		const IntVector3D center = m_nodeMap.at(node).m_center;
-		assert(m_nodeMap.at(node).m_size % 2 == 0, "node size should be an even numer");
+		assert(m_nodeMap.at(node).m_size % 2 == 0 && "node size should be an even numer");
 		const int halfSize = m_nodeMap.at(node).m_size / 2;
 		IntVector3D offset;
 		using enum WallSide;
@@ -278,7 +279,7 @@ namespace PMP
 		//good known magic numbers for hashing
 		uint64_t h = x * 73856093ULL ^ y * 19349663ULL ^ z * 83492791ULL;
 
-		// simple 64-bit ¡°scrambler¡±
+		// simple 64-bit ï¿½ï¿½scramblerï¿½ï¿½
 		h ^= h >> 33;
 		h *= 0xff51afd7ed558ccdULL;
 		h ^= h >> 33;
@@ -338,7 +339,7 @@ namespace PMP
 		}
 #else
 		if (!prefix.empty()) {
-			std::cout << (isLast ? "¦¦¦¡¦¡ " : "¦§¦¡¦¡ ");
+			std::cout << (isLast ? "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ " : "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ");
 		}
 #endif
 		std::cout << "Node " << id << " at " << printVector3D(m_nodeMap.at(id).m_center.toQVector3D()) << " with size " << m_nodeMap.at(id).m_size << "\n";
@@ -349,7 +350,7 @@ namespace PMP
 #ifdef WIN32
 			_printNodesTree(children, childVec[i], prefix + (isLast ? "    " : "|   "), last);
 #else
-			_printNodesTree(children, childVec[i], prefix + (isLast ? "    " : "¦¢   "), last);
+			_printNodesTree(children, childVec[i], prefix + (isLast ? "    " : "ï¿½ï¿½   "), last);
 #endif
 		}
 	}
