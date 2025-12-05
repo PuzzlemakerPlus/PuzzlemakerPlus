@@ -49,3 +49,4 @@ CMakePresets.json
 
 .vscode
 /CMakeUserPresets.json
+debug.log
