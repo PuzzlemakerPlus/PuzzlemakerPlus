@@ -1,4 +1,5 @@
 #include "test_chamber.h"
+#include "util/debug.h"
 #include <iostream>
 // source file for simple test chamber operations with no side effects
 // please keep all functions in this source file const or functions that dont change values inside the test chamber class
@@ -184,7 +185,7 @@ namespace PMP
 	{
 		float closestT = std::numeric_limits<float>::infinity();
 		std::optional<RayHitResult> closestHit;
-
+		//Debugger::instance().clearDebugPoints();
 		for (const auto& [_, surfaces] : m_surfaceMap)
 		{
 			for (const auto& surface : surfaces)
@@ -195,26 +196,28 @@ namespace PMP
 
 				// Wall geometry
 				float halfSize = node.m_size / 2.0f;
-				IntVector3D up = getWallUp(surface.side);
-				IntVector3D normal = getWallNormal(surface.side);
-				IntVector3D right = normal.cross(up);
-				IntVector3D center = getWallFaceCenter(node.m_center, node.m_size, normal);
+				QVector3D up = getWallUp(surface.side).toQVector3D();
+				QVector3D normal = getWallNormal(surface.side).toQVector3D();
+				QVector3D right = QVector3D::crossProduct(normal, up);
+				QVector3D center = getWallFaceCenter(node.m_center, node.m_size, normal).toQVector3D();
 
-				IntVector3D p0 = center + (-right - up) * halfSize;
-				IntVector3D p1 = center + (right - up) * halfSize;
-				IntVector3D p2 = center + (right + up) * halfSize;
-				IntVector3D p3 = center + (-right + up) * halfSize;
+				QVector3D p0 = center + (-right - up) * halfSize;
+				QVector3D p1 = center + (right - up) * halfSize;
+				QVector3D p2 = center + (right + up) * halfSize;
+				QVector3D p3 = center + (-right + up) * halfSize;
 
 				float tTemp;
 				QVector3D hitPosTemp;
 
-				if (rayIntersectsQuad(ray, p0.toQVector3D(), p1.toQVector3D(), p2.toQVector3D(), p3.toQVector3D(), tTemp, hitPosTemp) && tTemp > 0.0f && tTemp < closestT)
+				if (rayIntersectsQuad(ray, p0, p1, p2, p3, tTemp, hitPosTemp) && tTemp < closestT ) //&& tTemp > 0.0f
 				{
 					closestT = tTemp;
 					closestHit = RayHitResult{ surface.parentNode, hitPosTemp, surface };
+					//Debugger::instance().addDebugPoint(hitPosTemp);
 				}
 			}
 		}
+		//Debugger::instance().drawDebugPoints();
 		return closestHit;
 	}
 

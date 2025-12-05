@@ -181,8 +181,6 @@ namespace PMP
 		IntVector3D getNodeBBoxMin(NodeID id) const;
 		IntVector3D getNodeBBoxMax(NodeID id) const;
 		
-		void getNodesTouchingBBox(NodeID parentNode, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out) const;
-
 		NodeID m_rootNode;
 		// Size of the root node in hammer units - this is effectively the internal max map size
 		unsigned int m_rootNodeWorldSize;

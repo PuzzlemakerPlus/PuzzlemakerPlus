@@ -2,7 +2,7 @@
 #include "mesh.h"
 #include <qvectornd.h>
 #include <stdexcept>
-
+#include <iostream>
 
 namespace PMP
 {
@@ -11,14 +11,15 @@ namespace PMP
 	bool WallFacesDirection(WallSide side, const QVector3D& dir) 
 	{
 		IntVector3D normal = getWallNormal(side);
-		return normal.dot(dir) < 0;
+		//std::cout << "angle: " << normal.dot(dir) << "\n";
+		return normal.dot(dir) <= 0;
 	}
 
 	IntVector3D getWallNormal(WallSide side)
 	{
 		using enum WallSide;
 		switch (side) {
-			case POS_X:   return IntVector3D(-1,  0,  0);
+			case POS_X:   return IntVector3D(-1,  0,  0); // wall on a positive x side would have negative x normal
 			case NEG_X:  return IntVector3D( 1,  0,  0);
 			case POS_Y: return IntVector3D( 0, -1,  0);
 			case NEG_Y:    return IntVector3D( 0,  1,  0);
