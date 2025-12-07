@@ -209,7 +209,7 @@ namespace PMP
 				float tTemp;
 				QVector3D hitPosTemp;
 
-				if (rayIntersectsQuad(ray, p0, p1, p2, p3, tTemp, hitPosTemp) && tTemp < closestT ) //&& tTemp > 0.0f
+				if (rayIntersectsQuad(ray, p0, p1, p2, p3, tTemp, hitPosTemp) && tTemp < closestT && tTemp > 0.0f)
 				{
 					closestT = tTemp;
 					closestHit = RayHitResult{ surface.parentNode, hitPosTemp, surface };
