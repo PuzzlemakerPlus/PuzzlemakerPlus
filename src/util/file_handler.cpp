@@ -3,6 +3,7 @@
 //
 
 #include "file_handler.h"
+#include <algorithm>
 
 FileHandler::FileHandler(std::string& path, const std::string& mode) {
 

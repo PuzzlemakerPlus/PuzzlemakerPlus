@@ -63,29 +63,29 @@ int main(){
 	PMP::TestChamber tc;
 	//tc.PrintNodesTree();
 
-	addChildNodesAndPrint(tc, 0);
+	// addChildNodesAndPrint(tc, 0);
 
-	addChildNodesAndPrint(tc, 1);
+	// addChildNodesAndPrint(tc, 1);
 
-	addChildNodesAndPrint(tc, 2);
+	// addChildNodesAndPrint(tc, 2);
 
-	addChildNodesAndPrint(tc, 14);
+	// addChildNodesAndPrint(tc, 14);
 
-	addChildNodesAndPrint(tc, 19);
+	// addChildNodesAndPrint(tc, 19);
 
-	removeChildNodesAndPrint(tc, 14);
+	// removeChildNodesAndPrint(tc, 14);
 
-	removeChildNodesAndPrint(tc, 14);
+	// removeChildNodesAndPrint(tc, 14);
 
-	addChildNodesAndPrint(tc, 15);
+	// addChildNodesAndPrint(tc, 15);
 
-	addChildNodesAndPrint(tc, 36);
+	// addChildNodesAndPrint(tc, 36);
 
-	addChildNodesAndPrint(tc, 48);
+	// addChildNodesAndPrint(tc, 48);
 
-	addChildNodesAndPrint(tc, 54);
+	// addChildNodesAndPrint(tc, 54);
 
-	tc.testChildNodeGeneration();
+	// tc.testChildNodeGeneration();
 
 	RunRandomNodeSearches(tc, 100);
 	return 0;

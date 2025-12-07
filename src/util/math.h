@@ -3,6 +3,7 @@
 #pragma once
 #include <qvector3d.h>
 
+
 namespace PMP
 {
 	//Integer 3D vector class
