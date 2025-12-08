@@ -28,14 +28,8 @@ namespace PMP
 	const float gridSizeMax = 256;
 
 	
-
-	//Based on the information in this struct, it is possible to identify a surface without knowing its parentID or surfaceID
-	struct UniqueSurfaceIdentifer
-	{
-		uint size;
-		IntVector3D nodeCord;
-		WallSide side = WallSide::NONE;
-	};
+	struct UniqueSurfaceIdentifier;
+	struct UniqueVolumeIdensifier;
 
 	class TestChamber
 	{
@@ -118,9 +112,10 @@ namespace PMP
 		// Based on generated surfaces, generate quads for rendering. This is to separate rendering logic with octree logic
 		void generateQuads(std::vector<Quad>& out) const;
 		void generateTCQuads(std::vector<TestChamberQuad>& out) const;
+		void generateTCShadowQuads(std::vector<TestChamberQuad>& out) const;
 		// Creates a UniqueSurfaceIdentifer for the given node and side.
 		// USI should be the standard to long term description of a node to remove dependency on NodeID and SurfaceID
-		void makeUSI(NodeID node, UniqueSurfaceIdentifer& out, WallSide side = WallSide::NONE) const;
+		void makeUSI(NodeID node, UniqueSurfaceIdentifier& out, WallSide side = WallSide::NONE) const;
 		// Based on generated surfaces, generate quads for rendering. This is to separate rendering logic with octree logic
 
 		uint8_t nodeSurfaceFlag(NodeID node) const;
@@ -128,7 +123,7 @@ namespace PMP
 		bool canUnsubdivide(NodeID node) const;
 		// pass in a possible candidates of nodes that needs to be checked for unsubdividing.
 		// needs a contiguous list of NodeIDs that may or may not repeat
-		void unsubdivideNodes(NodeID* touchingNodes, int size);
+		void unsubdivideNodes(NodeID* touchingNodes, int size, std::vector<NodeID>* out = NULL);
 
 		// Expand the tree until the coordinate is enclosed by a node of given size
 		NodeID subdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size);
@@ -191,6 +186,28 @@ namespace PMP
 		SafeUnorderedMap<NodeID, std::array<ChamberSurface, 6>> m_surfaceMap;
 
 		int m_gridSize;
+	};
+
+	//Based on the information in this struct, it is possible to identify a surface without knowing its parentID or surfaceID
+	struct UniqueSurfaceIdentifier
+	{
+		uint size;
+		IntVector3D nodeCord;
+		WallSide side = WallSide::NONE;
+	};
+	// Based on the information in this struct, it is possible to identify a volume without knowing its NodeID
+	struct UniqueVolumeIdentifier
+	{
+		uint size;
+		IntVector3D nodeCord;
+		static UniqueVolumeIdentifier fromNodeID(const TestChamber& chamber, NodeID nodeID)
+		{
+			const TestChamberNode& node = chamber.getNodeMap().at(nodeID);
+			UniqueVolumeIdentifier uvi;
+			uvi.size = node.m_size;
+			uvi.nodeCord = node.m_center;
+			return uvi;
+		}
 	};
 
 	inline IntVector3D getWallFaceCenter(IntVector3D center, unsigned int size, IntVector3D normal)

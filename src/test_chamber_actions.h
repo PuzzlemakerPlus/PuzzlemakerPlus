@@ -13,67 +13,61 @@
 
 namespace PMP
 {
-	class TCSurfaceAction : public Undoable
+	struct SelectionVolume
+	{
+		IntVector3D mins;
+		IntVector3D maxs;
+	};
+	class TCAction : public Undoable
 	{
 	protected:
-		TCSurfaceAction(TestChamber* tc, Selector* sel) : 
+		TCAction(TestChamber* tc, Selector* sel) : 
 			m_testChamber(tc), m_selector(sel) {}
 
-		NodeID toNode(const UniqueSurfaceIdentifer& usi) const
+		NodeID toNode(const UniqueSurfaceIdentifier& usi) const
 		{
 			return m_testChamber->searchNodeWithCoordSize(
 				usi.nodeCord, static_cast<unsigned int>(usi.size));
 		}
+		NodeID toNode(const UniqueVolumeIdentifier& uvi) const
+		{
+			return m_testChamber->searchNodeWithCoordSize(
+				uvi.nodeCord, static_cast<unsigned int>(uvi.size));
+		}
 		TestChamber* m_testChamber = nullptr;
 		Selector* m_selector = nullptr;
 	};
-
-	class TCExtrudeAction : public TCSurfaceAction
+	class TCExtrudeAction : public TCAction
 	{
 	public:
-		// Multi-extrude Multi-select
 		TCExtrudeAction(TestChamber* tc,
 			Selector* sel,
-			std::vector<UniqueSurfaceIdentifer> extrudeUSIs,
-			std::vector<UniqueSurfaceIdentifer> newSelectUSIs)
-			: TCSurfaceAction(tc, sel), m_extrudeUSIs(std::move(extrudeUSIs)), m_newSelectUSIs(std::move(newSelectUSIs)){}
-
-		// Multi-extrude No-select
-		TCExtrudeAction(TestChamber* tc,
-			Selector* sel,
-			std::vector<UniqueSurfaceIdentifer> extrudeUSIs)
-			: TCSurfaceAction(tc, sel), m_extrudeUSIs(std::move(extrudeUSIs)){}
+			std::vector<UniqueVolumeIdentifier> extrudeUVIs,
+			SelectionVolume selectionVolume)
+			: TCAction(tc, sel), m_extrudeUVIs(std::move(extrudeUVIs)), m_prevSelectionVolume(std::move(selectionVolume)){}
 
 		int undo() override;
 		int redo() override;
 
 	private:
-		std::vector<UniqueSurfaceIdentifer> m_extrudeUSIs;
-		std::vector<UniqueSurfaceIdentifer> m_newSelectUSIs;
+		std::vector<UniqueVolumeIdentifier> m_extrudeUVIs;
+		SelectionVolume m_prevSelectionVolume;
 	};
 
-
-	class TCRecedeAction : public TCSurfaceAction
+	class TCRecedeAction : public TCAction
 	{
 	public:
-		// Multi-extrude Multi-select
 		TCRecedeAction(TestChamber* tc,
 			Selector* sel,
-			std::vector<UniqueSurfaceIdentifer> extrudeUSIs,
-			std::vector<UniqueSurfaceIdentifer> newSelectUSIs)
-			: TCSurfaceAction(tc, sel), m_recedeUSIs(std::move(extrudeUSIs)), m_newSelectUSIs(std::move(newSelectUSIs)){}
-
-		// Multi-extrude No-select
-		TCRecedeAction(TestChamber* tc,
-			Selector* sel,
-			std::vector<UniqueSurfaceIdentifer> extrudeUSIs)
-			: TCSurfaceAction(tc, sel), m_recedeUSIs(std::move(extrudeUSIs)){}
+			std::vector<UniqueVolumeIdentifier> recedeUVIs,
+			SelectionVolume selectionVolume)
+			: TCAction(tc, sel), m_recedeUVIs(std::move(recedeUVIs)), m_prevSelectionVolume(std::move(selectionVolume)) {}
 
 		int undo() override;
 		int redo() override;
 
 	private:
-		std::vector<UniqueSurfaceIdentifer> m_recedeUSIs;
-		std::vector<UniqueSurfaceIdentifer> m_newSelectUSIs;
+		std::vector<UniqueVolumeIdentifier> m_recedeUVIs;
+		SelectionVolume m_prevSelectionVolume;
 	};
 }

@@ -96,6 +96,16 @@ namespace PMP
 #else
 		m_lineShader.link();
 #endif
+		m_shadowShader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/shadow.vert");
+		m_shadowShader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/shadow.frag");
+#ifndef NDEBUG
+		if (!m_shadowShader.link()) {
+			qDebug() << "Shader failed to link:" << m_shadowShader.log();
+			return;
+		}
+#else
+		m_shadowShader.link();
+#endif
 	}
 
 	void Viewport::createGraphicsObjects()
@@ -104,6 +114,8 @@ namespace PMP
 		Q_ASSERT(QOpenGLContext::currentContext());
 		m_chamberVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
 		m_chamberIBO = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+		m_chamberShadowVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+		m_chamberShadowIBO = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
 		m_dotVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
 		m_lineVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
 
@@ -114,6 +126,9 @@ namespace PMP
 		m_chamberVAO.create();
 		m_chamberVBO.create();
 		m_chamberIBO.create();
+		m_chamberShadowVAO.create();
+		m_chamberShadowVBO.create();
+		m_chamberShadowIBO.create();
 
 		m_chamberVAO.bind();
 		m_chamberVBO.bind();
@@ -121,14 +136,6 @@ namespace PMP
 
 		const GLsizei stride = sizeof(TestChamberVertex);
 
-
-		//Important to note: m_wallShader and m_selectionShader share the vao. 
-		// const int vertexPosLocation = m_selectionShader.attributeLocation("aPos");
-		// const int vertexNormalLocation = m_selectionShader.attributeLocation("aNormal");
-		// const int surfaceIDLocation = m_selectionShader.attributeLocation("aSurfaceId");
-		// const int parentIDLocation = m_selectionShader.attributeLocation("aParentId");
-		// const int wallSideLocation = m_selectionShader.attributeLocation("aWallSide");
-		// std::cout << vertexPosLocation << vertexNormalLocation << surfaceIDLocation << parentIDLocation << wallSideLocation<< "\n";
 		const int vertexPosLocation = 0;
 		const int vertexNormalLocation = 1;
 		const int surfaceIDLocation = 2;
@@ -151,17 +158,69 @@ namespace PMP
 		glEnableVertexAttribArray(wallSideLocation);
 		glVertexAttribIPointer(wallSideLocation, 1, GL_UNSIGNED_INT, stride,reinterpret_cast<const void*>(offsetof(TestChamberVertex, wallSide)));
 		
-		
 		m_chamberVAO.release();
 		m_chamberVBO.release();
 		m_chamberIBO.release();
+
+		m_chamberShadowVAO.bind();
+		m_chamberShadowVBO.bind();
+		m_chamberShadowIBO.bind();
+
+		glEnableVertexAttribArray(vertexPosLocation);
+		glVertexAttribPointer(vertexPosLocation, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<const void*>(offsetof(TestChamberVertex, Position)));
+
+		glEnableVertexAttribArray(vertexNormalLocation);
+		glVertexAttribPointer(vertexNormalLocation, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<const void*>(offsetof(TestChamberVertex, Normal)));
+
+		glEnableVertexAttribArray(surfaceIDLocation);
+		glVertexAttribIPointer(surfaceIDLocation, 1, GL_UNSIGNED_INT, stride, reinterpret_cast<const void*>(offsetof(TestChamberVertex, surfaceID)));
+
+		glEnableVertexAttribArray(parentIDLocation);
+		glVertexAttribIPointer(parentIDLocation, 1, GL_UNSIGNED_INT, stride, reinterpret_cast<const void*>(offsetof(TestChamberVertex, parentNodeID)));
+
+		glEnableVertexAttribArray(wallSideLocation);
+		glVertexAttribIPointer(wallSideLocation, 1, GL_UNSIGNED_INT, stride, reinterpret_cast<const void*>(offsetof(TestChamberVertex, wallSide)));
+		
+		m_chamberShadowVAO.release();
+		m_chamberShadowVBO.release();
+		m_chamberShadowIBO.release();
+
 		createSelectionFBO();
+		createShadowFBO();
 		const std::string_view verStr = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 		const std::string_view vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
 		const std::string_view renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 		qDebug() << "Version: " << verStr;
 		qDebug() << "Adapter: " << renderer;
 		qDebug() << "Vendor: " << vendor;
+	}
+
+	void Viewport::createShadowFBO() {
+		glGenFramebuffers(1, &shadowFBO);
+		if (shadowMap) glDeleteTextures(1, &shadowMap);
+		glGenTextures(1, &shadowMap);
+
+		glBindTexture(GL_TEXTURE_2D, shadowMap);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+			SHADOW_RES, SHADOW_RES, 0,
+			GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+		// make "outside the map" return lit
+		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+			GL_TEXTURE_2D, shadowMap, 0);
+		glDrawBuffer(GL_NONE);
+		glReadBuffer(GL_NONE);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
 	}
 
 	void Viewport::createSelectionFBO()
@@ -344,8 +403,12 @@ namespace PMP
 		
 		std::vector<TestChamberQuad> quads;
 		m_testChamber->generateTCQuads(quads);
+		std::vector<TestChamberQuad> shadowQuads;
+		m_testChamber->generateTCShadowQuads(shadowQuads);
 		TestChamberMesh mesh;
 		CreateTCMesh(quads, mesh);
+		TestChamberMesh shadowMesh;
+		CreateTCMesh(shadowQuads, shadowMesh);
 		if (mesh.vertices.empty() || mesh.indices.empty()) throw std::runtime_error("Mesh has no vertices or indices to allocate");
 		// if you got an error around here, it is likely because for some reason the surface generation failed so opengl tried to draw 0 surfaces
 		this->makeCurrent();
@@ -354,15 +417,24 @@ namespace PMP
 		m_chamberIBO.bind();
 		// Disabling for now until we are more certain it's what we want - Kelsey
 		//m_chamberVBO.setUsagePattern(QOpenGLBuffer::StaticDraw);
-		
 		m_chamberVBO.allocate(mesh.vertices.data(), mesh.vertices.size() * sizeof(TestChamberVertex));
 		m_chamberIBO.allocate(mesh.indices.data(), mesh.indices.size() * sizeof(unsigned int));
-		
 		m_chamberVAO.release(); // must release VAO before index/vertex buffers, otherwise they get unbound from the VAO too!
 		m_chamberVBO.release(); // not necessary?
 		m_chamberIBO.release(); // not necessary?
+
+		m_chamberShadowVAO.bind();
+		m_chamberShadowVBO.bind();
+		m_chamberShadowIBO.bind();
+		m_chamberShadowVBO.allocate(shadowMesh.vertices.data(), shadowMesh.vertices.size() * sizeof(TestChamberVertex));
+		m_chamberShadowIBO.allocate(shadowMesh.indices.data(), shadowMesh.indices.size() * sizeof(unsigned int));
+		m_chamberShadowVAO.release();
+		m_chamberShadowVBO.release();
+		m_chamberShadowIBO.release();
+
 		this->doneCurrent();
 		m_indicesCount = mesh.indices.size();
+		m_shadowIndicesCount = shadowMesh.indices.size();
 		update();
 	}
 
@@ -373,6 +445,43 @@ namespace PMP
 		out.rotate(QQuaternion::fromEulerAngles(m_cameraAngles));
 		out.translate(m_cameraTarget);
 	}
+	//lightDir needs to be normalized
+	void Viewport::getGlobalLightViewMatrix(QVector3D lightDir, QMatrix4x4& out)
+	{
+		//------------------------------------------------------------
+		// Choose a reasonable AABB for your level region
+		// (replace with your real level min/max bounds)
+		//------------------------------------------------------------
+		QVector3D minP(-512, -512, -512);
+		QVector3D maxP(512, 512, 512);
+
+		QVector3D center = 0.5f * (minP + maxP);
+		QVector3D extent = 0.5f * (maxP - minP);
+
+		float orthoSize = qMax(extent.x(), extent.z()) * 1.3f;   // padding
+		float depth = extent.length() * 2.0f;                // enough to see caster + receiver
+
+		//------------------------------------------------------------
+		// Position the light camera:  
+		//  Place it *behind* the geometry along -lightDir
+		//------------------------------------------------------------
+		QVector3D lightPos = center - lightDir * depth;
+
+		//------------------------------------------------------------
+		// Build the matrices
+		//------------------------------------------------------------
+		QMatrix4x4 lightView = lookAt(lightPos, center, QVector3D(0, 1, 0));
+
+		QMatrix4x4 lightProj = ortho(
+			-orthoSize, orthoSize,
+			-orthoSize, orthoSize,
+			1.0f,
+			depth * 2.0f               // far plane
+		);
+
+		out = lightProj * lightView;
+	}
+
 
 	void Viewport::drawDots(QMatrix4x4 view)
 	{
@@ -402,7 +511,7 @@ namespace PMP
 		glDisable(GL_POLYGON_OFFSET_LINE);
 	}
 
-	void Viewport::drawTestChamber(QMatrix4x4 view)
+	void Viewport::drawTestChamber(QMatrix4x4 view, QMatrix4x4 light, QVector3D lightDir)
 	{
 		if(m_indicesCount == 0) return;
 		m_wallShader.bind();
@@ -413,11 +522,34 @@ namespace PMP
 		if(m_fog) m_wallShader.setUniformValue("u_fogStart", m_fogStart);
 		else m_wallShader.setUniformValue("u_fogStart", m_fogEnd);
 		m_wallShader.setUniformValue("u_fogEnd", m_fogEnd);
+		m_wallShader.setUniformValue("u_lightVP", light);
+		m_wallShader.setUniformValue("u_lightDir", lightDir);
+		m_wallShader.setUniformValue("u_drawShadow", static_cast<GLint>(m_drawShadow));
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, shadowMap);
+		m_wallShader.setUniformValue("u_shadowMap", 0);
 
 		m_chamberVAO.bind();
 		glDrawElements(GL_TRIANGLES, m_indicesCount, GL_UNSIGNED_INT, 0);
 		m_chamberVAO.release();
 		m_wallShader.release();
+	}
+
+	void Viewport::drawShadow(QMatrix4x4 light)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+		glViewport(0, 0, SHADOW_RES, SHADOW_RES);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		glDisable(GL_CULL_FACE);
+		m_shadowShader.bind();
+		m_shadowShader.setUniformValue("u_lightVP", light);
+		m_chamberShadowVAO.bind();
+		glDrawElements(GL_TRIANGLES, m_shadowIndicesCount, GL_UNSIGNED_INT, 0);
+		m_chamberShadowVAO.release();
+		//switch back
+		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
+		glEnable(GL_CULL_FACE);
+		glViewport(0, 0, int(width() * devicePixelRatioF()), int(height() * devicePixelRatioF()));
 	}
 
 	void Viewport::drawTestChamberSurfaceAttributes(QMatrix4x4 view)
@@ -484,14 +616,21 @@ namespace PMP
 		glEnable( GL_CULL_FACE );
 		glEnable(GL_PROGRAM_POINT_SIZE);
 		
+		// directional light direction (world space)
+		QVector3D lightDir = QVector3D(-1.0f, -1.0f, -5.0f).normalized();
+		QMatrix4x4 light;
+		getGlobalLightViewMatrix(lightDir, light);
+		drawShadow(light);
+
 		QMatrix4x4 view;
 		getViewMatrix(view);
 		drawDots(view);
 		drawLines(view);
 		//qDebug() << "Start drawing testchamber";
-		drawTestChamber(view);
+		drawTestChamber(view, light, lightDir);
 		//qDebug() << "Start drawing testchamber attribute";
 		drawTestChamberSurfaceAttributes(view);
+		
 
 		// after your normal scene draw (default FBO bound)
 		const int W = int(width()*devicePixelRatioF());

@@ -133,9 +133,12 @@ namespace PMP
 
 		QMatrix4x4 getProjectionMatrix() {return m_projection;};
 		void getViewMatrix(QMatrix4x4& out);
+
+		void getGlobalLightViewMatrix(QVector3D lightDir, QMatrix4x4& out);
 		
 	protected:
 		void createGraphicsObjects();
+		void createShadowFBO();
 		void createSelectionFBO();
 		void resizeSelectionFBO(GLsizei W, GLsizei H);
 		void loadShaders();
@@ -156,7 +159,8 @@ namespace PMP
 
 		void drawDots(QMatrix4x4 view);
 		void drawLines(QMatrix4x4 view);
-		void drawTestChamber(QMatrix4x4 view);
+		void drawTestChamber(QMatrix4x4 view, QMatrix4x4 light, QVector3D lightDir);
+		void drawShadow(QMatrix4x4 light);
 		void drawDragBox();
 
 		void setSelecting(bool on, const QRect& r = {}) { m_isDragging = on; m_rect = r; update(); }
@@ -195,8 +199,11 @@ namespace PMP
 		// Fog control
 		bool m_fog = false;
 		float m_fogStart = 250.0f;
-		float m_fogEnd = 25000.0f;
+		float m_fogEnd = 5000.0f;
 		QVector3D m_fogCol = {0.1,0.13,0.2};
+
+		// Shadow control
+		bool m_drawShadow = false;
 
 		// Debug view control
 		bool m_debugSurface = false;
@@ -229,6 +236,15 @@ namespace PMP
 		GLuint selectionTex=0;
 		GLuint selectionDep=0;
 		const float selectionTextureScale = 0.25f;
+
+		QOpenGLShaderProgram m_shadowShader;
+		QOpenGLVertexArrayObject m_chamberShadowVAO;
+		QOpenGLBuffer m_chamberShadowVBO;
+		QOpenGLBuffer m_chamberShadowIBO;
+		GLsizei m_shadowIndicesCount = 0;
+		GLuint shadowFBO;
+		GLuint shadowMap;
+		const int SHADOW_RES = 2048;
 
 		QLabel m_gridSizeLabel;
 

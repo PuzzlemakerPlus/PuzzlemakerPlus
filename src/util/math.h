@@ -2,7 +2,7 @@
 // Math related utility functions that aren't already covered by Qt or the standard library
 #pragma once
 #include <qvector3d.h>
-
+#include <qmatrix4x4.h>
 
 namespace PMP
 {
@@ -281,4 +281,42 @@ namespace PMP
 	}
 	template<typename T>
 	bool readFlag(T byte, int bitIndex) { return (byte >> bitIndex) & 1u; }
+
+	static QMatrix4x4 lookAt(const QVector3D& eye,
+		const QVector3D& center,
+		const QVector3D& up)
+	{
+		QVector3D f = (center - eye).normalized();
+		QVector3D s = QVector3D::crossProduct(f, up.normalized()).normalized();
+		QVector3D u = QVector3D::crossProduct(s, f);
+
+		QMatrix4x4 M;
+		M.setToIdentity();
+		M(0, 0) = s.x(); M(0, 1) = s.y(); M(0, 2) = s.z();
+		M(1, 0) = u.x(); M(1, 1) = u.y(); M(1, 2) = u.z();
+		M(2, 0) = -f.x(); M(2, 1) = -f.y(); M(2, 2) = -f.z();
+
+		QMatrix4x4 T;
+		T.setToIdentity();
+		T.translate(-eye);
+
+		return M * T;
+	}
+	static QMatrix4x4 ortho(float left, float right,
+		float bottom, float top,
+		float nearPlane, float farPlane)
+	{
+		QMatrix4x4 M;
+		M.setToIdentity();
+
+		M(0, 0) = 2.0f / (right - left);
+		M(1, 1) = 2.0f / (top - bottom);
+		M(2, 2) = -2.0f / (farPlane - nearPlane);
+
+		M(0, 3) = -(right + left) / (right - left);
+		M(1, 3) = -(top + bottom) / (top - bottom);
+		M(2, 3) = -(farPlane + nearPlane) / (farPlane - nearPlane);
+
+		return M;
+	}
 }

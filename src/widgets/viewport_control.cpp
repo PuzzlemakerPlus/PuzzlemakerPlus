@@ -30,7 +30,12 @@ namespace PMP {
 				event->accept();
 				update();
 				break;
-			case Qt::Key_G:
+			case Qt::Key_S:
+				m_drawShadow = !m_drawShadow; // toggle shadows. No need to reload chamber mesh and selection
+				event->accept();
+				update();
+				break;
+			case Qt::Key_D:
 				m_debugSurface = !m_debugSurface; // toggle debug mode. No need to reload chamber mesh and selection
 				event->accept();
 				update();

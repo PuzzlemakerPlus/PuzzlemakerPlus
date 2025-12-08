@@ -94,15 +94,16 @@ namespace PMP
 	}
 	int TestChamber::setNodeActive(NodeID node, bool active)
 	{
-		if(m_nodeMap.at(node).m_active == false) return 0; // State of the node has not changed
+		auto& tcn = m_nodeMap.at(node);
+		if(tcn.m_active == false) return 0; // State of the node has not changed
 
-		m_nodeMap.at(node).m_active = active;
+		tcn.m_active = active;
 		// Also need to make sure all adjacent nodes have matching size.
 		// TODO: now that we have IntVector3D, this can be optimized further
-		std::array<IntVector3D, 6> outerCoords = getNeighborNodeCenters(m_nodeMap.at(node).m_size, m_nodeMap.at(node).m_center);
+		std::array<IntVector3D, 6> outerCoords = getNeighborNodeCenters(tcn.m_size, tcn.m_center);
 		for(const auto& coord : outerCoords)
 		{
-			subdivideNodeToCoordOptimized(coord.toQVector3D(), 0, m_nodeMap.at(node).m_size);
+			subdivideNodeToCoordOptimized(coord.toQVector3D(), 0, tcn.m_size);
 		}
 		return 1; // State of the node has changed
 	}
@@ -117,10 +118,11 @@ namespace PMP
 		// Match the sizes of adjacent nodes only after all nodes have had their active state set
 		for ( int i = 0; i < nodes.size(); i++ )
 		{
-			std::array<IntVector3D, 6> outerCoords = getNeighborNodeCenters(m_nodeMap.at(nodes[i]).m_size, m_nodeMap.at(nodes[i]).m_center);
+			auto& tcn = m_nodeMap.at(nodes[i]);
+			std::array<IntVector3D, 6> outerCoords = getNeighborNodeCenters(tcn.m_size, tcn.m_center);
 			for ( const auto& coord : outerCoords )
 			{
-				NodeID done = subdivideNodeToCoordOptimized( coord.toQVector3D(), m_rootNode, m_nodeMap.at(nodes[i]).m_size);
+				NodeID done = subdivideNodeToCoordOptimized( coord.toQVector3D(), m_rootNode, tcn.m_size);
 				//Debugger::instance().addDebugPoint(coord.toQVector3D(), { 1.0f, 1.0f, 0.0f } );
 			}
 		}
@@ -129,11 +131,13 @@ namespace PMP
 	//Assumes out is empty during non-recursive calls
 	void TestChamber::getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WallSide side) const
 	{
+		const auto& tcn = m_nodeMap.at(node);
 		// Node has children 
-		if (m_nodeMap.at(node).m_childIDs.has_value())
+		if (tcn.m_childIDs.has_value())
 		{
+			const auto& children = tcn.m_childIDs.valueRead();
 			// Iterate through all children and get their surfaces
-			for (const auto& childID : m_nodeMap.at(node).m_childIDs.valueRead())
+			for (const auto& childID : children)
 			{
 				getSurfaceChildren(out, childID, side);
 			}
@@ -176,10 +180,11 @@ namespace PMP
 	NodeID TestChamber::getLeafNodeAtCoord(QVector3D coord, NodeID parentID)
 	{
 		if(isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
-		if(!m_nodeMap.at(parentID).m_childIDs.has_value()) return parentID; //found
+		auto& tcp = m_nodeMap.at(parentID);
+		if(!tcp.m_childIDs.has_value()) return parentID; //found
 		// at this point, we know the node has children and this node is still not the leaf node
-		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
-		return getLeafNodeAtCoord(coord, m_nodeMap.at(parentID).m_childIDs.value()[i]);
+		unsigned int i = getChildOrder(coord, tcp.m_center);
+		return getLeafNodeAtCoord(coord, tcp.m_childIDs.value()[i]);
 	}
 	NodeID TestChamber::subdivideNodeToCoordOptimized(QVector3D coord, NodeID parentID, unsigned int size)
 	{
@@ -195,11 +200,12 @@ namespace PMP
 	{
 		// this whole function call can be avoided by checking whether the target node is already subdivided
 		if(isPointOOB(coord)) return parentID;
-		if(m_nodeMap.at(parentID).m_size < size) throw std::runtime_error("Something went wrong trying to subdivide node");
-		if(m_nodeMap.at(parentID).m_size == size) return parentID;
-		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
-		if(!m_nodeMap.at(parentID).m_childIDs.has_value()) createChildrenOfNode(parentID);
-		return subdivideNodeToCoord(coord, m_nodeMap.at(parentID).m_childIDs.value()[i], size);
+		auto& tcp = m_nodeMap.at(parentID);
+		if(tcp.m_size < size) throw std::runtime_error("Something went wrong trying to subdivide node");
+		if(tcp.m_size == size) return parentID;
+		unsigned int i = getChildOrder(coord, tcp.m_center);
+		if(!tcp.m_childIDs.has_value()) createChildrenOfNode(parentID);
+		return subdivideNodeToCoord(coord, tcp.m_childIDs.value()[i], size);
 	}
 	std::array<IntVector3D, 4> TestChamber::getChamberSurfaceCorners(const ChamberSurface& surface)
 	{
@@ -270,7 +276,7 @@ namespace PMP
 		bool encapsulated = isBoxAInsideBoxB(nodeMin, nodeMax, mins, maxs);
 		if (overlap && !encapsulated)
 		{
-			//std::cout << "first condition \n";
+			//if a node is overlapping but not encapsulated, subdivide further
 			createChildrenOfNode(node);
 			for ( int i = 0; i < 8; i++ )
 			{
@@ -279,7 +285,7 @@ namespace PMP
 				subdivideNodeToBBoxRecursive( childID, mins, maxs, out );
 			}
 		}
-		else if (overlap)
+		else if (encapsulated) // no need to subdivide. 
 		{
 			out.push_back(node);
 		}
@@ -304,7 +310,6 @@ namespace PMP
 	}
 	int TestChamber::extrudeSurfaces(Selector* selector)
 	{
-		//Debugger::instance().clearDebugPoints();
 		QVector3D mins = selector->getMins();
 		QVector3D maxs = selector->getMaxs();
 		if ( !selector->isVolumeSelection() )
@@ -318,18 +323,32 @@ namespace PMP
 		}
 		std::vector<NodeID> touchingNodes;
 		subdivideNodesToBBox(mins, maxs, touchingNodes);
+		// remove children of touchingNodes which are all guaranteed to be encapsulated by the selection volume
+		for (const auto& nodeID : touchingNodes)
+		{
+			const auto& n = m_nodeMap.at(nodeID);
+			if (!n.m_childIDs.has_value()) continue;
+			const auto& children = n.m_childIDs.valueRead();
+			for(const auto& childID : children)
+			{
+				destroyBranch(childID);
+			}
+		}
 		int nodesChanged = setNodesActive(touchingNodes, false);
-		// TODO: unsubdivideNodes in extrudeSurfaces completely breaks. why?
-		//unsubdivideNodes(touchingNodes.data(), touchingNodes.size());
 		// TODO: Hook up to undo/redo
+		/*std::vector<UniqueVolumeIdentifier> extrudeUVIs;
+		SelectionVolume sv = { mins, maxs };
+		for ( const auto& nodeID : touchingNodes )
+		{
+			extrudeUVIs.push_back(UniqueVolumeIdentifier::fromNodeID(*this, nodeID));
+		}
+		UndoStack::instance().addAction(std::make_unique<TCExtrudeAction>(this, selector, extrudeUVIs, sv));*/
 		generateSurfaces();
 
-		//Debugger::instance().drawDebugPoints();
 		return nodesChanged;
 	}
 	int TestChamber::recedeSurfaces(Selector* selector)
 	{
-		//Debugger::instance().clearDebugPoints();
 		QVector3D mins = selector->getMins();
 		QVector3D maxs = selector->getMaxs();
 		if ( !selector->isVolumeSelection() )
@@ -348,7 +367,6 @@ namespace PMP
 		unsubdivideNodes(touchingNodes.data(), touchingNodes.size());
 		generateSurfaces();
 		
-		//Debugger::instance().drawDebugPoints();
 		return nodesChanged;
 	}
 	//does destroy the given node
@@ -366,35 +384,37 @@ namespace PMP
 		}
 		m_nodeMap.erase(nodeID);
 	}
-	void TestChamber::unsubdivideNodes(NodeID* touchingNodes, int count)
+	void TestChamber::unsubdivideNodes(NodeID* touchingNodes, int count, std::vector<NodeID>* out)
 	{
 		std::unordered_set<NodeID> parentsToCheck;
 		for (int i = 0; i < count; i++)
 		{
-			try {
-				NodeID parent = m_nodeMap.at(touchingNodes[i]).m_parentID.value();
-				if (m_nodeMap.at(parent).m_size >= gridSizeMin * 2) parentsToCheck.insert(parent);
-			}
-			catch (const std::out_of_range&) {
-				continue;
-			}
+			NodeID parent = m_nodeMap.at(touchingNodes[i]).m_parentID.value();
+			parentsToCheck.insert(parent);
 		}
 		for (const auto& parentID : parentsToCheck)
 		{
-			try {
-				if (canUnsubdivide(parentID)) // detecting the nodes to unsubdivide seem to work properly
+			auto it = m_nodeMap.find(parentID);
+			if (it == m_nodeMap.end()) continue; // node was deleted
+			if (canUnsubdivide(parentID)) // detecting the nodes to unsubdivide seem to work properly
+			{
+				auto& p = m_nodeMap.at(parentID);
+				const auto& childIDs = p.m_childIDs.valueRead();
+				for (NodeID j : childIDs)
 				{
-					const auto& childIDs = m_nodeMap.at(parentID).m_childIDs.valueRead();
-					for (NodeID j : childIDs)
-					{
-						destroyBranch(j);
-					}
-					m_nodeMap.at(parentID).m_childIDs.reset();
+					destroyBranch(j);
 				}
+				p.m_childIDs.reset();
+				
 			}
-			catch (const std::out_of_range&) {
-				continue;
-			}			
+		}
+		if (out) // add the remaining nodes to out
+		{
+			for (int i = 0; i < count; i++)
+			{
+				auto it = m_nodeMap.find(touchingNodes[i]);
+				if (it != m_nodeMap.end()) out->push_back(touchingNodes[i]);
+			}
 		}
 	}
 	void TestChamber::increaseGridSize()

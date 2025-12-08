@@ -8,5 +8,8 @@
         <file>shaders/dot.frag</file>
         <file>shaders/line.vert</file>
         <file>shaders/line.frag</file>
+	<file>shaders/shadow.vert</file>
+        <file>shaders/shadow.frag</file>
+
     </qresource>
 </RCC>

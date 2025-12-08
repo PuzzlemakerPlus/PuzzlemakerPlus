@@ -69,7 +69,6 @@ namespace PMP
 	}
 	bool TestChamber::canUnsubdivide(NodeID node) const
 	{	
-		//ScopedTimer("canUnsubdivide");
 		return readFlag(nodeSurfaceFlag(node), 6);
 	}
 	bool TestChamber::areNeighborsSameSize(NodeID node) const {
@@ -82,9 +81,7 @@ namespace PMP
 			auto r = tryGetNodeAtCoord(neighborCoords[i].toQVector3D());
 			if (r == std::nullopt) {
 				success = false; // Neighbor does not exist
-				//Debugger::instance().addDebugPoint(neighborCoords[i].toQVector3D(), { 1.0f,0.0f,0.0f });
 			}
-			//else Debugger::instance().addDebugPoint(m_nodeMap.at(r.value()).m_center.toQVector3D(), { 0.0f,1.0f,0.0f });
 		}
 		return success;
 	}
@@ -96,11 +93,7 @@ namespace PMP
 		{
 			if (isPointOOB(neighborCoords[i].toQVector3D())) continue;
 			auto r = tryGetNodeAtCoord(neighborCoords[i]);
-			if (r == std::nullopt) {
-
-				continue;
-			}
-			else {
+			if (r != std::nullopt) {
 				if (m_nodeMap.at(r.value()).m_active) {
 					//Debugger::instance().addDebugPoint(m_nodeMap.at(r.value()).m_center.toQVector3D(), {0.0f,1.0f,0.0f});
 				}
@@ -289,7 +282,7 @@ namespace PMP
 		//good known magic numbers for hashing
 		uint64_t h = x * 73856093ULL ^ y * 19349663ULL ^ z * 83492791ULL;
 
-		// simple 64-bit ��scrambler��
+		// simple 64-bit scrambler
 		h ^= h >> 33;
 		h *= 0xff51afd7ed558ccdULL;
 		h ^= h >> 33;
@@ -316,7 +309,7 @@ namespace PMP
 		return m_nodeMap.at(surface.parentNode).m_size * 0.5f * getWallNormal(surface.side) * -1 + m_nodeMap.at(surface.parentNode).m_center;
 	}
 
-	void TestChamber::makeUSI(NodeID nodeID, UniqueSurfaceIdentifer& out, WallSide side) const
+	void TestChamber::makeUSI(NodeID nodeID, UniqueSurfaceIdentifier& out, WallSide side) const
 	{
 		const TestChamberNode& node = m_nodeMap.at(nodeID);
 		out.size = node.m_size;
