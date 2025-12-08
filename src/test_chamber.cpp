@@ -9,7 +9,6 @@
 #include "test_chamber_types.h"
 #include "test_chamber_actions.h"
 
-
 #include <array>
 #include <memory>
 #include <qdebug.h>
@@ -33,7 +32,6 @@ namespace PMP
 		m_rootNode = positionToNodeID({0,0,0}); // Warm up hash function
 		createOctreeNode(m_rootNode, std::nullopt, {0,0,0}, m_rootNodeWorldSize);
 	}
-
 	void TestChamber::createChildrenOfNode( NodeID parentID )
 	{
 		TestChamberNode& parentNode = m_nodeMap.at(parentID);
@@ -57,7 +55,6 @@ namespace PMP
 		}
 		parentNode.m_active = true; // Make sure the parent node is active after creating children
 	}
-
 	void TestChamber::destroyChildrenOfNode( NodeID parentID )
 	{
 		TestChamberNode& parentNode = m_nodeMap.at(parentID);
@@ -79,7 +76,6 @@ namespace PMP
 			parentNode.m_childIDs.reset();
 		}
 	}
-
 	void TestChamber::createOctreeNode(NodeID newID, std::optional<NodeID> parentID, IntVector3D center, unsigned int size)
 	{
 		if ( parentID.has_value() )
@@ -87,7 +83,6 @@ namespace PMP
 		else
 			m_nodeMap.emplace(newID, TestChamberNode(center, size));
 	}
-
 	int TestChamber::setNodeActive(NodeID node, bool active)
 	{
 		if(m_nodeMap.at(node).m_active == false) return 0; // State of the node has not changed
@@ -102,7 +97,6 @@ namespace PMP
 		}
 		return 1; // State of the node has changed
 	}
-
 	int TestChamber::setNodesActive(std::vector<NodeID>& nodes, bool active) 
 	{
 		int nodesChanged = 0;
@@ -123,7 +117,6 @@ namespace PMP
 		}
 		return nodesChanged; // State of the node has changed
 	}
-
 	//Assumes out is empty during non-recursive calls
 	void TestChamber::getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WallSide side) const
 	{
@@ -143,8 +136,6 @@ namespace PMP
 			if (surf.side != WallSide::NONE) out.push_back(surf);
 		}
 	}
-
-
 	void TestChamber::getNeighborNodes(NodeID node, std::array<std::optional<NodeID>, 6>& out) const
 	{
 		const TestChamberNode& currentNode = m_nodeMap.at(node);
@@ -160,7 +151,6 @@ namespace PMP
 			}
 		}
 	}
-
 	std::optional<NodeID> TestChamber::tryGetNodeAtCoord(IntVector3D coord) const
 	{
 		NodeID hash = positionToNodeID(coord); 
@@ -170,12 +160,10 @@ namespace PMP
 			return r->first; // Node exists at this hash
 		}
 	}
-
 	NodeID TestChamber::getLeafNodeAtCoord(QVector3D coord)
 	{
 		return getLeafNodeAtCoord(coord, m_rootNode);
 	}
-	
 	NodeID TestChamber::getLeafNodeAtCoord(QVector3D coord, NodeID parentID)
 	{
 		if(isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
@@ -184,8 +172,6 @@ namespace PMP
 		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
 		return getLeafNodeAtCoord(coord, m_nodeMap.at(parentID).m_childIDs.value()[i]);
 	}
-
-
 	NodeID TestChamber::subdivideNodeToCoordOptimized(QVector3D coord, NodeID parentID, unsigned int size)
 	{
 		IntVector3D p = getClosestPossibleNodeCenterAtLevel(coord, size);
@@ -196,7 +182,6 @@ namespace PMP
 		}
 		return subdivideNodeToCoord(coord, parentID, size);
 	}
-
 	NodeID TestChamber::subdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size)
 	{
 		// this whole function call can be avoided by checking whether the target node is already subdivided
@@ -207,7 +192,6 @@ namespace PMP
 		if(!m_nodeMap.at(parentID).m_childIDs.has_value()) createChildrenOfNode(parentID);
 		return subdivideNodeToCoord(coord, m_nodeMap.at(parentID).m_childIDs.value()[i], size);
 	}
-
 	std::array<IntVector3D, 4> TestChamber::getChamberSurfaceCorners(const ChamberSurface& surface)
 	{
 		const TestChamberNode& node = m_nodeMap.at(surface.parentNode);
@@ -226,7 +210,6 @@ namespace PMP
 
 		return {p0, p1, p2, p3};
 	}
-
 	void TestChamber::checkChildrenTouchingBBox( NodeID parentID, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out ) const
 	{
 		const TestChamberNode& parent = m_nodeMap.at(parentID);
@@ -252,13 +235,11 @@ namespace PMP
 			}
 		}
 	}
-
 	void TestChamber::getNodesTouchingBBox( const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out ) const
 	{
 		out.clear();
 		checkChildrenTouchingBBox(m_rootNode, mins, maxs, out);
 	}
-
 	void TestChamber::subdivideNodesToBBox( const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out )
 	{
 		// Get a list of all the nodes touching the bbox, then subdivide the ones that overlap the edge
@@ -270,7 +251,6 @@ namespace PMP
 			subdivideNodeToBBoxRecursive(touchingNodes[i], mins, maxs, out);
 		}
 	}
-
 	void TestChamber::subdivideNodeToBBoxRecursive( NodeID node, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out )
 	{
 		// check if bbox intersect
@@ -295,7 +275,6 @@ namespace PMP
 			out.push_back(node);
 		}
 	}
-
 	void TestChamber::generateSurfaces()
 	{
 		m_surfaceMap.clear();
@@ -314,7 +293,6 @@ namespace PMP
 			}
 		}
 	}
-
 	int TestChamber::extrudeSurfaces(Selector* selector)
 	{
 		//Debugger::instance().clearDebugPoints();
@@ -332,18 +310,14 @@ namespace PMP
 		std::vector<NodeID> touchingNodes;
 		subdivideNodesToBBox(mins, maxs, touchingNodes);
 		int nodesChanged = setNodesActive(touchingNodes, false);
-		//for (int i = 0; i < touchingNodes.size(); i++)
-		//{
-		//	Debugger::instance().addDebugPoint(m_nodeMap.at(touchingNodes[i]).m_center.toQVector3D(), {0.0f,0.0f,1.0f});
-		//}
-
+		// TODO: unsubdivideNodes in extrudeSurfaces completely breaks. why?
+		//unsubdivideNodes(touchingNodes.data(), touchingNodes.size());
 		// TODO: Hook up to undo/redo
 		generateSurfaces();
 
 		//Debugger::instance().drawDebugPoints();
 		return nodesChanged;
 	}
-
 	int TestChamber::recedeSurfaces(Selector* selector)
 	{
 		//Debugger::instance().clearDebugPoints();
@@ -362,8 +336,6 @@ namespace PMP
 		subdivideNodesToBBox(mins, maxs, touchingNodes);
 		int nodesChanged = setNodesActive(touchingNodes, true);
 		// TODO: Hook up to undo/redo
-		//generateSurfaces();
-		// Optimize this:
 		unsubdivideNodes(touchingNodes.data(), touchingNodes.size());
 		generateSurfaces();
 		
@@ -385,20 +357,15 @@ namespace PMP
 		}
 		m_nodeMap.erase(nodeID);
 	}
-	//TODO optimize this function and make it support recursive unsubdivision
 	void TestChamber::unsubdivideNodes(NodeID* touchingNodes, int count)
 	{
+		Debugger::instance().clearDebugPoints();
 		std::unordered_set<NodeID> parentsToCheck;
-
 		for (int i = 0; i < count; i++)
 		{
 			try {
 				NodeID parent = m_nodeMap.at(touchingNodes[i]).m_parentID.value();
-				// Without the recursive child destruction, we can only unsubdivide parents of minimum size nodes
 				if (m_nodeMap.at(parent).m_size >= gridSizeMin * 2) parentsToCheck.insert(parent);
-
-				//uncomment this if we implement fix above
-				//parentsToCheck.insert(parent);
 			}
 			catch (const std::out_of_range&) {
 				continue;
@@ -408,27 +375,24 @@ namespace PMP
 		for (const auto& parentID : parentsToCheck)
 		{
 			try {
-				//std::cout << "Checking parent node " << parentID << " for unsubdivision\n";
-				// At the moment, this needs to be called after the generateSurfaces call above which makes things a bit messy
-				// TODO: Can we come up with a method to check for parents to unsubdivide before generating surfaces?
-				// TODO: need to fix: if a surface was not generated in the first generateSurfaces() than it might calculate wrong
 				if (canUnsubdivide(parentID)) // detecting the nodes to unsubdivide seem to work properly
 				{
-
-					for (NodeID j : m_nodeMap.at(parentID).m_childIDs.valueRead())
+					const auto& childIDs = m_nodeMap.at(parentID).m_childIDs.valueRead();
+					for (NodeID j : childIDs)
 					{
 						destroyBranch(j);
-						//m_nodeMap.erase(j);
 					}
 					m_nodeMap.at(parentID).m_childIDs.reset();
 					// we know that canUnsubdivide works properly as indicated by the green dots
-					//Debugger::instance().addDebugPoint(m_nodeMap.at(parentID).m_center.toQVector3D(), { 0.0f,1.0f,0.0f });
+					Debugger::instance().addDebugPoint(m_nodeMap.at(parentID).m_center.toQVector3D(), { 0.0f,1.0f,0.0f });
 				}
+				else Debugger::instance().addDebugPoint(m_nodeMap.at(parentID).m_center.toQVector3D(), { 1.0f,0.0f,0.0f });
 			}
 			catch (const std::out_of_range&) {
 				continue;
 			}			
 		}
+		Debugger::instance().drawDebugPoints();
 	}
 	void TestChamber::increaseGridSize()
 	{
@@ -436,7 +400,6 @@ namespace PMP
 		if ( m_gridSize > gridSizeMax )
 			m_gridSize = gridSizeMax;
 	}
-
 	void TestChamber::decreaseGridSize()
 	{
 		m_gridSize /= 2;

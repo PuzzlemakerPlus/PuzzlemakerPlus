@@ -50,7 +50,9 @@ namespace PMP
 				// set complete flag if all 4 children have the same state on this side
 				// if any side is incomplete, the node is incomplete 
 				// either all enabled or all diabled
-				setFlag(flags, 6, (countSide % 4 == 0 || enabledChildren % 8 == 0) && readFlag(flags, 6));
+				setFlag(flags, 6, countSide % 4 == 0 && readFlag(flags, 6));
+				setFlag(flags, 6, enabledChildren % 8 == 0 && readFlag(flags, 6));
+				
 			}
 		}
 		else {
@@ -60,16 +62,15 @@ namespace PMP
 				if (isSurface(side, node)) {
 					setFlag(flags, i, true);
 				}
+				Debugger::instance().addDebugPoint(m_nodeMap.at(node).m_center.toQVector3D(), { 0.0f,0.0f,1.0f });
 			}
 		}
 		return flags;
 	}
-
 	bool TestChamber::canUnsubdivide(NodeID node) const
 	{	
 		return readFlag(nodeSurfaceFlag(node), 6);
 	}
-
 	bool TestChamber::areNeighborsSameSize(NodeID node) const {
 		const TestChamberNode& currentNode = m_nodeMap.at(node);
 		std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.m_size, currentNode.m_center);
