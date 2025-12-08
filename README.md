@@ -6,13 +6,25 @@ It is currently very early in development and not ready for general use, but we 
 
 ## Build instructions
 
-### Windows
+### Windows & Linux
 
-TODO
+Install Qt (>=6.8.0)
 
-### Linux
+The official Qt installer requires an account, if you want to avoid this you can use [aqtinstall](https://github.com/miurahr/aqtinstall) instead
 
-TODO
+Clone this repo and run CMake. CMake should automatically detect your Qt installation.
+
+```
+git clone git@github.com:PuzzlemakerPlus/PuzzlemakerPlus.git
+cd PuzzlemakerPlus
+cmake .
+```
+
+To build on Linux, run 
+
+```
+make
+```
 
 ## Legal information
 
