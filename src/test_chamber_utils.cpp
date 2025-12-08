@@ -1,4 +1,5 @@
 #include "test_chamber.h"
+#include "test_chamber.h"
 #include "util/debug.h"
 #include <iostream>
 #include <cassert>
@@ -6,50 +7,67 @@
 // please keep all functions in this source file const or functions that dont change values inside the test chamber class
 namespace PMP
 {
-	bool TestChamber::canUnsubdivide(NodeID node) const
+	//let's try encoding directional information on an integer
+	// 
+	//1 bit per direction: 
+	// POS_X,
+	// NEG_X,
+	// POS_Y,
+	// NEG_Y,
+	// POS_Z,
+	// NEG_Z,
+	// and 1 bit for indicating whether this node is "complete"
+	// 
+	// if a direction flag is set, that means this node has a full surface on that side
+	// if a direction flag is 0, it could mean that the node has no surface on that side, or has a partial surface on that side
+	// define 'complete node' as a node that has all 6 sides with each side either fully covered or fully uncovered
+	//    basically, a 'complete node' can be unsubdivided
+	// the 7th bit indicates whether this node is "complete" or not
+	uint8_t TestChamber::nodeSurfaceFlag(NodeID node) const
 	{
-		try {
-			if (!m_nodeMap.at(node).m_childIDs.has_value())
-			{
-				// node has no children to unsubdivide
-				// maybe the parent node of this node can be unsubdivided
-				//Debugger::instance().addDebugPoint(m_nodeMap.at(node).m_center.toQVector3D(), { 1.0f,1.0f,0.0f });
-				return false;
-			}
-		}
-		catch (const std::out_of_range&) {
-			// node does not exist. likely already destroyed by another unsubdivide operation?
-			return false;
-		}
-		//for its sides:
-		for (int i = 0; i < 6; i++)
+		uint8_t flags = 64; // start with 7th bit set to 1 (complete)
+		const TestChamberNode& currentNode = m_nodeMap.at(node);
+		if (currentNode.m_childIDs.has_value())
 		{
-			WallSide childSide = static_cast<WallSide>(i);
-			int count = 0;
-			int activeChild = 0;
-			for (const auto& childID : m_nodeMap.at(node).m_childIDs.valueRead())
+			const auto& childIDs = currentNode.m_childIDs.valueRead();
+			std::array<uint8_t, 8> childFlags;
+			int enabledChildren = 0;
+			for (int i = 0; i < 8; i++)
 			{
-				m_nodeMap.at(childID).m_active ? activeChild++ : activeChild;
-				try {
-					if (m_surfaceMap.at(childID)[i].side == childSide) //check if the side is active
-					{
-						//Debugger::instance().addDebugPoint(m_nodeMap.at(childID).m_center.toQVector3D(), { 0.0f,0.0f,1.0f });
-						//std::cout << "Added Side " << i << "\n";
-						count++;
-					}
-				}
-				catch (const std::out_of_range&) {
-					continue; // child has no surface on this side
-				}
+				childFlags[i] = nodeSurfaceFlag(childIDs[i]);
+				if (isNodeActive(childIDs[i])) enabledChildren++;
 			}
-			if (count % 4 != 0 || activeChild % 8 != 0) // either not all children have this side active, or not all children are active
+			for (int i = 0; i < 6; i++)
 			{
-				return false;
+				WallSide side = static_cast<WallSide>(i);
+				int countSide = 0;
+				for (int j = 0; j < 8; j++)
+				{
+					countSide += (int) readFlag(childFlags[j], i);
+					setFlag(flags, 6, readFlag(childFlags[j], 6) && readFlag(flags, 6));
+				}
+				setFlag(flags, i, countSide == 4);
+				// set complete flag if all 4 children have the same state on this side
+				// if any side is incomplete, the node is incomplete
+				setFlag(flags, 6, countSide % 4 == 0 && readFlag(flags, 6));
+				setFlag(flags, 6, enabledChildren % 8 == 0 && readFlag(flags, 6)); // either all enabled or all diabled
 			}
-			// if count % 4 == 0, then all 4 children have the same active state on this side
-			// if any one side isn't "full", we cannot unsubdivide
 		}
-		return true;
+		else {
+			for (int i = 0; i < 6; i++)
+			{
+				WallSide side = static_cast<WallSide>(i);
+				if (isSurface(side, node)) {
+					setFlag(flags, i, true);
+				}
+			}
+		}
+		return flags;
+	}
+
+	bool TestChamber::canUnsubdivide(NodeID node) const
+	{	
+		return readFlag(nodeSurfaceFlag(node), 6);
 	}
 
 	bool TestChamber::areNeighborsSameSize(NodeID node) const {

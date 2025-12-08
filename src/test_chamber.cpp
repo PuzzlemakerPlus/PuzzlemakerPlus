@@ -362,7 +362,7 @@ namespace PMP
 		subdivideNodesToBBox(mins, maxs, touchingNodes);
 		int nodesChanged = setNodesActive(touchingNodes, true);
 		// TODO: Hook up to undo/redo
-		generateSurfaces();
+		//generateSurfaces();
 		// Optimize this:
 		unsubdivideNodes(touchingNodes.data(), touchingNodes.size());
 		generateSurfaces();
@@ -385,17 +385,17 @@ namespace PMP
 		}
 		m_nodeMap.erase(nodeID);
 	}
-
+	//TODO optimize this function and make it support recursive unsubdivision
 	void TestChamber::unsubdivideNodes(NodeID* touchingNodes, int count)
 	{
 		std::unordered_set<NodeID> parentsToCheck;
-		
+
 		for (int i = 0; i < count; i++)
 		{
 			try {
 				NodeID parent = m_nodeMap.at(touchingNodes[i]).m_parentID.value();
 				// Without the recursive child destruction, we can only unsubdivide parents of minimum size nodes
-				if (m_nodeMap.at(parent).m_size == gridSizeMin * 2) parentsToCheck.insert(parent);
+				if (m_nodeMap.at(parent).m_size >= gridSizeMin * 2) parentsToCheck.insert(parent);
 
 				//uncomment this if we implement fix above
 				//parentsToCheck.insert(parent);
@@ -404,26 +404,30 @@ namespace PMP
 				continue;
 			}
 		}
-		
+
 		for (const auto& parentID : parentsToCheck)
 		{
-			//std::cout << "Checking parent node " << parentID << " for unsubdivision\n";
-			// At the moment, this needs to be called after the generateSurfaces call above which makes things a bit messy
-			// TODO: Can we come up with a method to check for parents to unsubdivide before generating surfaces?
-			// TODO: need to fix: if a surface was not generated in the first generateSurfaces() than it might calculate wrong
-			if (canUnsubdivide(parentID)) // detecting the nodes to unsubdivide seem to work properly
-			{
-
-				for (NodeID j : m_nodeMap.at(parentID).m_childIDs.valueRead())
+			try {
+				//std::cout << "Checking parent node " << parentID << " for unsubdivision\n";
+				// At the moment, this needs to be called after the generateSurfaces call above which makes things a bit messy
+				// TODO: Can we come up with a method to check for parents to unsubdivide before generating surfaces?
+				// TODO: need to fix: if a surface was not generated in the first generateSurfaces() than it might calculate wrong
+				if (canUnsubdivide(parentID)) // detecting the nodes to unsubdivide seem to work properly
 				{
-					destroyBranch(j);
-					//m_nodeMap.erase(j);
+
+					for (NodeID j : m_nodeMap.at(parentID).m_childIDs.valueRead())
+					{
+						destroyBranch(j);
+						//m_nodeMap.erase(j);
+					}
+					m_nodeMap.at(parentID).m_childIDs.reset();
+					// we know that canUnsubdivide works properly as indicated by the green dots
+					//Debugger::instance().addDebugPoint(m_nodeMap.at(parentID).m_center.toQVector3D(), { 0.0f,1.0f,0.0f });
 				}
-				m_nodeMap.at(parentID).m_childIDs.reset();
-				// we know that canUnsubdivide works properly as indicated by the green dots
-				//Debugger::instance().addDebugPoint(m_nodeMap.at(parentID).m_center.toQVector3D(), { 0.0f,1.0f,0.0f });
 			}
-			//unsubdivideRecursive(parentID);
+			catch (const std::out_of_range&) {
+				continue;
+			}			
 		}
 	}
 	void TestChamber::increaseGridSize()

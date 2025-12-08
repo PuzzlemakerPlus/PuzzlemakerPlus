@@ -271,4 +271,14 @@ namespace PMP
 	{
 		return ( v1 < v2 + epsilon ) && ( v1 > v2 - epsilon );
 	}
+	template<typename T>
+	void setFlag(T& byte, int flag, bool value)
+	{
+		if (value)
+			byte |= (1u << flag);   // set bit
+		else
+			byte &= ~(1u << flag);  // clear bit
+	}
+	template<typename T>
+	bool readFlag(T byte, int bitIndex) { return (byte >> bitIndex) & 1u; }
 }

@@ -121,6 +121,8 @@ namespace PMP
 		void makeUSI(NodeID node, UniqueSurfaceIdentifer& out, WallSide side = WallSide::NONE) const;
 		// Based on generated surfaces, generate quads for rendering. This is to separate rendering logic with octree logic
 
+		uint8_t nodeSurfaceFlag(NodeID node) const;
+
 		bool canUnsubdivide(NodeID node) const;
 		// pass in a possible candidates of nodes that needs to be checked for unsubdividing.
 		// needs a contiguous list of NodeIDs that may or may not repeat
