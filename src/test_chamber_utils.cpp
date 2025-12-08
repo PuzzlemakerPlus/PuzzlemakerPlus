@@ -48,9 +48,9 @@ namespace PMP
 				}
 				setFlag(flags, i, countSide == 4);
 				// set complete flag if all 4 children have the same state on this side
-				// if any side is incomplete, the node is incomplete
-				setFlag(flags, 6, countSide % 4 == 0 && readFlag(flags, 6));
-				setFlag(flags, 6, enabledChildren % 8 == 0 && readFlag(flags, 6)); // either all enabled or all diabled
+				// if any side is incomplete, the node is incomplete 
+				// either all enabled or all diabled
+				setFlag(flags, 6, (countSide % 4 == 0 || enabledChildren % 8 == 0) && readFlag(flags, 6));
 			}
 		}
 		else {

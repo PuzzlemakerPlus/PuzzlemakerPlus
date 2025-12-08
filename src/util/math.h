@@ -193,7 +193,7 @@ namespace PMP
 		{
 			return _x * other._x + _y * other._y + _z * other._z;
 		}
-		float dotQ(const QVector3D& other) const
+		float dot(const QVector3D& other) const
 		{
 			return QVector3D::dotProduct(toQVector3D(), other);
 		}

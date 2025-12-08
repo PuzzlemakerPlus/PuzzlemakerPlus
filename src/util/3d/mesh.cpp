@@ -11,8 +11,10 @@ namespace PMP
 	bool WallFacesDirection(WallSide side, const QVector3D& dir) 
 	{
 		IntVector3D normal = getWallNormal(side);
-		//std::cout << "angle: " << normal.dot(dir) << "\n";
-		return normal.dot(dir) <= 0;
+		//std::cout << "normal: (" << normal.x() << ", " << normal.y() << ", " << normal.z() << ")\n";
+		//std::cout << "dir: (" << dir.x() << ", " << dir.y() << ", " << dir.z() << ")\n";
+		//std::cout << "dot: " << normal.dot(dir) << "\n";
+		return normal.dot(dir) < 0;
 	}
 
 	IntVector3D getWallNormal(WallSide side)
