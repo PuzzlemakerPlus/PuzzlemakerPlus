@@ -27,6 +27,8 @@ namespace PMP
 	const float gridSizeMin = 32;
 	const float gridSizeMax = 256;
 
+	
+
 	//Based on the information in this struct, it is possible to identify a surface without knowing its parentID or surfaceID
 	struct UniqueSurfaceIdentifer
 	{
@@ -153,8 +155,6 @@ namespace PMP
 		// Returned node will always be a leaf node
 		NodeID getLeafNodeAtCoord(QVector3D coord);
 		NodeID getLeafNodeAtCoord(QVector3D coord, NodeID parentID);
-
-
 
 		// Debug
 		void printNodes();

@@ -1,6 +1,7 @@
 #include "test_chamber.h"
 #include "test_chamber.h"
 #include "util/debug.h"
+#include "util/scoped_timer.h"
 #include <iostream>
 #include <cassert>
 // source file for simple test chamber operations with no side effects
@@ -41,7 +42,7 @@ namespace PMP
 			{
 				WallSide side = static_cast<WallSide>(i);
 				int countSide = 0;
-				for (int j = 0; j < 8; j++)
+				for(int j : childrenOnFace[i])
 				{
 					countSide += (int) readFlag(childFlags[j], i);
 					setFlag(flags, 6, readFlag(childFlags[j], 6) && readFlag(flags, 6));
@@ -50,8 +51,7 @@ namespace PMP
 				// set complete flag if all 4 children have the same state on this side
 				// if any side is incomplete, the node is incomplete 
 				// either all enabled or all diabled
-				setFlag(flags, 6, countSide % 4 == 0 && readFlag(flags, 6));
-				setFlag(flags, 6, enabledChildren % 8 == 0 && readFlag(flags, 6));
+				setFlag(flags, 6, countSide % 4 == 0 && enabledChildren % 8 == 0 && readFlag(flags, 6));
 				
 			}
 		}
@@ -62,13 +62,14 @@ namespace PMP
 				if (isSurface(side, node)) {
 					setFlag(flags, i, true);
 				}
-				Debugger::instance().addDebugPoint(m_nodeMap.at(node).m_center.toQVector3D(), { 0.0f,0.0f,1.0f });
+				//Debugger::instance().addDebugPoint(m_nodeMap.at(node).m_center.toQVector3D(), { 0.0f,0.0f,1.0f });
 			}
 		}
 		return flags;
 	}
 	bool TestChamber::canUnsubdivide(NodeID node) const
 	{	
+		//ScopedTimer("canUnsubdivide");
 		return readFlag(nodeSurfaceFlag(node), 6);
 	}
 	bool TestChamber::areNeighborsSameSize(NodeID node) const {
@@ -242,24 +243,14 @@ namespace PMP
 	}
 
 	//Given a wallside of a node, should this wall be drawn
-	//optimize this function by using IntVector3D
 	bool TestChamber::isSurface(WallSide side, NodeID node) const
 	{
-		const IntVector3D center = m_nodeMap.at(node).m_center;
-		assert(m_nodeMap.at(node).m_size % 2 == 0 && "node size should be an even numer");
-		const int halfSize = m_nodeMap.at(node).m_size / 2;
-		IntVector3D offset;
-		using enum WallSide;
-		switch (side) {
-		case POS_X: offset = { +halfSize + 1, 0, 0 }; break;
-		case NEG_X: offset = { -halfSize - 1, 0, 0 }; break;
-		case POS_Y: offset = { 0, +halfSize + 1, 0 }; break;
-		case NEG_Y: offset = { 0, -halfSize - 1, 0 }; break;
-		case POS_Z: offset = { 0, 0, +halfSize + 1 }; break;
-		case NEG_Z: offset = { 0, 0, -halfSize - 1 }; break;
-		case NONE: throw std::runtime_error("Invalid WallSide");
-		}
-
+		const TestChamberNode& ref = m_nodeMap.at(node);
+		const IntVector3D center = ref.m_center;
+		assert(ref.m_size % 2 == 0 && "node size should be an even numer");
+		const int halfSize = ref.m_size / 2;
+		IntVector3D norm = getWallNormal(side);
+		IntVector3D offset = -(norm * halfSize + norm);
 		IntVector3D neighborCoord = center + offset;
 
 		bool isVisible = isPointOOB(neighborCoord); //if coordinate behind this surface is OOB, this surface should be drawn

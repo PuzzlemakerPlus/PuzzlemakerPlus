@@ -32,20 +32,29 @@ namespace PMP
 		m_rootNode = positionToNodeID({0,0,0}); // Warm up hash function
 		createOctreeNode(m_rootNode, std::nullopt, {0,0,0}, m_rootNodeWorldSize);
 	}
+
 	void TestChamber::createChildrenOfNode( NodeID parentID )
 	{
 		TestChamberNode& parentNode = m_nodeMap.at(parentID);
 		std::array<NodeID, 8>& parentChildIds = parentNode.m_childIDs.value_initialize();
 		
 		// Child Node Generation Order
-		//negx negy negz
-		//posx negy negz
-		//negx posy negz
-		//posx posy negz
-		//negx negy posz
-		//posx negy posz
-		//negx posy posz
-		//posx posy posz
+		//negx negy negz: 0
+		//posx negy negz: 1
+		//negx posy negz: 2
+		//posx posy negz: 3
+		//negx negy posz: 4
+		//posx negy posz: 5
+		//negx posy posz: 6
+		//posx posy posz: 7
+		
+		// posx -> 1, 3, 5, 7
+		// posy -> 2, 3, 6, 7
+		// posz -> 4, 5, 6, 7
+		// negx -> 0, 2, 4, 6
+		// negy -> 0, 1, 4, 5
+		// negz -> 0, 1, 2, 3
+
 		for (unsigned int i = 0; i < 8; ++i )
 		{
 			IntVector3D pos = getChildCenter(i, parentNode.m_size, parentNode.m_center);
@@ -359,7 +368,6 @@ namespace PMP
 	}
 	void TestChamber::unsubdivideNodes(NodeID* touchingNodes, int count)
 	{
-		Debugger::instance().clearDebugPoints();
 		std::unordered_set<NodeID> parentsToCheck;
 		for (int i = 0; i < count; i++)
 		{
@@ -371,7 +379,6 @@ namespace PMP
 				continue;
 			}
 		}
-
 		for (const auto& parentID : parentsToCheck)
 		{
 			try {
@@ -383,16 +390,12 @@ namespace PMP
 						destroyBranch(j);
 					}
 					m_nodeMap.at(parentID).m_childIDs.reset();
-					// we know that canUnsubdivide works properly as indicated by the green dots
-					Debugger::instance().addDebugPoint(m_nodeMap.at(parentID).m_center.toQVector3D(), { 0.0f,1.0f,0.0f });
 				}
-				else Debugger::instance().addDebugPoint(m_nodeMap.at(parentID).m_center.toQVector3D(), { 1.0f,0.0f,0.0f });
 			}
 			catch (const std::out_of_range&) {
 				continue;
 			}			
 		}
-		Debugger::instance().drawDebugPoints();
 	}
 	void TestChamber::increaseGridSize()
 	{

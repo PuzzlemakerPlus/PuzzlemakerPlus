@@ -22,7 +22,15 @@ namespace PMP
 		NEG_Z,
 		NONE
 	};
-
+	// children indices for each face of a cube
+	constexpr int childrenOnFace[6][4] = {
+		{1,3,5,7}, // POS_X
+		{0,2,4,6}, // NEG_X
+		{2,3,6,7}, // POS_Y
+		{0,1,4,5}, // NEG_Y
+		{4,5,6,7}, // POS_Z
+		{0,1,2,3}, // NEG_Z
+	};
 	struct Vertex
 	{
 		QVector3D Position;
