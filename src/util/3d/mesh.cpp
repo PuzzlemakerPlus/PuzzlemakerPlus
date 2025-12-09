@@ -10,8 +10,8 @@ namespace PMP
 
 	bool WallFacesDirection(WallSide side, const QVector3D& dir) 
 	{
-		IntVector3D normal = getWallNormal(side);
-		return normal.dot(dir) < 0;
+		IntVector3D gNormal = getWallNormal(side);
+		return gNormal.dot(dir) < 0;
 	}
 
 	IntVector3D getWallNormal(WallSide side)
@@ -52,7 +52,7 @@ namespace PMP
 		const QVector3D p7(0.0f, size, size);
 
 		std::array<QVector3D, 4> quad;
-		IntVector3D normal = getWallNormal(side);
+		IntVector3D gNormal = getWallNormal(side);
 
 		switch (side) {
 			case WallSide::NEG_Z: // Bottom
@@ -79,7 +79,7 @@ namespace PMP
 
 		std::array<Vertex, 4> face;
 		for (int i = 0; i < 4; ++i) {
-			face[i] = Vertex { quad[i], normal.toQVector3D()};
+			face[i] = Vertex { quad[i], gNormal.toQVector3D()};
 		}
 		return {face, {0,1,2,0,2,3}};
 	}
@@ -98,32 +98,32 @@ namespace PMP
 		QVector3D p7 = center + QVector3D(-h, +h, +h);
 
 		std::array<QVector3D, 4> quad;
-		QVector3D normal;
+		QVector3D gNormal;
 
 		switch (side) {
 			case WallSide::NEG_Z: // Back
 				quad = { p0, p1, p2, p3 };
-				normal = QVector3D(0.0f, 0.0f, 1.0f);
+				gNormal = QVector3D(0.0f, 0.0f, 1.0f);
 				break;
 			case WallSide::NEG_Y: // Bottom
 				quad = { p1, p0, p4, p5 };
-				normal = QVector3D(0.0f, -1.0f, 0.0f);
+				gNormal = QVector3D(0.0f, -1.0f, 0.0f);
 				break;
 			case WallSide::POS_X: // Right
 				quad = { p2, p1, p5, p6 };
-				normal = QVector3D(1.0f, 0.0f, 0.0f);
+				gNormal = QVector3D(1.0f, 0.0f, 0.0f);
 				break;
 			case WallSide::POS_Y: // Top
 				quad = { p3, p2, p6, p7 };
-				normal = QVector3D(0.0f, 1.0f, 0.0f);
+				gNormal = QVector3D(0.0f, 1.0f, 0.0f);
 				break;
 			case WallSide::NEG_X: // Left
 				quad = { p0, p3, p7, p4 };
-				normal = QVector3D(-1.0f, 0.0f, 0.0f);
+				gNormal = QVector3D(-1.0f, 0.0f, 0.0f);
 				break;
 			case WallSide::POS_Z: // Front
 				quad = { p5, p4, p7, p6 };
-				normal = QVector3D(0.0f, 0.0f, -1.0f);
+				gNormal = QVector3D(0.0f, 0.0f, -1.0f);
 				break;
 			default:
 				throw std::out_of_range("Invalid side index");
@@ -131,7 +131,7 @@ namespace PMP
 
 		std::array<Vertex, 4> face;
 		for (int i = 0; i < 4; ++i) {
-			face[i] = Vertex { quad[i], normal };
+			face[i] = Vertex { quad[i], gNormal };
 		}
 
 		return { face, {0, 1, 2, 0, 2, 3} };
@@ -151,32 +151,32 @@ namespace PMP
 		QVector3D p7 = center + QVector3D(-h, +h, +h);
 
 		std::array<QVector3D, 4> quad;
-		QVector3D normal;
+		QVector3D gNormal;
 
 		switch (side) {
 			case WallSide::NEG_Z: // Back
 				quad = { p0, p1, p2, p3 };
-				normal = QVector3D(0.0f, 0.0f, 1.0f);
+				gNormal = QVector3D(0.0f, 0.0f, 1.0f);
 				break;
 			case WallSide::NEG_Y: // Bottom
 				quad = { p1, p0, p4, p5 };
-				normal = QVector3D(0.0f, -1.0f, 0.0f);
+				gNormal = QVector3D(0.0f, -1.0f, 0.0f);
 				break;
 			case WallSide::POS_X: // Right
 				quad = { p2, p1, p5, p6 };
-				normal = QVector3D(1.0f, 0.0f, 0.0f);
+				gNormal = QVector3D(1.0f, 0.0f, 0.0f);
 				break;
 			case WallSide::POS_Y: // Top
 				quad = { p3, p2, p6, p7 };
-				normal = QVector3D(0.0f, 1.0f, 0.0f);
+				gNormal = QVector3D(0.0f, 1.0f, 0.0f);
 				break;
 			case WallSide::NEG_X: // Left
 				quad = { p0, p3, p7, p4 };
-				normal = QVector3D(-1.0f, 0.0f, 0.0f);
+				gNormal = QVector3D(-1.0f, 0.0f, 0.0f);
 				break;
 			case WallSide::POS_Z: // Front
 				quad = { p5, p4, p7, p6 };
-				normal = QVector3D(0.0f, 0.0f, -1.0f);
+				gNormal = QVector3D(0.0f, 0.0f, -1.0f);
 				break;
 			default:
 				throw std::out_of_range("Invalid side index");
@@ -184,7 +184,7 @@ namespace PMP
 
 		std::array<TestChamberVertex, 4> face;
 		for (int i = 0; i < 4; ++i) {
-			face[i] = TestChamberVertex { quad[i], normal, surfaceID, parentID, static_cast<unsigned int>(side) };
+			face[i] = TestChamberVertex{ quad[i], gNormal, surfaceID, parentID, static_cast<unsigned int>(side), QVector2D(0,0) };
 		}
 
 		return { face, {0, 1, 2, 0, 2, 3}};

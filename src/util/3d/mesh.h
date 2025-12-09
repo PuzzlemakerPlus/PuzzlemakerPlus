@@ -44,6 +44,7 @@ namespace PMP
 		unsigned int surfaceID;
 		unsigned int parentNodeID;
 		unsigned int wallSide;
+		QVector2D texCoord;
 	};
 
 	struct Quad

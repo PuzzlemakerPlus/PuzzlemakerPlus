@@ -8,8 +8,13 @@
         <file>shaders/dot.frag</file>
         <file>shaders/line.vert</file>
         <file>shaders/line.frag</file>
-	<file>shaders/shadow.vert</file>
+        <file>shaders/shadow.vert</file>
         <file>shaders/shadow.frag</file>
-
+        <file>shaders/g_buffer.frag</file>
+        <file>shaders/g_buffer.vert</file>
+        <file>shaders/deferred.frag</file>
+        <file>shaders/deferred.vert</file>
+	<file>shaders/ao.frag</file>
+        <file>shaders/ao.vert</file>
     </qresource>
 </RCC>

@@ -5,6 +5,7 @@ layout(location = 1) in vec3 aNormal;
 layout(location = 2) in uint aSurfaceId;  
 layout(location = 3) in uint aParentId;
 layout(location = 4) in uint aWallSide;
+layout(location = 5) in vec2 aTexCoord;
 
 uniform mat4 u_view;
 uniform mat4 u_proj;

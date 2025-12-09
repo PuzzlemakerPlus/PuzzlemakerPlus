@@ -44,7 +44,8 @@ namespace PMP
 		}
 #endif
 		// Puzzlemaker background color
-		glClearColor( 0.803, 0.815, 0.807, 1.0f );
+		//glClearColor( 0.803, 0.815, 0.807, 1.0f ); set in deferred shader now
+
 		loadShaders();
 		createGraphicsObjects();
 		auto* ext = context()->extraFunctions();
@@ -106,6 +107,36 @@ namespace PMP
 #else
 		m_shadowShader.link();
 #endif
+		m_gBufferShader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/g_buffer.vert");
+		m_gBufferShader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/g_buffer.frag");
+#ifndef NDEBUG
+		if (!m_gBufferShader.link()) {
+			qDebug() << "Shader failed to link:" << m_gBufferShader.log();
+			return;
+		}
+#else
+		m_gBufferShader.link();
+#endif
+		m_deferredShader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/deferred.vert");
+		m_deferredShader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/deferred.frag");
+#ifndef NDEBUG
+		if (!m_deferredShader.link()) {
+			qDebug() << "Shader failed to link:" << m_deferredShader.log();
+			return;
+		}
+#else
+		m_deferredShader.link();
+#endif
+		m_aoShader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/ao.vert");
+		m_aoShader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/ao.frag");
+#ifndef NDEBUG
+		if (!m_aoShader.link()) {
+			qDebug() << "Shader failed to link:" << m_aoShader.log();
+			return;
+		}
+#else
+		m_aoShader.link();
+#endif
 	}
 
 	void Viewport::createGraphicsObjects()
@@ -141,6 +172,7 @@ namespace PMP
 		const int surfaceIDLocation = 2;
 		const int parentIDLocation = 3;
 		const int wallSideLocation = 4;
+		const int texCoordLocation = 5;
 		bool vaoCheck = allDifferent({vertexPosLocation, vertexNormalLocation, surfaceIDLocation, parentIDLocation, wallSideLocation});
 		Q_ASSERT(vaoCheck && "All positions of VAO must have unique position");
 		glEnableVertexAttribArray(vertexPosLocation);
@@ -158,6 +190,10 @@ namespace PMP
 		glEnableVertexAttribArray(wallSideLocation);
 		glVertexAttribIPointer(wallSideLocation, 1, GL_UNSIGNED_INT, stride,reinterpret_cast<const void*>(offsetof(TestChamberVertex, wallSide)));
 		
+		glEnableVertexAttribArray(wallSideLocation);
+		glVertexAttribPointer(texCoordLocation, 2, GL_FLOAT, GL_TRUE, stride, reinterpret_cast<const void*>(offsetof(TestChamberVertex, texCoord)));
+
+
 		m_chamberVAO.release();
 		m_chamberVBO.release();
 		m_chamberIBO.release();
@@ -185,14 +221,73 @@ namespace PMP
 		m_chamberShadowVBO.release();
 		m_chamberShadowIBO.release();
 
+		// Fullscreen triangle setup for deferred rendering
+		m_fullscreenVAO.create();
+		m_fullscreenVAO.bind();
+		// No VBO needed, we can generate the triangle in the vertex shader
+		m_fullscreenVAO.release();
+
+		createGBufferFBO();
 		createSelectionFBO();
 		createShadowFBO();
+		createHBAOFBO();
 		const std::string_view verStr = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 		const std::string_view vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
 		const std::string_view renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 		qDebug() << "Version: " << verStr;
 		qDebug() << "Adapter: " << renderer;
 		qDebug() << "Vendor: " << vendor;
+	}
+
+	void Viewport::createGBufferFBO()
+	{
+		const int W = int(width() * devicePixelRatioF());
+		const int H = int(height() * devicePixelRatioF());
+		//delete old
+		if (gBufferFBO) glDeleteFramebuffers(1, &gBufferFBO);
+		if (gNormal) glDeleteTextures(1, &gNormal);
+		if (gAlbedo) glDeleteTextures(1, &gAlbedo);
+		if (gDepth) glDeleteTextures(1, &gDepth);
+		// start FBO
+		glGenFramebuffers(1, &gBufferFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, gBufferFBO);
+
+		// normal
+		glGenTextures(1, &gNormal);
+		glBindTexture(GL_TEXTURE_2D, gNormal);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, W, H, 0, GL_RGBA, GL_FLOAT, nullptr);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gNormal, 0);
+		
+		// albedo
+		glGenTextures(1, &gAlbedo);
+		glBindTexture(GL_TEXTURE_2D, gAlbedo);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, W, H, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gAlbedo, 0);
+
+		// depth
+		glGenTextures(1, &gDepth);
+		glBindTexture(GL_TEXTURE_2D, gDepth);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, W, H, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, gDepth, 0);
+		
+		// set normal and albedo buffers as draw buffers
+		GLenum attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+		glDrawBuffers(2, attachments);
+
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+			qDebug() << "GBuffer FBO is NOT complete!";
+		}
+		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
 	}
 
 	void Viewport::createShadowFBO() {
@@ -276,6 +371,53 @@ namespace PMP
 		}
 
 		// Back to Qt's onscreen FBO
+		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
+	}
+
+	void Viewport::createHBAOFBO()
+	{
+		const int W = int(width() * devicePixelRatioF());
+		const int H = int(height() * devicePixelRatioF());
+
+		// Guard: if the widget is 0x0 (e.g. not shown yet), skip
+		if (W == 0 || H == 0) {
+			qDebug() << "Skipping AO FBO creation, size is 0x0";
+			return;
+		}
+
+		if (hbaoFBO) {
+			glDeleteFramebuffers(1, &hbaoFBO);
+			hbaoFBO = 0;
+		}
+		if (aoTex) {
+			glDeleteTextures(1, &aoTex);
+			aoTex = 0;
+		}
+
+		glGenFramebuffers(1, &hbaoFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, hbaoFBO);
+
+		// Single-channel AO texture
+		glGenTextures(1, &aoTex);
+		glBindTexture(GL_TEXTURE_2D, aoTex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, W, H, 0, GL_RGBA, GL_FLOAT, nullptr);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+			GL_TEXTURE_2D, aoTex, 0);
+
+		GLenum drawBuf = GL_COLOR_ATTACHMENT0;
+		glDrawBuffers(1, &drawBuf);
+
+		// Now check completeness
+		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (status != GL_FRAMEBUFFER_COMPLETE) {
+			qDebug() << "AO FBO incomplete! status =" << status;
+		}
+
 		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
 	}
 
@@ -459,13 +601,13 @@ namespace PMP
 		QVector3D extent = 0.5f * (maxP - minP);
 
 		float orthoSize = qMax(extent.x(), extent.z()) * 1.3f;   // padding
-		float depth = extent.length() * 2.0f;                // enough to see caster + receiver
+		float gDepth = extent.length() * 2.0f;                // enough to see caster + receiver
 
 		//------------------------------------------------------------
 		// Position the light camera:  
 		//  Place it *behind* the geometry along -lightDir
 		//------------------------------------------------------------
-		QVector3D lightPos = center - lightDir * depth;
+		QVector3D lightPos = center - lightDir * gDepth;
 
 		//------------------------------------------------------------
 		// Build the matrices
@@ -476,7 +618,7 @@ namespace PMP
 			-orthoSize, orthoSize,
 			-orthoSize, orthoSize,
 			1.0f,
-			depth * 2.0f               // far plane
+			gDepth * 2.0f               // far plane
 		);
 
 		out = lightProj * lightView;
@@ -498,12 +640,22 @@ namespace PMP
 
 	void Viewport::drawLines(QMatrix4x4 view)
 	{
+		const int W = int(width() * devicePixelRatioF());
+		const int H = int(height() * devicePixelRatioF());
 		if(m_lineVertCount == 0) return;
 		glEnable(GL_POLYGON_OFFSET_LINE);
-		glPolygonOffset(-1000.0f, -1000.0f);
+		//glPolygonOffset(-1000.0f, -1000.0f);
 		m_lineShader.bind();
 		m_lineShader.setUniformValue("u_view", view);
 		m_lineShader.setUniformValue("u_proj", m_projection);
+		m_lineShader.setUniformValue("u_screenWidth", W);
+		m_lineShader.setUniformValue("u_screenHeight", H);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gDepth);
+		m_lineShader.setUniformValue("u_depth", 0);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, gAlbedo);
+		m_lineShader.setUniformValue("u_albedo", 1);
 		m_lineVAO.bind();
 		glDrawArrays(GL_LINES, 0, m_lineVertCount);
 		m_lineVAO.release();
@@ -511,6 +663,7 @@ namespace PMP
 		glDisable(GL_POLYGON_OFFSET_LINE);
 	}
 
+	// deprecated
 	void Viewport::drawTestChamber(QMatrix4x4 view, QMatrix4x4 light, QVector3D lightDir)
 	{
 		if(m_indicesCount == 0) return;
@@ -535,12 +688,92 @@ namespace PMP
 		m_wallShader.release();
 	}
 
+	void Viewport::drawGBuffer(QMatrix4x4 view)
+	{
+		const int W = int(width() * devicePixelRatioF());
+		const int H = int(height() * devicePixelRatioF());
+		glBindFramebuffer(GL_FRAMEBUFFER, gBufferFBO);
+		glViewport(0, 0, W, H); // <- likely not necessary
+		glEnable(GL_DEPTH_TEST);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		m_gBufferShader.bind();
+		m_gBufferShader.setUniformValue("u_view", view);
+		m_gBufferShader.setUniformValue("u_proj", m_projection);
+
+		// for test chamber that is already in world space, pass in the identity matrix
+		m_gBufferShader.setUniformValue("u_model", QMatrix4x4());
+		m_gBufferShader.setUniformValue("u_debugView", static_cast<GLint>(m_debugSurface));
+		m_gBufferShader.setUniformValue("u_useTestChamberColor", 1);
+		
+		m_chamberVAO.bind();
+		glDrawElements(GL_TRIANGLES, m_indicesCount, GL_UNSIGNED_INT, 0);
+		m_chamberVAO.release();
+		m_gBufferShader.setUniformValue("uUseTestChamberColor", 0);
+		// draw other models on screen
+		// making sure to pass in appropriate u_model every time
+
+		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
+	}
+
+	void Viewport::drawDeferred(QMatrix4x4 view, QMatrix4x4 light, QVector3D lightDir)
+	{
+		const int W = int(width() * devicePixelRatioF());
+		const int H = int(height() * devicePixelRatioF());
+		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
+		glViewport(0, 0, W, H); // <- likely not necessary
+		glDisable(GL_DEPTH_TEST); // depth information stored in depth buffer anyways
+
+		m_deferredShader.bind();
+		//essentials
+		m_deferredShader.setUniformValue("u_view", view);
+		m_deferredShader.setUniformValue("u_invView", view.inverted());
+		m_deferredShader.setUniformValue("u_proj", m_projection);
+		m_deferredShader.setUniformValue("u_invProj", m_projection.inverted());
+		m_deferredShader.setUniformValue("u_screenSize", QVector2D(W, H));
+		m_deferredShader.setUniformValue("u_near", m_near);
+		m_deferredShader.setUniformValue("u_far", m_far);
+
+		//global directional light
+		m_deferredShader.setUniformValue("u_lightVP", light);
+		m_deferredShader.setUniformValue("u_lightDir", lightDir);
+		m_deferredShader.setUniformValue("u_drawShadow", static_cast<GLint>(m_drawShadow));
+
+		//fog
+		m_deferredShader.setUniformValue("u_fogColor", m_fogCol);
+		if (m_fog) m_deferredShader.setUniformValue("u_fogStart", m_fogStart);
+		else m_deferredShader.setUniformValue("u_fogStart", m_fogEnd);
+		m_deferredShader.setUniformValue("u_fogEnd", m_fogEnd);
+
+		//textures
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, shadowMap);
+		m_deferredShader.setUniformValue("u_shadowMap", 0);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, gNormal);
+		m_deferredShader.setUniformValue("u_normal", 1);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, gAlbedo);
+		m_deferredShader.setUniformValue("u_albedo", 2);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, gDepth);
+		m_deferredShader.setUniformValue("u_depth", 3);
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, aoTex);
+		m_deferredShader.setUniformValue("u_ao", 4);
+
+		m_fullscreenVAO.bind();
+		glDrawArrays(GL_TRIANGLES, 0, 3); // fullscreen triangle that is generated in the vertex shader
+		m_fullscreenVAO.release();
+	}
+
 	void Viewport::drawShadow(QMatrix4x4 light)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
 		glViewport(0, 0, SHADOW_RES, SHADOW_RES);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glDisable(GL_CULL_FACE);
+
 		m_shadowShader.bind();
 		m_shadowShader.setUniformValue("u_lightVP", light);
 		m_chamberShadowVAO.bind();
@@ -550,6 +783,46 @@ namespace PMP
 		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
 		glEnable(GL_CULL_FACE);
 		glViewport(0, 0, int(width() * devicePixelRatioF()), int(height() * devicePixelRatioF()));
+	}
+
+	void Viewport::drawAO(QMatrix4x4 view)
+	{
+		const int W = int(width() * devicePixelRatioF());
+		const int H = int(height() * devicePixelRatioF());
+
+		glBindFramebuffer(GL_FRAMEBUFFER, hbaoFBO);
+		glViewport(0, 0, W, H);
+		glDisable(GL_DEPTH_TEST);
+		glClearColor(0.0f, 0.0f, 1.0f, 1.0f);  // AO = 1 (no occlusion)
+		//glClear(GL_COLOR_BUFFER_BIT);
+
+		m_aoShader.bind();
+		if (!m_aoShader.bind()) {
+			qDebug() << "AO shader failed to bind:" << m_aoShader.log();
+		}
+		// Matrices
+		m_aoShader.setUniformValue("u_view", view);
+		m_aoShader.setUniformValue("u_invView", view.inverted());
+		m_aoShader.setUniformValue("u_proj", m_projection);
+		m_aoShader.setUniformValue("u_invProj", m_projection.inverted());
+		m_aoShader.setUniformValue("u_near", m_near);
+		m_aoShader.setUniformValue("u_far", m_far);
+
+		// G-buffer inputs
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gNormal);
+		m_aoShader.setUniformValue("u_normal", 0);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, gDepth);
+		m_aoShader.setUniformValue("u_depth", 1);
+
+		m_fullscreenVAO.bind();
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		m_fullscreenVAO.release();
+		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
+		glViewport(0, 0, W, H);
+		glEnable(GL_DEPTH_TEST);
 	}
 
 	void Viewport::drawTestChamberSurfaceAttributes(QMatrix4x4 view)
@@ -615,22 +888,25 @@ namespace PMP
 		glEnable( GL_DEPTH_TEST );
 		glEnable( GL_CULL_FACE );
 		glEnable(GL_PROGRAM_POINT_SIZE);
+
+		QMatrix4x4 view;
+		getViewMatrix(view);
+		//deferred rendering. draw normal and albedo as well as depth
+		drawGBuffer(view);
 		
 		// directional light direction (world space)
 		QVector3D lightDir = QVector3D(-1.0f, -1.0f, -5.0f).normalized();
 		QMatrix4x4 light;
 		getGlobalLightViewMatrix(lightDir, light);
 		drawShadow(light);
+		drawAO(view);
 
-		QMatrix4x4 view;
-		getViewMatrix(view);
+		drawDeferred(view, light, lightDir);
 		drawDots(view);
 		drawLines(view);
-		//qDebug() << "Start drawing testchamber";
-		drawTestChamber(view, light, lightDir);
-		//qDebug() << "Start drawing testchamber attribute";
+
+
 		drawTestChamberSurfaceAttributes(view);
-		
 
 		// after your normal scene draw (default FBO bound)
 		const int W = int(width()*devicePixelRatioF());
@@ -656,10 +932,9 @@ namespace PMP
 		const float aspect = (float)width / (float)(height > 0 ? height : 1);
 		m_projection.setToIdentity();
 		// Source near clip plane value, might change later
-		m_projection.perspective(m_fov, aspect, 7.0f, 32767.0f);
-		const int W = int(width * devicePixelRatioF());
-		const int H = int(height * devicePixelRatioF());
-		resizeSelectionFBO(W, H);
+		m_projection.perspective(m_fov, aspect, m_near, m_far);
+		createGBufferFBO();
+		createHBAOFBO();
 	}
 
 	void Viewport::reloadChamberMeshAndSelection()
@@ -766,7 +1041,6 @@ namespace PMP
 		m_gridSizeLabel.move(width() - m_gridSizeLabel.width(), height() - m_gridSizeLabel.height());
 		m_gridSizeLabel.setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignBottom);
 		updateGridSizeLabel();
-
 		QOpenGLWidget::resizeEvent(event);
 	}
 

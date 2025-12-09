@@ -93,13 +93,15 @@ namespace PMP
 	class Viewport : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core
 	{
 	public:
-		Viewport(QWidget *parent) : 
-			QOpenGLWidget(parent), 
+		Viewport(QWidget* parent) :
+			QOpenGLWidget(parent),
 			QOpenGLFunctions_3_3_Core(),
 #ifndef NDEBUG
 			m_debugLogger(this),
 #endif
 			m_fov(90.0f),
+			m_near(7.0f),
+			m_far(32767.0f),
 			// FIXME: Position/angle handling here is reversed from what's expected - Kelsey
 			m_cameraTarget(0.0f, 0.0f, 0.0f),
 			m_cameraAngles(0.0f, 0.0f, 0.0f),
@@ -138,8 +140,10 @@ namespace PMP
 		
 	protected:
 		void createGraphicsObjects();
+		void createGBufferFBO();
 		void createShadowFBO();
 		void createSelectionFBO();
+		void createHBAOFBO();
 		void resizeSelectionFBO(GLsizei W, GLsizei H);
 		void loadShaders();
 		void paintGL() override;
@@ -160,7 +164,10 @@ namespace PMP
 		void drawDots(QMatrix4x4 view);
 		void drawLines(QMatrix4x4 view);
 		void drawTestChamber(QMatrix4x4 view, QMatrix4x4 light, QVector3D lightDir);
+		void drawGBuffer(QMatrix4x4 view);
+		void drawDeferred(QMatrix4x4 view, QMatrix4x4 light, QVector3D lightDir);
 		void drawShadow(QMatrix4x4 light);
+		void drawAO(QMatrix4x4 view);
 		void drawDragBox();
 
 		void setSelecting(bool on, const QRect& r = {}) { m_isDragging = on; m_rect = r; update(); }
@@ -180,6 +187,8 @@ namespace PMP
 		// and it doesn't really seem to be necessary (camera only rotates around yaw/pitch) - Kelsey
 		QVector3D m_cameraAngles;
 		float m_cameraDistance;
+		float m_near;
+		float m_far;
 		
 		//Mouse based control
 		bool m_isOrbiting;
@@ -245,6 +254,18 @@ namespace PMP
 		GLuint shadowFBO;
 		GLuint shadowMap;
 		const int SHADOW_RES = 2048;
+
+		QOpenGLShaderProgram m_deferredShader;
+		QOpenGLShaderProgram m_gBufferShader;
+		QOpenGLVertexArrayObject m_fullscreenVAO;
+		GLuint gBufferFBO;
+		GLuint gNormal;
+		GLuint gAlbedo;
+		GLuint gDepth;
+		
+		QOpenGLShaderProgram m_aoShader;
+		GLuint hbaoFBO;
+		GLuint aoTex;
 
 		QLabel m_gridSizeLabel;
 

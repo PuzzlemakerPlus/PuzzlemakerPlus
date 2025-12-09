@@ -210,10 +210,10 @@ namespace PMP
 		}
 	};
 
-	inline IntVector3D getWallFaceCenter(IntVector3D center, unsigned int size, IntVector3D normal)
+	inline IntVector3D getWallFaceCenter(IntVector3D center, unsigned int size, IntVector3D gNormal)
 	{
 		assert(size % 2 == 0 && "Node size must be even");
-		return center + (int)(size / 2) * -normal;
+		return center + (int)(size / 2) * -gNormal;
 	}
 
 	inline std::array<IntVector3D, 6> getNeighborNodeCenters(const unsigned int nodeSize, const IntVector3D nodeCenter)
