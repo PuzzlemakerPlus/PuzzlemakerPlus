@@ -113,7 +113,8 @@ void main()
     
     // Fetch G-buffer data
     vec3 albedo = texture(u_albedo, vUv).rgb;
-    vec3 N      = texture(u_normal, vUv).xyz;
+    vec3 N_view      = texture(u_normal, vUv).xyz;
+    vec3 N = normalize(mat3(u_invView) * N_view);
     float depth = texture(u_depth, vUv).r;
     vec3 ao = texture(u_ao, vUv).rgb;
 

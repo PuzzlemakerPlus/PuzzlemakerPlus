@@ -11,6 +11,7 @@ layout (location = 1) out vec4 gAlbedo;
 uniform sampler2D uAlbedoMap; // or a solid color if you don¡¯t use textures yet
 uniform int u_useTestChamberColor;
 uniform int u_debugView;
+uniform mat4 u_view;
 
 vec3 computeTestChamberColor() 
 {
@@ -27,9 +28,9 @@ vec3 computeTestChamberColor()
 
 void main()
 {
-    // normalize just in case
-    vec3 N = normalize(worldNormal);
-    gNormal = vec4(N, 1.0);
+    vec3 N_world = normalize(worldNormal);
+    vec3 N_view = normalize((u_view * vec4(N_world, 0.0)).xyz);
+    gNormal = vec4(N_view, 1.0);
 
     vec3 albedoColor;
     if(u_debugView == 1)
