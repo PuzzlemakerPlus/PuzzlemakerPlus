@@ -34,9 +34,20 @@
 namespace PMP
 {
 	struct DebugPoint;
-	const float cameraDistDefault = 512.0f;
-	const float cameraDistMin = 256.0f;
-	const float cameraDistMax = 14000.0f;
+
+	// These defaults roughly match PTI
+	const float cameraDistDefault = 5000.0f;
+	const float cameraDistMin = 1400.0f;
+	const float cameraDistMax = 25000.0f;
+
+	const float fovDefault = 15.0f;
+	const float nearClipDefault = 7.0f;
+	const float farClipDefault = 65536.0f;
+
+	const float fogStartDefault = 2000.0f;
+	const float fogEndDefault = 5000.0f;
+
+	const QVector3D camAngleDefault(-64.0f, 0.0f, 22.0f);
 
 	template <typename T>
 	bool allDifferent(std::initializer_list<T> values) {
@@ -101,12 +112,12 @@ namespace PMP
 #ifndef NDEBUG
 			m_debugLogger(this),
 #endif
-			m_fov(90.0f),
-			m_near(1.0f),
-			m_far(3000.0f),
+			m_fov(fovDefault),
+			m_near(nearClipDefault),
+			m_far(farClipDefault),
 			// FIXME: Position/angle handling here is reversed from what's expected - Kelsey
 			m_cameraTarget(0.0f, 0.0f, 0.0f),
-			m_cameraAngles(0.0f, 0.0f, 0.0f),
+			m_cameraAngles(camAngleDefault),
 			m_cameraDistance(cameraDistDefault),
 			m_isOrbiting(false),
 			m_isPanning(false),
@@ -214,8 +225,8 @@ namespace PMP
 
 		// Fog control
 		bool m_fog = false;
-		float m_fogStart = 250.0f;
-		float m_fogEnd = 5000.0f;
+		float m_fogStart = fogStartDefault;
+		float m_fogEnd = fogEndDefault;
 		QVector3D m_fogCol = {0.1,0.13,0.2};
 
 		// Shadow control
