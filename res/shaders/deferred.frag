@@ -149,7 +149,7 @@ void main()
     }
     float v_viewZ = viewZFromDepth(depth);
     float fog = clamp((v_viewZ - u_fogStart) / (u_fogEnd - u_fogStart), 0.0, 1.0);
-    vec3 finalColor = mix(color, u_fogColor, fog); // * ao;
-    //FragColor = vec4(finalColor, 1.0);
-    FragColor = vec4(ao,1.0f);
+    vec3 finalColor = mix(color, u_fogColor, fog) * ao; // * ao;
+    FragColor = vec4(finalColor, 1.0);
+    //FragColor = vec4(ao,1.0f);
 }

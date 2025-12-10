@@ -208,6 +208,6 @@ void main()
     acc /= float(KERNEL_SIZE); //normalize with valid inbound rays only
     acc = clamp(acc,0.0,cutOff) * (1 / cutOff); //cutoff
     //accFarGeom ? 
-    FragColor = vec4(vec3(acc),1.0f);
+    FragColor = vec4(vec3(acc * 0.2 + 0.8),1.0f);
 }
 
