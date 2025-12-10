@@ -10,9 +10,9 @@ It is currently very early in development and not ready for general use, but we 
 
 Install Qt (>=6.8.0)
 
-The official Qt installer requires an account, if you want to avoid this you can use [aqtinstall](https://github.com/miurahr/aqtinstall) instead
+The official Qt installer requires an account, if you want to avoid this you can use [aqtinstall](https://github.com/miurahr/aqtinstall) instead.
 
-Clone this repo and run CMake. CMake should automatically detect your Qt installation.
+Clone this repo and run CMake. CMake should automatically detect your Qt installation if it is at the default location. If it is not, you will need to manually set the CMake variable `Qt6_DIR` to the location of the install folder.
 
 ```
 git clone git@github.com:PuzzlemakerPlus/PuzzlemakerPlus.git
@@ -30,6 +30,6 @@ make
 
 Due to being intended as a modding tool for Portal 2, Puzzlemaker Plus has a somewhat complex licensing setup.
 
-This repository (PuzzlemakerPlus/PuzzlemakerPlus) is free and open source software under the MIT license. It does not contain any original or modified Portal 2 content, and all of the code has been written without referencing Valve-owned code. **Puzzlemaker Plus is not a reverse engineering project and does not intend to exactly replicate the implementation or functionality of the official Portal 2 in-game editor.**
+This repository (PuzzlemakerPlus/PuzzlemakerPlus) is free and open source software under the [MIT license](https://github.com/PuzzlemakerPlus/PuzzlemakerPlus/blob/main/LICENSE). It does not contain any original or modified Portal 2 content, and all of the code has been written without referencing Valve-owned code. **Puzzlemaker Plus is NOT a reverse engineering project and does not intend to replicate the exact implementation or behavior of the official Portal 2 in-game editor.**
 
 In order to run, the editor will eventually require "packages" containing game and editor assets, some of which are based on files included with Portal 2. These will be stored in a separate "content" repository which will not be available under an open source license due to the assets being partially owned by Valve. We will do our best to ensure that this content is still usable by other Portal 2 modders, and will be designing the application to allow hypothetically swapping out these assets in order to use it with another game.
