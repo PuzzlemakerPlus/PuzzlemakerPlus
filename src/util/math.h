@@ -319,4 +319,11 @@ namespace PMP
 
 		return M;
 	}
+	float randf();
+	// Uniform random sampling of rotation in quaternion
+	// Shoemake et al. 1992
+	QVector4D uniformQuaternion();
+
+	QVector3D quaternionToUnitVector(QVector4D quat);
+
 }

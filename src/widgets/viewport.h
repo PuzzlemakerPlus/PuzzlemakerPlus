@@ -29,6 +29,8 @@
 #include "../util/3d/ray.h"
 #include "../test_chamber.h"
 
+#define AOKERNEL_SIZE 64
+
 namespace PMP
 {
 	struct DebugPoint;
@@ -100,8 +102,8 @@ namespace PMP
 			m_debugLogger(this),
 #endif
 			m_fov(90.0f),
-			m_near(7.0f),
-			m_far(32767.0f),
+			m_near(1.0f),
+			m_far(3000.0f),
 			// FIXME: Position/angle handling here is reversed from what's expected - Kelsey
 			m_cameraTarget(0.0f, 0.0f, 0.0f),
 			m_cameraAngles(0.0f, 0.0f, 0.0f),
@@ -115,6 +117,8 @@ namespace PMP
 		{ 
 			connect(m_frameTimer, &QTimer::timeout, this, &Viewport::onFrameUpdate);
 			m_frameTimer->start(10); // ~100 FPS
+
+			generateAOKernel();
 		}
 
 		void loadDots(std::vector<DebugPoint> vertices);
@@ -173,6 +177,9 @@ namespace PMP
 		void setSelecting(bool on, const QRect& r = {}) { m_isDragging = on; m_rect = r; update(); }
 
 		void updateGridSizeLabel();
+
+		void generateAOKernel();
+		void pertubateAOKernel(float strength);
 
 	private:
 		TestChamber* m_testChamber = nullptr;
@@ -266,6 +273,7 @@ namespace PMP
 		QOpenGLShaderProgram m_aoShader;
 		GLuint hbaoFBO;
 		GLuint aoTex;
+		std::array<QVector3D, AOKERNEL_SIZE> m_aokernel;
 
 		QLabel m_gridSizeLabel;
 

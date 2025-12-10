@@ -63,6 +63,8 @@ qt_add_executable(PuzzlemakerPlus
 	src/util/debug.h
 	src/util/math.cpp
 	src/util/math.h
+	src/util/scoped_timer.h
+
 
 	# This is a test chamber. Four walls, ceiling and a floor
 	# ✅ Good enough for science! ❎ Not Aperture Science!

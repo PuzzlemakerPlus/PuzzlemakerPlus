@@ -1,7 +1,11 @@
 // math.h
 // Math related utility functions that aren't already covered by Qt or the standard library
 
+#include <random>
+#include <cmath>
 #include "math.h"
+
+constexpr double PI = 3.14159265358979323846;
 
 namespace PMP
 {
@@ -61,5 +65,35 @@ namespace PMP
 		       mins1.x() < mins2.x() || maxs1.x() > maxs2.x() ||
 		       mins1.y() < mins2.y() || maxs1.y() > maxs2.y() ||
 		       mins1.z() < mins2.z() || maxs1.z() > maxs2.z() );
+	}
+	//random float between 0 and 1
+	float randf()
+	{
+		std::mt19937 rng(std::random_device{}());
+		static std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+		return dist(rng);
+	}
+	QVector4D uniformQuaternion()
+	{
+		float u1 = randf();
+		float u2 = randf();
+		float u3 = randf();
+
+		return QVector4D(
+			sqrt(1 - u1)*std::sin(2 * PI * u2),
+			sqrt(1 - u1) * std::cos(2 * PI * u2),
+			sqrt(u1) * std::sin(2 * PI * u3),
+			sqrt(u1) * std::cos(2 * PI * u3));
+	}
+	QVector3D quaternionToUnitVector(QVector4D quat)
+	{
+		float x = quat.x();
+		float y = quat.y();
+		float z = quat.z();
+		float w = quat.w();
+		return QVector3D(
+			2*(x*z+w*y),
+			2*(y*z-w*z),
+			1-2*(x*x+y*y));
 	}
 }

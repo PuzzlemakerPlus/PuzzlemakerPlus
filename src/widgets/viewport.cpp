@@ -12,7 +12,7 @@
 #include <QWheelEvent>
 #include <qvectornd.h>
 #include <QOpenGLExtraFunctions>
-
+#include <random>
 
 
 #include "../undo.h"
@@ -405,6 +405,8 @@ namespace PMP
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		
+
 
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 			GL_TEXTURE_2D, aoTex, 0);
@@ -785,11 +787,12 @@ namespace PMP
 		glViewport(0, 0, int(width() * devicePixelRatioF()), int(height() * devicePixelRatioF()));
 	}
 
+	
+
 	void Viewport::drawAO(QMatrix4x4 view)
 	{
 		const int W = int(width() * devicePixelRatioF());
 		const int H = int(height() * devicePixelRatioF());
-
 		glBindFramebuffer(GL_FRAMEBUFFER, hbaoFBO);
 		glViewport(0, 0, W, H);
 		glDisable(GL_DEPTH_TEST);
@@ -807,6 +810,8 @@ namespace PMP
 		m_aoShader.setUniformValue("u_invProj", m_projection.inverted());
 		m_aoShader.setUniformValue("u_near", m_near);
 		m_aoShader.setUniformValue("u_far", m_far);
+		m_aoShader.setUniformValue("u_rand", 50.0f);
+		m_aoShader.setUniformValueArray("u_kernel", m_aokernel.data(),(GLsizei)m_aokernel.size());
 
 		// G-buffer inputs
 		glActiveTexture(GL_TEXTURE0);
@@ -1050,5 +1055,25 @@ namespace PMP
 			return;
 
 		m_gridSizeLabel.setText(QString("Grid Size: ") + QString::number(m_testChamber->getGridSize()));
+	}
+	void Viewport::generateAOKernel()
+	{
+		for (int i = 0; i < 64; ++i)
+		{
+			QVector3D sample = quaternionToUnitVector(uniformQuaternion());
+			sample = sample.normalized();
+			float var = 0.005f;
+			float scale = (var * randf() + (1- var)); // bias closer to origin
+			sample *= scale;
+			m_aokernel[i] = sample;
+		}
+	}
+	void Viewport::pertubateAOKernel(float strength)
+	{
+		for (int i = 0; i < 64; ++i)
+		{
+			QVector3D pertub(randf(), randf(), randf());
+			m_aokernel[i] = (m_aokernel[i] + pertub * strength).normalized();
+		}
 	}
 }
