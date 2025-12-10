@@ -242,7 +242,7 @@ namespace PMP {
 	void Viewport::wheelEvent(QWheelEvent* event)
 	{
 		float prev_dist = m_cameraDistance;
-		m_cameraDistance -= event->angleDelta().y() / 2.0f; // todo make this customizable
+		m_cameraDistance -= event->angleDelta().y() * 6.0f; // roughly matches PTI - make this customizable
 
 		if (m_cameraDistance < cameraDistMin) m_cameraDistance = cameraDistMin;
 		else if (m_cameraDistance > cameraDistMax) m_cameraDistance = cameraDistMax;

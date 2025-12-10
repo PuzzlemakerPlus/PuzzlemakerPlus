@@ -672,9 +672,17 @@ namespace PMP
 		m_wallShader.setUniformValue("u_proj", m_projection);
 		m_wallShader.setUniformValue("u_fogColor", m_fogCol);
 		m_wallShader.setUniformValue("u_debugView", static_cast<GLint>(m_debugSurface));
-		if(m_fog) m_wallShader.setUniformValue("u_fogStart", m_fogStart);
-		else m_wallShader.setUniformValue("u_fogStart", m_fogEnd);
-		m_wallShader.setUniformValue("u_fogEnd", m_fogEnd);
+		if (m_fog) 
+		{
+			m_wallShader.setUniformValue("u_fogStart", m_fogStart);
+			m_wallShader.setUniformValue("u_fogEnd", m_fogEnd);
+		}
+		else 
+		{
+			// set fog beyond the far clip plane
+			m_wallShader.setUniformValue("u_fogStart", m_far + 1.0f);
+			m_wallShader.setUniformValue("u_fogEnd", m_far + 1.0f);
+		}
 		m_wallShader.setUniformValue("u_lightVP", light);
 		m_wallShader.setUniformValue("u_lightDir", lightDir);
 		m_wallShader.setUniformValue("u_drawShadow", static_cast<GLint>(m_drawShadow));
@@ -741,9 +749,18 @@ namespace PMP
 
 		//fog
 		m_deferredShader.setUniformValue("u_fogColor", m_fogCol);
-		if (m_fog) m_deferredShader.setUniformValue("u_fogStart", m_fogStart);
-		else m_deferredShader.setUniformValue("u_fogStart", m_fogEnd);
-		m_deferredShader.setUniformValue("u_fogEnd", m_fogEnd);
+		if (m_fog) 
+		{
+			// PTI seems to keep the "location" of the fog consistent regardless of zoom level
+			m_deferredShader.setUniformValue("u_fogStart", m_fogStart + m_cameraDistance);
+			m_deferredShader.setUniformValue("u_fogEnd", m_fogEnd + m_cameraDistance);
+		}
+		else 
+		{
+			// set fog beyond the far clip plane
+			m_deferredShader.setUniformValue("u_fogStart", m_far + 1.0f);
+			m_deferredShader.setUniformValue("u_fogEnd", m_far + 2.0f);
+		}
 
 		//textures
 		glActiveTexture(GL_TEXTURE0);
@@ -1001,6 +1018,7 @@ namespace PMP
 			camAngle.rotate(QQuaternion::fromEulerAngles(m_cameraAngles));
 			camAngle = camAngle.transposed(); // Reverse the transformation
 
+			// TODO: increase pan speed the more zooned out you are
 			QVector3D moveAmount(delta.x(), -delta.y(), 0.0f);
 			moveAmount = camAngle * moveAmount * 1.4f;
 
