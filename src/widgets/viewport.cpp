@@ -808,6 +808,10 @@ namespace PMP
 
 	void Viewport::drawAO(QMatrix4x4 view)
 	{
+		//AO pipeline
+		// kernel is a uniformly random rotation turned into unit direction vectors
+		// for each fragment, we randomly rotate the kernel 
+		// this means we dont have to regenerate kernel every frame
 		const int W = int(width() * devicePixelRatioF());
 		const int H = int(height() * devicePixelRatioF());
 		glBindFramebuffer(GL_FRAMEBUFFER, hbaoFBO);
@@ -827,17 +831,13 @@ namespace PMP
 		m_aoShader.setUniformValue("u_invProj", m_projection.inverted());
 		m_aoShader.setUniformValue("u_near", m_near);
 		m_aoShader.setUniformValue("u_far", m_far);
-		m_aoShader.setUniformValue("u_rand", 50.0f);
+		m_aoShader.setUniformValue("u_range", 50.0f);
 		m_aoShader.setUniformValueArray("u_kernel", m_aokernel.data(),(GLsizei)m_aokernel.size());
 
 		// G-buffer inputs
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, gNormal);
-		m_aoShader.setUniformValue("u_normal", 0);
-
-		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, gDepth);
-		m_aoShader.setUniformValue("u_depth", 1);
+		m_aoShader.setUniformValue("u_depth", 0);
 
 		m_fullscreenVAO.bind();
 		glDrawArrays(GL_TRIANGLES, 0, 3);

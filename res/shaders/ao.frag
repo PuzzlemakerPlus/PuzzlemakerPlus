@@ -3,30 +3,40 @@
 const int KERNEL_SIZE = 64;
 
 uniform float u_range = 50.0f;
+
 uniform float u_near;
 uniform float u_far;
 uniform mat4 u_proj;
 uniform mat4 u_view;
 uniform mat4 u_invProj;
 uniform mat4 u_invView;
-uniform sampler2D u_normal;
 uniform sampler2D u_depth;
 uniform vec3 u_kernel[KERNEL_SIZE];
-
-
 
 in vec2 vUv;
 out vec4 FragColor;
 
-float linearizeDepth(float depth)
+uint hashU(uint x)
 {
-    // depth: [0,1] -> NDC z: [-1,1]
-    float z = depth * 2.0 - 1.0;
-
-    float n = u_near;
-    float f = u_far;
-
-    return (2.0 * n * f) / (f + n - z * (f - n));
+    x ^= x >> 16;
+    x *= 0x7feb352dU;
+    x ^= x >> 15;
+    x *= 0x846ca68bU;
+    x ^= x >> 16;
+    return x;
+}
+float uf(uint x) {
+    return float(x) * (1.0 / 4294967296.0);
+}
+uint seed(vec2 uv)
+{
+    return floatBitsToUint(uv.x * 4096.0) ^ (floatBitsToUint(uv.y * 4096.0)*1664525u) ^ 1013904223u;
+}
+vec2 rand2(uint seed)
+{
+    uint r1 = hashU(seed ^ 0x68bc21ebu);
+    uint r2 = hashU(seed ^ 0x02e5be93u);
+    return normalize(vec2(uf(r1), uf(r2)));
 }
 vec3 uvToWorld(vec2 uv, float depth)
 {
@@ -57,69 +67,6 @@ void worldToUvDepth(vec3 worldPos, out vec2 uv, out float depth)
     // NDC z ¡æ depth buffer
     depth = (ndc.z + 1.0) * 0.5;    // [0, 1]
 }
-
-mat3 makeTBN(vec3 N)
-{
-    vec3 up = abs(N.z) < 0.999 ? vec3(0,0,1) : vec3(1,0,0);
-    vec3 T = normalize(cross(up, N));
-    vec3 B = cross(N, T);
-    return mat3(T, B, N);
-}
-
-void makeTB(vec3 N, out vec3 T, out vec3 B)
-{
-    vec3 up = abs(N.z) < 0.999 ? vec3(0,0,1) : vec3(1,0,0);
-    T = normalize(cross(up, N));
-    B = cross(N, T);
-}
-
-vec3 jitterHemisphere(vec3 v, vec2 r, float maxAngle)
-{
-    // Build TBN using the original direction
-    mat3 TBN = makeTBN(v);
-
-    float phi = 2.0 * 3.14159265 * r.x;
-    float cosTheta = cos(maxAngle * r.y);
-    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
-
-    vec3 local = vec3(cos(phi) * sinTheta,
-                      sin(phi) * sinTheta,
-                      cosTheta);
-
-    return normalize(TBN * local);
-}
-
-uint hashU(uint x)
-{
-    x ^= x >> 16;
-    x *= 0x7feb352dU;
-    x ^= x >> 15;
-    x *= 0x846ca68bU;
-    x ^= x >> 16;
-    return x;
-}
-float uf(uint x) {
-    return float(x) * (1.0 / 4294967296.0);
-}
-
-uint seed(vec2 uv)
-{
-    return floatBitsToUint(uv.x * 4096.0) ^ (floatBitsToUint(uv.y * 4096.0)*1664525u) ^ 1013904223u;
-}
-vec2 rand2(uint seed)
-{
-    uint r1 = hashU(seed ^ 0x68bc21ebu);
-    uint r2 = hashU(seed ^ 0x02e5be93u);
-    return normalize(vec2(uf(r1), uf(r2)));
-}
-vec3 rand3(uint seed)
-{
-    uint r0 = hashU(seed);
-    uint r1 = hashU(seed ^ 0x68bc21ebu);
-    uint r2 = hashU(seed ^ 0x02e5be93u);
-
-    return normalize(vec3(uf(r0), uf(r1), uf(r2)));
-}
 vec4 randomQuat(uint seed)
 {
     float u1 = fract(sin(dot(rand2(seed), vec2(12.9898,78.233))) * 43758.5453);
@@ -129,7 +76,7 @@ vec4 randomQuat(uint seed)
     float a = sqrt(1.0 - u1);
     float b = sqrt(u1);
 
-    float theta1 = 6.2831853 * u2; // 2¥ð
+    float theta1 = 6.2831853 * u2; // 2pi
     float theta2 = 6.2831853 * u3;
 
     return vec4(
@@ -139,39 +86,34 @@ vec4 randomQuat(uint seed)
         b * cos(theta2)    // w
     );
 }
-
 vec3 rotateByQuat(vec3 v, vec4 q)
 {
     vec3 t = 2.0 * cross(q.xyz, v);
     return v + q.w * t + cross(q.xyz, t);
 }
-float sigmoid(float strength, float x, float center)
-{
-    return 1/(1+exp(-strength * (x - center)));
-}
 void main()
 {   
-    
     float depth   = texture(u_depth, vUv).r;
-    float d = linearizeDepth(depth);
-    vec3 pos = uvToWorld(vUv,depth); // we now have view space position
-
-    vec3 normal = texture(u_normal, vUv).xyz;
+    vec3 pos = uvToWorld(vUv,depth);
 
     float acc = 0;
-    float accFarGeom = 0;
     int hit = 0;
-    float range = 100;
+    float range = u_range;
     float ratio = 0.05f; // keep this low. remember that the maximum range is (ratio+1)**KERNEL_SIZE
-    float strength = 1.0f; //probably good as is
     float cutOff = 0.4f;
+
+    // sample vector is scaled depending on whether the previous sample was a hit or not
+    // (hit is when the sample position depth is closer to the camera than the gt depth
+    // if previous not hit: reduce range
+    // if previous hit: increase range
+    // this has the effect of smoothing out the occlusion
+
     // inverse = 1 - ratio
     // if hit == 1:
     //      range *= 1+ratio * (hit * 2 -1) (multiply by 1.02)
     // else if hit == 0:
     //      range *= 1+ratio * (hit * 2 -1) (multiply by 0.98)
-    //if previous not hit: reduce range
-    //if previous hit: increase range
+    
     vec4 q = randomQuat(seed(vUv));
     int inbound = 0;
     for(int i=0;i<KERNEL_SIZE;i++)
@@ -185,29 +127,22 @@ void main()
         worldToUvDepth(samplePos, sampleuv, sampleDepth);
         
         float fragPos = texture(u_depth, sampleuv).r;
-        vec3 sampleNormal = texture(u_normal, sampleuv).xyz;
-        float d2 = linearizeDepth(fragPos);
-        //fragPos - sampleDepth is big if the neighboring geometry is much closer to the camera
-        // so if fragPos-sampleDepth is big then you actually do want to add some white to this fragment
-        //float rangeCheck = smoothstep(0.0, 1.0, 100 * abs(fragPos - sampleDepth)); 
-        
         if(fragPos > sampleDepth)
         {
             acc += 1;
             hit = 1;
         } else
         {
+            // this acts as a range check. 
+            // because we are dealing with special geometry, we want to scale by how close the geometry is in terms of uv
+            // this means that if geometries are far while being right next to each other in terms of screen space
+            // we want to ignore the occlusion
+            acc +=  float(KERNEL_SIZE) * max(depth - fragPos, 0) / length(sampleuv - vUv);
             hit = 0;
         }
-        //acc += max(d - d2, 0) * 0.01f;
-        if(fragPos < sampleDepth) accFarGeom += (1 - smoothstep(0.0, 1.0, range / max(d - d2, 0))) * clamp(1 - dot(normal, sampleNormal), 0,1); 
-        
-        
     }
-    //accFarGeom = sigmoid(10,accFarGeom / float(KERNEL_SIZE), 0.5);
     acc /= float(KERNEL_SIZE); //normalize with valid inbound rays only
     acc = clamp(acc,0.0,cutOff) * (1 / cutOff); //cutoff
-    //accFarGeom ? 
-    FragColor = vec4(vec3(acc * 0.2 + 0.8),1.0f);
+    FragColor = vec4(vec3(acc),1.0f);
 }
 
