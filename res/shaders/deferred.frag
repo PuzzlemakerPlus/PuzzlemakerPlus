@@ -88,7 +88,7 @@ float computeShadowFactorView(vec3 viewPos, vec3 normal)
         {
             vec2 offset = vec2(x, y) * texelSize;
             float closestDepth = texture(u_shadowMap, projCoords.xy + offset).r;
-            shadow += (viewZFromDepth(currentDepth - bias) > viewZFromDepth(closestDepth)) ? 0.0 : 1.0;
+            shadow += ((currentDepth - bias) > (closestDepth)) ? 0.0 : 1.0;
         }
     }
     shadow /= 9.0;

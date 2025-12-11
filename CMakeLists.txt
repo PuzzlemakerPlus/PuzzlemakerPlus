@@ -49,6 +49,7 @@ qt_add_executable(PuzzlemakerPlus
 	src/widgets/palette.cpp
 	src/widgets/palette.h
 	src/widgets/viewport_control.cpp
+	src/widgets/viewport_draw.cpp
 	src/widgets/viewport.cpp
 	src/widgets/viewport.h
 	src/widgets/PaletteElement.cpp

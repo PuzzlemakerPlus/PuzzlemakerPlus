@@ -193,7 +193,6 @@ namespace PMP
 		void updateGridSizeLabel();
 
 		void generateAOKernel();
-		void pertubateAOKernel(float strength);
 
 	private:
 		TestChamber* m_testChamber = nullptr;

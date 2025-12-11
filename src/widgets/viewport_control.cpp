@@ -9,7 +9,69 @@
 #include <iostream>
 
 namespace PMP {
+	// This function gets called every 16ms
+	void Viewport::onFrameUpdate()
+	{
+		bool updateGraphics = false;
+		QVector2D currentMouseGlobal = QVector2D(this->mapFromGlobal(QCursor::pos()));
+		QVector2D delta = currentMouseGlobal - m_lastMousePos;
+		if (m_isOrbiting)
+		{
+			QVector3D deltaOrbitAngle = 0.2f * QVector3D(delta.y() / 2.0f, 0, delta.x() / 2.0f); // todo make this customizable
+			m_cameraAngles += deltaOrbitAngle;
 
+			// Don't allow flipping the camera
+			// 0 is straight down and -180 is straight up due to the way we handle the view matrix transform right now
+			if (m_cameraAngles.x() > 0.0f)
+				m_cameraAngles.setX(0.0f);
+			else if (m_cameraAngles.x() < -180.0f)
+				m_cameraAngles.setX(-180.0f);
+
+			m_orbitVelocity = deltaOrbitAngle;
+			m_shouldOrbitInertia = true;
+			updateGraphics = true;
+		}
+
+		if (m_isPanning)
+		{
+			QMatrix4x4 camAngle;
+			camAngle.rotate(QQuaternion::fromEulerAngles(m_cameraAngles));
+			camAngle = camAngle.transposed(); // Reverse the transformation
+
+			// TODO: increase pan speed the more zooned out you are
+			QVector3D moveAmount(delta.x(), -delta.y(), 0.0f);
+			moveAmount = camAngle * moveAmount * 1.4f;
+
+			m_cameraTarget += moveAmount;
+			updateGraphics = true;
+		}
+
+		m_lastMousePos = currentMouseGlobal;
+
+		if (m_shouldOrbitInertia && !m_isOrbiting) {
+			m_cameraAngles += m_orbitVelocity;
+
+			// Clamp again
+			if (m_cameraAngles.x() > 0.0f)
+				m_cameraAngles.setX(0.0f);
+			else if (m_cameraAngles.x() < -180.0f)
+				m_cameraAngles.setX(-180.0f);
+
+			// Dampen inertia
+			m_orbitVelocity *= 0.9f;
+
+			// Stop when very slow
+			if (m_orbitVelocity.lengthSquared() < 0.0001f) {
+				m_orbitVelocity = QVector3D(0, 0, 0);
+				m_shouldOrbitInertia = false;
+			}
+			updateGraphics = true;
+		}
+		if (updateGraphics)
+		{
+			update();//Draws the frame again because the view changed
+		}
+	}
 	void Viewport::keyPressEvent(QKeyEvent* event)
 	{
 		Q_ASSERT(m_selector);
