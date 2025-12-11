@@ -2,15 +2,15 @@
 
 const int KERNEL_SIZE = 64;
 
-uniform float u_range = 50.0f;
+uniform float u_range = 2.0f;
+uniform float u_variableRange = 0.05f;  // keep this low. remember that the maximum range is (ratio+1)**KERNEL_SIZE
 
-uniform float u_near;
-uniform float u_far;
 uniform mat4 u_proj;
 uniform mat4 u_view;
 uniform mat4 u_invProj;
 uniform mat4 u_invView;
 uniform sampler2D u_depth;
+uniform sampler2D u_normal; //used to test whether there is an object here. 4th float is cleared to 0 if there is none
 uniform vec3 u_kernel[KERNEL_SIZE];
 
 in vec2 vUv;
@@ -91,58 +91,58 @@ vec3 rotateByQuat(vec3 v, vec4 q)
     vec3 t = 2.0 * cross(q.xyz, v);
     return v + q.w * t + cross(q.xyz, t);
 }
+float sigmoid(float x, float k, float offset)
+{
+    return 1.0 / (1.0 + exp(-k * (x - offset)));
+}
+float linearViewZ(float depth, float near, float far)
+{
+    float ndc = depth * 2.0 - 1.0;
+    return (2.0 * near * far) / (far + near - ndc * (far - near));
+}
+
 void main()
 {   
+    vec4 normal = texture(u_normal, vUv);
+
+    if(normal.w < 0.5f)
+    {
+        FragColor = vec4(1.0f, 1.0f, 1.0f, 0.0f);
+        return;
+    }
     float depth   = texture(u_depth, vUv).r;
     vec3 pos = uvToWorld(vUv,depth);
 
-    float acc = 0;
     int hit = 0;
     float range = u_range;
-    float ratio = 0.05f; // keep this low. remember that the maximum range is (ratio+1)**KERNEL_SIZE
-    float cutOff = 0.4f;
-
-    // sample vector is scaled depending on whether the previous sample was a hit or not
-    // (hit is when the sample position depth is closer to the camera than the gt depth
-    // if previous not hit: reduce range
-    // if previous hit: increase range
-    // this has the effect of smoothing out the occlusion
-
-    // inverse = 1 - ratio
-    // if hit == 1:
-    //      range *= 1+ratio * (hit * 2 -1) (multiply by 1.02)
-    // else if hit == 0:
-    //      range *= 1+ratio * (hit * 2 -1) (multiply by 0.98)
+    float ratio = u_variableRange;
     
     vec4 q = randomQuat(seed(vUv));
-    int inbound = 0;
+
+    float occlusion = 0;
+    int count = 0;
     for(int i=0;i<KERNEL_SIZE;i++)
     {
-        range *= 1 + ratio * (hit * 2 -1);
-        vec3 offset = rotateByQuat(u_kernel[i], q);;
+        range *= 1 + ratio;
+        vec3 offset = rotateByQuat(u_kernel[i], q);
+        if(dot(normalize(offset), normalize(normal.xyz)) < 0) continue; //only check with hemisphere
+        count++;
         vec3 samplePos = pos + offset * range;
 
-        vec2 sampleuv;
+        vec2 sampleUV;
         float sampleDepth;
-        worldToUvDepth(samplePos, sampleuv, sampleDepth);
-        
-        float fragPos = texture(u_depth, sampleuv).r;
-        if(fragPos > sampleDepth)
+        worldToUvDepth(samplePos, sampleUV, sampleDepth);
+        float fragPos = texture(u_depth, sampleUV).r;
+        float linSampleZ = linearViewZ(sampleDepth, 1, 1000);
+        float linFragZ   = linearViewZ(fragPos, 1, 1000);
+        float depthDiff = linSampleZ - linFragZ;
+        if(0.0 < depthDiff && depthDiff < 1)
         {
-            acc += 1;
-            hit = 1;
-        } else
-        {
-            // this acts as a range check. 
-            // because we are dealing with special geometry, we want to scale by how close the geometry is in terms of uv
-            // this means that if geometries are far while being right next to each other in terms of screen space
-            // we want to ignore the occlusion
-            acc +=  float(KERNEL_SIZE) * max(depth - fragPos, 0) / length(sampleuv - vUv);
-            hit = 0;
+            occlusion += 1;
         }
     }
-    acc /= float(KERNEL_SIZE); //normalize with valid inbound rays only
-    acc = clamp(acc,0.0,cutOff) * (1 / cutOff); //cutoff
-    FragColor = vec4(vec3(acc),1.0f);
+    occlusion = 1 - occlusion / float(count);
+    occlusion = clamp(occlusion * 2 - 1, 0,1);
+    occlusion = sigmoid(occlusion, 10, 0.7);
+    FragColor = vec4(vec3(occlusion),1.0f);
 }
-

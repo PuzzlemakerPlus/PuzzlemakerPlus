@@ -25,6 +25,14 @@
 
 namespace PMP
 {
+	void Viewport::getTextureSize(GLuint tex, int& width, int& height)
+	{
+		glBindTexture(GL_TEXTURE_2D, tex);
+
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+	}
+
 	void Viewport::initializeGL()
 	{
 		initializeOpenGLFunctions();
@@ -137,6 +145,16 @@ namespace PMP
 #else
 		m_aoShader.link();
 #endif
+		m_blurShader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/blur.vert");
+		m_blurShader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/blur.frag");
+#ifndef NDEBUG
+		if (!m_blurShader.link()) {
+			qDebug() << "Shader failed to link:" << m_blurShader.log();
+			return;
+		}
+#else
+		m_blurShader.link();
+#endif
 	}
 
 	void Viewport::createGraphicsObjects()
@@ -227,10 +245,15 @@ namespace PMP
 		// No VBO needed, we can generate the triangle in the vertex shader
 		m_fullscreenVAO.release();
 
-		createGBufferFBO();
+		const int W = int(width() * devicePixelRatioF());
+		const int H = int(height() * devicePixelRatioF());
+		createGBufferFBO(W, H);
+		createSSAOFBO(W, H);
+		createBlurFBO(W, H);
 		createSelectionFBO();
 		createShadowFBO();
-		createHBAOFBO();
+		
+
 		const std::string_view verStr = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 		const std::string_view vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
 		const std::string_view renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
@@ -239,46 +262,75 @@ namespace PMP
 		qDebug() << "Vendor: " << vendor;
 	}
 
-	void Viewport::createGBufferFBO()
+	void Viewport::createBlurFBO(const int W, const int H)
 	{
-		const int W = int(width() * devicePixelRatioF());
-		const int H = int(height() * devicePixelRatioF());
-		//delete old
-		if (gBufferFBO) glDeleteFramebuffers(1, &gBufferFBO);
-		if (gNormal) glDeleteTextures(1, &gNormal);
-		if (gAlbedo) glDeleteTextures(1, &gAlbedo);
-		if (gDepth) glDeleteTextures(1, &gDepth);
-		// start FBO
-		glGenFramebuffers(1, &gBufferFBO);
-		glBindFramebuffer(GL_FRAMEBUFFER, gBufferFBO);
+		if (m_blurFBO) glDeleteFramebuffers(1, &m_blurFBO);
+		if (m_blurTex) glDeleteTextures(1, &m_blurTex);
 
-		// normal
-		glGenTextures(1, &gNormal);
-		glBindTexture(GL_TEXTURE_2D, gNormal);
+		glGenFramebuffers(1, &m_blurFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, m_blurFBO);
+
+		glGenTextures(1, &m_blurTex);
+		glBindTexture(GL_TEXTURE_2D, m_blurTex);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, W, H, 0, GL_RGBA, GL_FLOAT, nullptr);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gNormal, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_blurTex, 0);
+
+		// set normal and albedo buffers as draw buffers
+		GLenum attachments = GL_COLOR_ATTACHMENT0;
+		glDrawBuffers(1, &attachments);
+
+		// Completeness check
+		const GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (status != GL_FRAMEBUFFER_COMPLETE) {
+			qWarning() << "Selection FBO incomplete, status =" << Qt::hex << status;
+		}
+
+		// Back to Qt's onscreen FBO
+		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
+	}
+
+	void Viewport::createGBufferFBO(const int W, const int H)
+	{
+		//delete old
+		if (m_gBufferFBO) glDeleteFramebuffers(1, &m_gBufferFBO);
+		if (m_gNormal) glDeleteTextures(1, &m_gNormal);
+		if (m_gAlbedo) glDeleteTextures(1, &m_gAlbedo);
+		if (m_gDepth) glDeleteTextures(1, &m_gDepth);
+		// start FBO
+		glGenFramebuffers(1, &m_gBufferFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferFBO);
+
+		// normal
+		glGenTextures(1, &m_gNormal);
+		glBindTexture(GL_TEXTURE_2D, m_gNormal);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, W, H, 0, GL_RGBA, GL_FLOAT, nullptr);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_gNormal, 0);
 		
 		// albedo
-		glGenTextures(1, &gAlbedo);
-		glBindTexture(GL_TEXTURE_2D, gAlbedo);
+		glGenTextures(1, &m_gAlbedo);
+		glBindTexture(GL_TEXTURE_2D, m_gAlbedo);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, W, H, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gAlbedo, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, m_gAlbedo, 0);
 
 		// depth
-		glGenTextures(1, &gDepth);
-		glBindTexture(GL_TEXTURE_2D, gDepth);
+		glGenTextures(1, &m_gDepth);
+		glBindTexture(GL_TEXTURE_2D, m_gDepth);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, W, H, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, gDepth, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_gDepth, 0);
 		
 		// set normal and albedo buffers as draw buffers
 		GLenum attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
@@ -291,11 +343,11 @@ namespace PMP
 	}
 
 	void Viewport::createShadowFBO() {
-		glGenFramebuffers(1, &shadowFBO);
-		if (shadowMap) glDeleteTextures(1, &shadowMap);
-		glGenTextures(1, &shadowMap);
+		glGenFramebuffers(1, &m_shadowFBO);
+		if (m_shadowMap) glDeleteTextures(1, &m_shadowMap);
+		glGenTextures(1, &m_shadowMap);
 
-		glBindTexture(GL_TEXTURE_2D, shadowMap);
+		glBindTexture(GL_TEXTURE_2D, m_shadowMap);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
 			SHADOW_RES, SHADOW_RES, 0,
 			GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
@@ -309,9 +361,9 @@ namespace PMP
 		float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
-		glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, m_shadowFBO);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-			GL_TEXTURE_2D, shadowMap, 0);
+			GL_TEXTURE_2D, m_shadowMap, 0);
 		glDrawBuffer(GL_NONE);
 		glReadBuffer(GL_NONE);
 
@@ -324,20 +376,20 @@ namespace PMP
 		
 		const GLsizei baseW = GLsizei(width()  * devicePixelRatioF());
 		const GLsizei baseH = GLsizei(height() * devicePixelRatioF());
-		const int W = std::max(1, int(std::floor(baseW * selectionTextureScale)));
-		const int H = std::max(1, int(std::floor(baseH * selectionTextureScale)));
+		const int W = std::max(1, int(std::floor(baseW * m_selectionTextureScale)));
+		const int H = std::max(1, int(std::floor(baseH * m_selectionTextureScale)));
 		
 		// delete old if any
-		if (selectionDep) glDeleteRenderbuffers(1, &selectionDep);
-		if (selectionTex) glDeleteTextures(1, &selectionTex);
-		if (selectionFBO) glDeleteFramebuffers(1, &selectionFBO);
+		if (m_selectionDep) glDeleteRenderbuffers(1, &m_selectionDep);
+		if (m_selectionTex) glDeleteTextures(1, &m_selectionTex);
+		if (m_selectionFBO) glDeleteFramebuffers(1, &m_selectionFBO);
 
-		glGenFramebuffers(1, &selectionFBO);
-		glBindFramebuffer(GL_FRAMEBUFFER, selectionFBO);
+		glGenFramebuffers(1, &m_selectionFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, m_selectionFBO);
 
 		// Integer color texture
-		glGenTextures(1, &selectionTex);
-		glBindTexture(GL_TEXTURE_2D, selectionTex);
+		glGenTextures(1, &m_selectionTex);
+		glBindTexture(GL_TEXTURE_2D, m_selectionTex);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -351,14 +403,14 @@ namespace PMP
 					GL_UNSIGNED_INT,      // integer type
 					nullptr);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-							GL_TEXTURE_2D, selectionTex, 0);
+							GL_TEXTURE_2D, m_selectionTex, 0);
 
 		// Depth renderbuffer
-		glGenRenderbuffers(1, &selectionDep);
-		glBindRenderbuffer(GL_RENDERBUFFER, selectionDep);
+		glGenRenderbuffers(1, &m_selectionDep);
+		glBindRenderbuffer(GL_RENDERBUFFER, m_selectionDep);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, W, H);
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-								GL_RENDERBUFFER, selectionDep);
+								GL_RENDERBUFFER, m_selectionDep);
 
 		// Draw buffer list
 		const GLenum db = GL_COLOR_ATTACHMENT0;
@@ -374,32 +426,29 @@ namespace PMP
 		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
 	}
 
-	void Viewport::createHBAOFBO()
+	void Viewport::createSSAOFBO(const int W, const int H)
 	{
-		const int W = int(width() * devicePixelRatioF());
-		const int H = int(height() * devicePixelRatioF());
-
 		// Guard: if the widget is 0x0 (e.g. not shown yet), skip
 		if (W == 0 || H == 0) {
 			qDebug() << "Skipping AO FBO creation, size is 0x0";
 			return;
 		}
 
-		if (hbaoFBO) {
-			glDeleteFramebuffers(1, &hbaoFBO);
-			hbaoFBO = 0;
+		if (m_ssaoFBO) {
+			glDeleteFramebuffers(1, &m_ssaoFBO);
+			m_ssaoFBO = 0;
 		}
-		if (aoTex) {
-			glDeleteTextures(1, &aoTex);
-			aoTex = 0;
+		if (m_aoTex) {
+			glDeleteTextures(1, &m_aoTex);
+			m_aoTex = 0;
 		}
 
-		glGenFramebuffers(1, &hbaoFBO);
-		glBindFramebuffer(GL_FRAMEBUFFER, hbaoFBO);
+		glGenFramebuffers(1, &m_ssaoFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, m_ssaoFBO);
 
 		// Single-channel AO texture
-		glGenTextures(1, &aoTex);
-		glBindTexture(GL_TEXTURE_2D, aoTex);
+		glGenTextures(1, &m_aoTex);
+		glBindTexture(GL_TEXTURE_2D, m_aoTex);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, W, H, 0, GL_RGBA, GL_FLOAT, nullptr);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -409,7 +458,7 @@ namespace PMP
 
 
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-			GL_TEXTURE_2D, aoTex, 0);
+			GL_TEXTURE_2D, m_aoTex, 0);
 
 		GLenum drawBuf = GL_COLOR_ATTACHMENT0;
 		glDrawBuffers(1, &drawBuf);
@@ -426,20 +475,20 @@ namespace PMP
 	void Viewport::resizeSelectionFBO(GLsizei baseW, GLsizei baseH)
 	{
 		if (baseW <= 0 || baseH <= 0) return; // guard against minimized window
-		const int W = std::max(1, int(std::floor(baseW * selectionTextureScale)));
-		const int H = std::max(1, int(std::floor(baseH * selectionTextureScale)));
+		const int W = std::max(1, int(std::floor(baseW * m_selectionTextureScale)));
+		const int H = std::max(1, int(std::floor(baseH * m_selectionTextureScale)));
 
 		// If you haven’t created the FBO yet, make it once.
-		if (!selectionFBO) {
+		if (!m_selectionFBO) {
 			createSelectionFBO();     // your existing function
 			return;                   // createSelectionFBO already sized to current widget
 		}
 
 		// Reallocate attachments to the new size
-		glBindFramebuffer(GL_FRAMEBUFFER, selectionFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, m_selectionFBO);
 
 		// Color (integer) texture
-		glBindTexture(GL_TEXTURE_2D, selectionTex);
+		glBindTexture(GL_TEXTURE_2D, m_selectionTex);
 		glTexImage2D(GL_TEXTURE_2D, 0,
 					GL_RGBA32UI,           // integer internal format
 					W, H, 0,
@@ -448,7 +497,7 @@ namespace PMP
 					nullptr);
 
 		// Depth renderbuffer
-		glBindRenderbuffer(GL_RENDERBUFFER, selectionDep);
+		glBindRenderbuffer(GL_RENDERBUFFER, m_selectionDep);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, W, H);
 
 		// Make sure draw buffers are still set
@@ -596,20 +645,26 @@ namespace PMP
 		// Choose a reasonable AABB for your level region
 		// (replace with your real level min/max bounds)
 		//------------------------------------------------------------
-		QVector3D minP(-512, -512, -512);
-		QVector3D maxP(512, 512, 512);
 
+		int rn = 100;
+		if (m_testChamber)
+		{
+			rn = m_testChamber->getRootNodeSizeInt();
+		}
+		QVector3D minP(-rn/2, -rn / 2, -rn / 2);
+		QVector3D maxP(rn / 2, rn / 2, rn / 2);
+		
 		QVector3D center = 0.5f * (minP + maxP);
 		QVector3D extent = 0.5f * (maxP - minP);
 
 		float orthoSize = qMax(extent.x(), extent.z()) * 1.3f;   // padding
-		float gDepth = extent.length() * 2.0f;                // enough to see caster + receiver
+		float m_gDepth = extent.length() * 2.0f;                // enough to see caster + receiver
 
 		//------------------------------------------------------------
 		// Position the light camera:  
 		//  Place it *behind* the geometry along -lightDir
 		//------------------------------------------------------------
-		QVector3D lightPos = center - lightDir * gDepth;
+		QVector3D lightPos = center - lightDir * m_gDepth;
 
 		//------------------------------------------------------------
 		// Build the matrices
@@ -620,7 +675,7 @@ namespace PMP
 			-orthoSize, orthoSize,
 			-orthoSize, orthoSize,
 			1.0f,
-			gDepth * 2.0f               // far plane
+			m_gDepth * 2.0f               // far plane
 		);
 
 		out = lightProj * lightView;
@@ -653,10 +708,10 @@ namespace PMP
 		m_lineShader.setUniformValue("u_screenWidth", W);
 		m_lineShader.setUniformValue("u_screenHeight", H);
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, gDepth);
+		glBindTexture(GL_TEXTURE_2D, m_gDepth);
 		m_lineShader.setUniformValue("u_depth", 0);
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, gAlbedo);
+		glBindTexture(GL_TEXTURE_2D, m_gAlbedo);
 		m_lineShader.setUniformValue("u_albedo", 1);
 		m_lineVAO.bind();
 		glDrawArrays(GL_LINES, 0, m_lineVertCount);
@@ -682,14 +737,14 @@ namespace PMP
 		else 
 		{
 			// set fog beyond the far clip plane
-			m_wallShader.setUniformValue("u_fogStart", m_far + 1.0f);
-			m_wallShader.setUniformValue("u_fogEnd", m_far + 1.0f);
+			m_wallShader.setUniformValue("u_fogStart", m_far * m_far);
+			m_wallShader.setUniformValue("u_fogEnd", m_far * m_far + 1);
 		}
 		m_wallShader.setUniformValue("u_lightVP", light);
 		m_wallShader.setUniformValue("u_lightDir", lightDir);
 		m_wallShader.setUniformValue("u_drawShadow", static_cast<GLint>(m_drawShadow));
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, shadowMap);
+		glBindTexture(GL_TEXTURE_2D, m_shadowMap);
 		m_wallShader.setUniformValue("u_shadowMap", 0);
 
 		m_chamberVAO.bind();
@@ -702,9 +757,11 @@ namespace PMP
 	{
 		const int W = int(width() * devicePixelRatioF());
 		const int H = int(height() * devicePixelRatioF());
-		glBindFramebuffer(GL_FRAMEBUFFER, gBufferFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferFBO);
 		glViewport(0, 0, W, H); // <- likely not necessary
 		glEnable(GL_DEPTH_TEST);
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClearDepth(1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		m_gBufferShader.bind();
@@ -726,7 +783,7 @@ namespace PMP
 		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
 	}
 
-	void Viewport::drawDeferred(QMatrix4x4 view, QMatrix4x4 light, QVector3D lightDir)
+	void Viewport::drawDeferred(QMatrix4x4 view, QMatrix4x4 light, QVector3D lightDir, GLuint blurredAO)
 	{
 		const int W = int(width() * devicePixelRatioF());
 		const int H = int(height() * devicePixelRatioF());
@@ -738,6 +795,12 @@ namespace PMP
 		//essentials
 		m_deferredShader.setUniformValue("u_view", view);
 		m_deferredShader.setUniformValue("u_invView", view.inverted());
+
+		QMatrix4x4 customprojection;
+		customprojection.setToIdentity();
+		const float aspect = (float)width() / (float)(height() > 0 ? height() : 1);
+		customprojection.perspective(m_fov, aspect, 1, 3000);
+
 		m_deferredShader.setUniformValue("u_proj", m_projection);
 		m_deferredShader.setUniformValue("u_invProj", m_projection.inverted());
 		m_deferredShader.setUniformValue("u_screenSize", QVector2D(W, H));
@@ -766,19 +829,19 @@ namespace PMP
 
 		//textures
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, shadowMap);
+		glBindTexture(GL_TEXTURE_2D, m_shadowMap);
 		m_deferredShader.setUniformValue("u_shadowMap", 0);
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, gNormal);
+		glBindTexture(GL_TEXTURE_2D, m_gNormal);
 		m_deferredShader.setUniformValue("u_normal", 1);
 		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, gAlbedo);
+		glBindTexture(GL_TEXTURE_2D, m_gAlbedo);
 		m_deferredShader.setUniformValue("u_albedo", 2);
 		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, gDepth);
+		glBindTexture(GL_TEXTURE_2D, m_gDepth);
 		m_deferredShader.setUniformValue("u_depth", 3);
 		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, aoTex);
+		glBindTexture(GL_TEXTURE_2D, blurredAO);
 		m_deferredShader.setUniformValue("u_ao", 4);
 
 		m_fullscreenVAO.bind();
@@ -788,7 +851,7 @@ namespace PMP
 
 	void Viewport::drawShadow(QMatrix4x4 light)
 	{
-		glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, m_shadowFBO);
 		glViewport(0, 0, SHADOW_RES, SHADOW_RES);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glDisable(GL_CULL_FACE);
@@ -804,8 +867,6 @@ namespace PMP
 		glViewport(0, 0, int(width() * devicePixelRatioF()), int(height() * devicePixelRatioF()));
 	}
 
-	
-
 	void Viewport::drawAO(QMatrix4x4 view)
 	{
 		//AO pipeline
@@ -814,11 +875,11 @@ namespace PMP
 		// this means we dont have to regenerate kernel every frame
 		const int W = int(width() * devicePixelRatioF());
 		const int H = int(height() * devicePixelRatioF());
-		glBindFramebuffer(GL_FRAMEBUFFER, hbaoFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, m_ssaoFBO);
 		glViewport(0, 0, W, H);
 		glDisable(GL_DEPTH_TEST);
-		glClearColor(0.0f, 0.0f, 1.0f, 1.0f);  // AO = 1 (no occlusion)
-		//glClear(GL_COLOR_BUFFER_BIT);
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);  // AO = 1 (no occlusion)
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		m_aoShader.bind();
 		if (!m_aoShader.bind()) {
@@ -827,17 +888,26 @@ namespace PMP
 		// Matrices
 		m_aoShader.setUniformValue("u_view", view);
 		m_aoShader.setUniformValue("u_invView", view.inverted());
-		m_aoShader.setUniformValue("u_proj", m_projection);
-		m_aoShader.setUniformValue("u_invProj", m_projection.inverted());
-		m_aoShader.setUniformValue("u_near", m_near);
-		m_aoShader.setUniformValue("u_far", m_far);
-		m_aoShader.setUniformValue("u_range", 50.0f);
+		QMatrix4x4 aoprojection; 
+		aoprojection.setToIdentity();
+		const float aspect = (float)width() / (float)(height() > 0 ? height() : 1);
+		aoprojection.perspective(m_fov, aspect, 1, 3000);
+
+		m_aoShader.setUniformValue("u_proj", aoprojection);
+		m_aoShader.setUniformValue("u_invProj", aoprojection.inverted());
 		m_aoShader.setUniformValueArray("u_kernel", m_aokernel.data(),(GLsizei)m_aokernel.size());
 
+		// see ao.frag for explanation
+		//m_aoShader.setUniformValue("u_range", 70.0f);
+		//m_aoShader.setUniformValue("u_variableRange", 0.05f); 
+		//m_aoShader.setUniformValue("u_cutOff", 0.4f);
 		// G-buffer inputs
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, gDepth);
+		glBindTexture(GL_TEXTURE_2D, m_gDepth);
 		m_aoShader.setUniformValue("u_depth", 0);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, m_gNormal);
+		m_aoShader.setUniformValue("u_normal", 1);
 
 		m_fullscreenVAO.bind();
 		glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -847,6 +917,35 @@ namespace PMP
 		glEnable(GL_DEPTH_TEST);
 	}
 
+	//access the blurred texture in m_blurTex
+	// outputs m_blurTex which is the output of the blur
+	GLuint Viewport::blurTexture(GLuint texture)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, m_blurFBO);
+		const int W = int(width() * devicePixelRatioF());
+		const int H = int(height() * devicePixelRatioF());
+		glViewport(0, 0, W, H);
+		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glDisable(GL_DEPTH_TEST);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		m_blurShader.bind();
+		m_blurShader.setUniformValue("u_radius", 10); //value terms of texels
+		m_blurShader.setUniformValue("u_sigma", 4.0f);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		m_blurShader.setUniformValue("u_input", 0);
+
+		m_fullscreenVAO.bind();
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		m_fullscreenVAO.release();
+		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
+		glEnable(GL_DEPTH_TEST);
+		glViewport(0, 0, W, H);
+		return m_blurTex;
+	}
+
 	void Viewport::drawTestChamberSurfaceAttributes(QMatrix4x4 view)
 	{
 		
@@ -854,12 +953,12 @@ namespace PMP
 		if(m_lastDragRect.width() == 0 || m_lastDragRect.height() == 0) return;
 		// bind offscreen FBO
 		m_selectionShader.bind();
-		glBindFramebuffer(GL_FRAMEBUFFER, selectionFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, m_selectionFBO);
 		glDisable(GL_BLEND);
 		glDisable(GL_DITHER);
 		glEnable(GL_DEPTH_TEST);
-		const int W = int(width() * devicePixelRatioF() * selectionTextureScale);
-		const int H = int(height() * devicePixelRatioF() * selectionTextureScale);
+		const int W = int(width() * devicePixelRatioF() * m_selectionTextureScale);
+		const int H = int(height() * devicePixelRatioF() * m_selectionTextureScale);
 		glViewport(0, 0, W, H);
 
 		// Do not implement scissors here
@@ -905,6 +1004,12 @@ namespace PMP
 // QT Functions
 	void Viewport::paintGL()
 	{
+		//int blurW, blurH;
+		//getTextureSize(m_blurTex, blurW, blurH);
+		//int aoW, aoH;
+		//getTextureSize(m_aoTex, aoW, aoH);
+        //std::cout << "Blur Size: " << blurW << "x" << blurH << std::endl;
+        //std::cout << "AO Size: " << aoW << "x" << aoH << std::endl;
 		//qDebug() << "Start drawing";
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 		glEnable( GL_DEPTH_TEST );
@@ -922,8 +1027,9 @@ namespace PMP
 		getGlobalLightViewMatrix(lightDir, light);
 		drawShadow(light);
 		drawAO(view);
+		GLuint blurredAO = blurTexture(m_aoTex);
 
-		drawDeferred(view, light, lightDir);
+		drawDeferred(view, light, lightDir, blurredAO);
 		drawDots(view);
 		drawLines(view);
 
@@ -948,15 +1054,19 @@ namespace PMP
 		glUseProgram(0);
 	}
 
-	void Viewport::resizeGL( int width, int height )
+
+	void Viewport::resizeGL( int _width, int _height )
 	{
 		Q_ASSERT(m_selector);
-		const float aspect = (float)width / (float)(height > 0 ? height : 1);
+		const float aspect = (float)_width / (float)(_height > 0 ? _height : 1);
 		m_projection.setToIdentity();
 		// Source near clip plane value, might change later
 		m_projection.perspective(m_fov, aspect, m_near, m_far);
-		createGBufferFBO();
-		createHBAOFBO();
+		const int W = int(width() * devicePixelRatioF());
+		const int H = int(height() * devicePixelRatioF());
+		createGBufferFBO(W, H);
+		createSSAOFBO(W, H);
+		createBlurFBO(W, H);
 	}
 
 	void Viewport::reloadChamberMeshAndSelection()
@@ -968,16 +1078,16 @@ namespace PMP
 	bool Viewport::readSelectionRectCPU(ScreenSurfaceSet& out)
 	{
 		//TODO: this setting does not seem to work on my windows machine
-		const int x = m_lastDragRect.left() * selectionTextureScale;
-		const int y = height() * selectionTextureScale- m_lastDragRect.bottom() * selectionTextureScale;
-		const int w = m_lastDragRect.width() * selectionTextureScale;
-		const int h = m_lastDragRect.height() * selectionTextureScale;
+		const int x = m_lastDragRect.left() * m_selectionTextureScale;
+		const int y = height() * m_selectionTextureScale- m_lastDragRect.bottom() * m_selectionTextureScale;
+		const int w = m_lastDragRect.width() * m_selectionTextureScale;
+		const int h = m_lastDragRect.height() * m_selectionTextureScale;
 
 		if (w <= 0 || h <= 0) return false;
 		// 4 uints (RGBA) per pixel
 		std::vector<uint32_t> buf(size_t(w) * h * 4);
 
-		glBindFramebuffer(GL_FRAMEBUFFER, selectionFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, m_selectionFBO);
 		glPixelStorei(GL_PACK_ALIGNMENT, 1);
 		glReadPixels(x, y, w, h, GL_RGBA_INTEGER, GL_UNSIGNED_INT, buf.data());
 		// Back to Qt’s default FBO so you don’t accidentally draw into the integer one

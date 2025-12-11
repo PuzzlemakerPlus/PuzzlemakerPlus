@@ -147,6 +147,7 @@ namespace PMP
 		void setTestChamber(TestChamber* tc) {m_testChamber = tc;updateGridSizeLabel();};
 		void drawTestChamberSurfaceAttributes(QMatrix4x4 view);
 		void setSelector(Selector* s){m_selector = s;};
+		GLuint blurTexture(GLuint texture);
 
 		QMatrix4x4 getProjectionMatrix() {return m_projection;};
 		void getViewMatrix(QMatrix4x4& out);
@@ -155,15 +156,17 @@ namespace PMP
 		
 	protected:
 		void createGraphicsObjects();
-		void createGBufferFBO();
+		void createBlurFBO(const int W, const int H);
+		void createSSAOFBO(const int W, const int H);
+		void createGBufferFBO(const int W, const int H);
 		void createShadowFBO();
 		void createSelectionFBO();
-		void createHBAOFBO();
 		void resizeSelectionFBO(GLsizei W, GLsizei H);
 		void loadShaders();
 		void paintGL() override;
 		void resizeGL( int width, int height ) override;
 		void reloadChamberMeshAndSelection();
+		void getTextureSize(GLuint tex, int& width, int& height);
 		void initializeGL() override;
 		bool readSelectionRectCPU(ScreenSurfaceSet& out);
 
@@ -180,7 +183,7 @@ namespace PMP
 		void drawLines(QMatrix4x4 view);
 		void drawTestChamber(QMatrix4x4 view, QMatrix4x4 light, QVector3D lightDir);
 		void drawGBuffer(QMatrix4x4 view);
-		void drawDeferred(QMatrix4x4 view, QMatrix4x4 light, QVector3D lightDir);
+		void drawDeferred(QMatrix4x4 view, QMatrix4x4 light, QVector3D lightDir, GLuint blurredAO);
 		void drawShadow(QMatrix4x4 light);
 		void drawAO(QMatrix4x4 view);
 		void drawDragBox();
@@ -259,32 +262,37 @@ namespace PMP
 		QOpenGLBuffer m_lineVBO;
 		GLsizei m_lineVertCount = 0;
 
-		GLuint selectionFBO=0;
-		GLuint selectionTex=0;
-		GLuint selectionDep=0;
-		const float selectionTextureScale = 0.25f;
+		GLuint m_selectionFBO=0;
+		GLuint m_selectionTex=0;
+		GLuint m_selectionDep=0;
+		const float m_selectionTextureScale = 0.25f;
 
 		QOpenGLShaderProgram m_shadowShader;
 		QOpenGLVertexArrayObject m_chamberShadowVAO;
 		QOpenGLBuffer m_chamberShadowVBO;
 		QOpenGLBuffer m_chamberShadowIBO;
 		GLsizei m_shadowIndicesCount = 0;
-		GLuint shadowFBO;
-		GLuint shadowMap;
+		GLuint m_shadowFBO;
+		GLuint m_shadowMap;
 		const int SHADOW_RES = 2048;
+
+		QOpenGLVertexArrayObject m_fullscreenVAO;
 
 		QOpenGLShaderProgram m_deferredShader;
 		QOpenGLShaderProgram m_gBufferShader;
-		QOpenGLVertexArrayObject m_fullscreenVAO;
-		GLuint gBufferFBO;
-		GLuint gNormal;
-		GLuint gAlbedo;
-		GLuint gDepth;
+		GLuint m_gBufferFBO;
+		GLuint m_gNormal;
+		GLuint m_gAlbedo;
+		GLuint m_gDepth;
 		
 		QOpenGLShaderProgram m_aoShader;
-		GLuint hbaoFBO;
-		GLuint aoTex;
+		GLuint m_ssaoFBO;
+		GLuint m_aoTex;
 		std::array<QVector3D, AOKERNEL_SIZE> m_aokernel;
+
+		QOpenGLShaderProgram m_blurShader;
+		GLuint m_blurFBO;
+		GLuint m_blurTex;
 
 		QLabel m_gridSizeLabel;
 

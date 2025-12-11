@@ -98,7 +98,7 @@ float computeShadowFactor(vec3 worldPos, vec3 normal)
         {
             vec2 offset = vec2(x, y) * texelSize;
             float closestDepth = texture(u_shadowMap, projCoords.xy + offset).r;
-            shadow += (currentDepth - bias > closestDepth) ? 0.0 : 1.0;
+            shadow += (100 * (currentDepth - bias) > 100 * (closestDepth)) ? 0.0 : 1.0;
         }
     }
 
@@ -113,11 +113,12 @@ void main()
     
     // Fetch G-buffer data
     vec3 albedo = texture(u_albedo, vUv).rgb;
-    vec3 N_view      = texture(u_normal, vUv).xyz;
-    vec3 N = normalize(mat3(u_invView) * N_view);
+    //this is how you switch from view space to world space if necessary:
+        //vec3 N_view      = texture(u_normal, vUv).xyz;
+        //vec3 N = normalize(mat3(u_invView) * N_view);
+    vec3 N = texture(u_normal, vUv).xyz;
     float depth = texture(u_depth, vUv).r;
     vec3 ao = texture(u_ao, vUv).rgb;
-
     // If nothing was drawn here, depth is usually 1.0 (far plane)
     if (depth == 1.0)
     {
@@ -126,22 +127,34 @@ void main()
         return;
     }
     N = normalize(N);
-    vec3 worldPos = reconstructWorldPos(vUv, depth);
+    
     vec3 color;
     if(u_drawShadow == 1)
     {
-        // ----- Lighting + shadow -----
+//      ----- Lighting + shadow -----
+        vec3 worldPos = reconstructWorldPos(vUv, depth);
         vec3 u_lightDir_flipped = u_lightDir;
         u_lightDir_flipped.z = -u_lightDir_flipped.z;
-        vec3 L = normalize(u_lightDir_flipped);   // from fragment to light
-        float NdotL = dot(N, L) > 0 ? 1.0f : 0.0f;
-        float shadowFactor = computeShadowFactor(worldPos, N);
-        float ambientFactor = 0.7f;
-        float maxLight = 1.0f;
-        float minLight = 0.1f;
+        vec3 L = normalize(u_lightDir_flipped);  // direction from fragment to light
+
+        float NdotL = max(dot(N, L), 0.0);       // smooth Lambert, no hard step
+
+        float shadowFactor = clamp(computeShadowFactor(worldPos, N), 0.0, 1.0);
+
+        float ambientFactor = 0.7;
+        float minLight = 0.1;
+        float maxLight = 1.0;
+
+        // how much direct light we actually get
+        float lightTerm = NdotL * shadowFactor;
+
+        // interpolate between minLight and maxLight based on lightTerm
+        float directScale = minLight + (maxLight - minLight) * lightTerm;
+
         vec3 ambient = ambientFactor * albedo;
-        vec3 lit     = albedo * max(minLight,(maxLight - ambientFactor) * min(NdotL, shadowFactor)); 
-        color   = ambient + lit;
+        vec3 lit     = albedo * directScale;
+
+        color = clamp(ambient + lit, 0,1);
     }
     else
     {
@@ -151,5 +164,5 @@ void main()
     float fog = clamp((v_viewZ - u_fogStart) / (u_fogEnd - u_fogStart), 0.0, 1.0);
     vec3 finalColor = mix(color, u_fogColor, fog) * ao; // * ao;
     FragColor = vec4(finalColor, 1.0);
-    //FragColor = vec4(ao,1.0f);
+    
 }

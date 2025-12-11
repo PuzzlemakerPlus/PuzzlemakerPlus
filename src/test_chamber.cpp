@@ -212,10 +212,10 @@ namespace PMP
 		const TestChamberNode& node = m_nodeMap.at(surface.parentNode);
 		float halfSize = node.m_size / 2.0f;
 
-		IntVector3D gNormal = getWallNormal(surface.side);
-		IntVector3D surfCenter = getWallFaceCenter(node.m_center, node.m_size, gNormal);
+		IntVector3D m_gNormal = getWallNormal(surface.side);
+		IntVector3D surfCenter = getWallFaceCenter(node.m_center, node.m_size, m_gNormal);
 		IntVector3D up     = getWallUp(surface.side);
-		IntVector3D right  = gNormal.cross(up);
+		IntVector3D right  = m_gNormal.cross(up);
 
 		// Quad corners: counter-clockwise
 		IntVector3D p0 = surfCenter + (-right - up) * halfSize;  // bottom-left
@@ -405,7 +405,6 @@ namespace PMP
 					destroyBranch(j);
 				}
 				p.m_childIDs.reset();
-				
 			}
 		}
 		if (out) // add the remaining nodes to out

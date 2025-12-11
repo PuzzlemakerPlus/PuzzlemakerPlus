@@ -30,7 +30,7 @@ void main()
 {
     vec3 N_world = normalize(worldNormal);
     vec3 N_view = normalize((u_view * vec4(N_world, 0.0)).xyz);
-    gNormal = vec4(N_view, 1.0);
+    gNormal = vec4(N_world, 1.0);
 
     vec3 albedoColor;
     if(u_debugView == 1)

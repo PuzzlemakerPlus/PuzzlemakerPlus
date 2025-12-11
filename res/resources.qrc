@@ -16,5 +16,8 @@
         <file>shaders/deferred.vert</file>
 	<file>shaders/ao.frag</file>
         <file>shaders/ao.vert</file>
+	<file>shaders/blur.frag</file>
+        <file>shaders/blur.vert</file>
+
     </qresource>
 </RCC>

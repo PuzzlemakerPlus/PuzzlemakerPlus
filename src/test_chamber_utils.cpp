@@ -211,9 +211,9 @@ namespace PMP
 				// Wall geometry
 				float halfSize = node.m_size / 2.0f;
 				QVector3D up = getWallUp(surface.side).toQVector3D();
-				QVector3D gNormal = getWallNormal(surface.side).toQVector3D();
-				QVector3D right = QVector3D::crossProduct(gNormal, up);
-				QVector3D center = getWallFaceCenter(node.m_center, node.m_size, gNormal).toQVector3D();
+				QVector3D m_gNormal = getWallNormal(surface.side).toQVector3D();
+				QVector3D right = QVector3D::crossProduct(m_gNormal, up);
+				QVector3D center = getWallFaceCenter(node.m_center, node.m_size, m_gNormal).toQVector3D();
 
 				QVector3D p0 = center + (-right - up) * halfSize;
 				QVector3D p1 = center + (right - up) * halfSize;
