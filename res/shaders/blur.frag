@@ -12,7 +12,6 @@ void main()
 {
     vec4 init = texture(u_input, vUv);
     float blur = init.w;
-
     // Skip blur if this pixel isn't marked for it
     if (blur < 0.5f)
     {

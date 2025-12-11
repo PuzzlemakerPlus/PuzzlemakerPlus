@@ -455,8 +455,6 @@ namespace PMP
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		
-
-
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 			GL_TEXTURE_2D, m_aoTex, 0);
 
@@ -808,6 +806,9 @@ namespace PMP
 		m_deferredShader.setUniformValue("u_far", m_far);
 
 		//global directional light
+		QMatrix4x4 invView = view.inverted();
+		QMatrix4x4 viewToLight = light * invView;
+		m_deferredShader.setUniformValue("u_viewToLight", viewToLight);
 		m_deferredShader.setUniformValue("u_lightVP", light);
 		m_deferredShader.setUniformValue("u_lightDir", lightDir);
 		m_deferredShader.setUniformValue("u_drawShadow", static_cast<GLint>(m_drawShadow));
@@ -1023,13 +1024,14 @@ namespace PMP
 		
 		// directional light direction (world space)
 		QVector3D lightDir = QVector3D(-1.0f, -1.0f, -5.0f).normalized();
-		QMatrix4x4 light;
-		getGlobalLightViewMatrix(lightDir, light);
-		drawShadow(light);
+		QMatrix4x4 lightVP;
+		getGlobalLightViewMatrix(lightDir, lightVP);
+		
+		drawShadow(lightVP);
 		drawAO(view);
 		GLuint blurredAO = blurTexture(m_aoTex);
 
-		drawDeferred(view, light, lightDir, blurredAO);
+		drawDeferred(view, lightVP, lightDir, blurredAO);
 		drawDots(view);
 		drawLines(view);
 
