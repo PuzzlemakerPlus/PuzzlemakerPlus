@@ -98,7 +98,8 @@ namespace PMP
 
 	Quad generateCubeFace(WallSide side, float size=128.0f);
 	Quad generateQuadAt(QVector3D center, WallSide side, float size);
-	TestChamberQuad generateTCQuadAt(QVector3D center, WallSide side, float size, unsigned int surfaceID, unsigned int parentID);
+	//margin enlarges the face without changing its origin, measured in percentage
+	TestChamberQuad generateTCQuadAt(QVector3D center, WallSide side, float size, unsigned int surfaceID, unsigned int parentID, float margin = 1.0f);
 
 	void CreateMesh(std::vector<Quad> quads, Mesh& out);
 	void CreateTCMesh(std::vector<TestChamberQuad> quads, TestChamberMesh& out);

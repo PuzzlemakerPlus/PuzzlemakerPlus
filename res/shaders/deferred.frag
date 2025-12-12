@@ -75,25 +75,28 @@ float computeShadowFactorView(vec3 viewPos, vec3 normal)
     // Bias to reduce acne (depends on angle to light)
     vec3  N      = normalize(normal);
     vec3  L      = normalize(u_lightDir);           // from fragment to light
-    float ndotl  = max(dot(N, L), 0.0);
-    float bias   = max(0.0005 * (1.0 - ndotl), 0.00);
+    float ndotl  = max(dot(N, L), 0.005);
+    float bias   = max(0.015 * (1.0 - ndotl), 0.00);
 
     // PCF sample
     float shadow = 0.0;
     vec2 texelSize = 1.0 / vec2(textureSize(u_shadowMap, 0));
-
-    for (int x = -1; x <= 1; ++x)
+    int xL = 3;
+    int yL = 3;
+   
+    for (int x = -xL; x <= xL; ++x)
     {
-        for (int y = -1; y <= 1; ++y)
+        for (int y = -xL; y <= xL; ++y)
         {
             vec2 offset = vec2(x, y) * texelSize;
             float closestDepth = texture(u_shadowMap, projCoords.xy + offset).r;
-            shadow += ((currentDepth - bias) > (closestDepth)) ? 0.0 : 1.0;
+            shadow += ((currentDepth - bias) > (closestDepth)) ? 1.0 : 0.0;
         }
     }
-    shadow /= 9.0;
-
-    return shadow;
+    shadow /= float((xL * 2 + 1) * (yL * 2 + 1));
+    bool isLight = shadow < 0.5f;
+    return isLight ? 1.0 : 0.0;
+    //return 1 - shadow;
 }
 void main()
 {
@@ -119,8 +122,7 @@ void main()
     {
 //      ----- Lighting + shadow -----
         vec3 viewPos = getViewPos(vUv, depth);
-        vec3 u_lightDir_flipped = u_lightDir;
-        u_lightDir_flipped.z = -u_lightDir_flipped.z;
+        vec3 u_lightDir_flipped = -u_lightDir;
         vec3 L = normalize(u_lightDir_flipped);  // direction from fragment to light
 
         float NdotL = max(dot(N, L), 0.0);       // smooth Lambert, no hard step

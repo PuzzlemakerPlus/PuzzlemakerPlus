@@ -137,7 +137,7 @@ namespace PMP
 		return { face, {0, 1, 2, 0, 2, 3} };
 	}
 
-	TestChamberQuad generateTCQuadAt(QVector3D center, WallSide side, float size, unsigned int surfaceID, unsigned int parentID)
+	TestChamberQuad generateTCQuadAt(QVector3D center, WallSide side, float size, unsigned int surfaceID, unsigned int parentID, float margin)
 	{
 		float h = size / 2.0f;
 
@@ -152,30 +152,36 @@ namespace PMP
 
 		std::array<QVector3D, 4> quad;
 		QVector3D m_gNormal;
-
+		QVector3D marginMul;
 		switch (side) {
 			case WallSide::NEG_Z: // Back
-				quad = { p0, p1, p2, p3 };
+				marginMul = { margin, margin, 1 };
+				quad = { marginMul*p0, marginMul*p1, marginMul*p2, marginMul*p3 };
 				m_gNormal = QVector3D(0.0f, 0.0f, 1.0f);
 				break;
 			case WallSide::NEG_Y: // Bottom
-				quad = { p1, p0, p4, p5 };
+				marginMul = { margin, 1, margin};
+				quad = { marginMul*p1, marginMul*p0, marginMul*p4, marginMul*p5 };
 				m_gNormal = QVector3D(0.0f, 1.0f, 0.0f);
 				break;
 			case WallSide::POS_X: // Right
-				quad = { p2, p1, p5, p6 };
+				marginMul = { 1, margin, margin };
+				quad = { marginMul*p2, marginMul*p1, marginMul*p5, marginMul*p6 };
 				m_gNormal = QVector3D(-1.0f, 0.0f, 0.0f);
 				break;
 			case WallSide::POS_Y: // Top
-				quad = { p3, p2, p6, p7 };
+				marginMul = { margin, 1, margin };
+				quad = { marginMul*p3, marginMul*p2, marginMul*p6, marginMul*p7 };
 				m_gNormal = QVector3D(0.0f, -1.0f, 0.0f);
 				break;
 			case WallSide::NEG_X: // Left
-				quad = { p0, p3, p7, p4 };
+				marginMul = { 1, margin, margin };
+				quad = { marginMul*p0, marginMul*p3, marginMul*p7, marginMul*p4 };
 				m_gNormal = QVector3D(1.0f, 0.0f, 0.0f);
 				break;
 			case WallSide::POS_Z: // Front
-				quad = { p5, p4, p7, p6 };
+				marginMul = { margin, margin, 1 };
+				quad = { marginMul*p5, marginMul*p4, marginMul*p7, marginMul*p6 };
 				m_gNormal = QVector3D(0.0f, 0.0f, -1.0f);
 				break;
 			default:

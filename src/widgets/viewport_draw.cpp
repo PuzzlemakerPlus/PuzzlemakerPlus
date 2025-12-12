@@ -533,7 +533,7 @@ namespace PMP
 		glViewport(0, 0, SHADOW_RES, SHADOW_RES);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glDisable(GL_CULL_FACE);
-
+		glCullFace(GL_FRONT);
 		m_shadowShader.bind();
 		m_shadowShader.setUniformValue("u_lightVP", light);
 		m_chamberShadowVAO.bind();
@@ -542,6 +542,7 @@ namespace PMP
 		//switch back
 		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
 		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
 		glViewport(0, 0, int(width() * devicePixelRatioF()), int(height() * devicePixelRatioF()));
 	}
 

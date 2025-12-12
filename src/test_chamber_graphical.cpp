@@ -24,6 +24,7 @@ namespace PMP {
 		if (m_surfaceMap.size() == 0) throw std::runtime_error("Attempted to generate quads for test chamber with no surface");
 		for (const auto& [surfaceID, surfaces] : m_surfaceMap)
 		{
+			int sideID = 0;
 			for (const auto& surface : surfaces)
 			{
 				if (surface.side == WallSide::NONE) continue;
@@ -31,7 +32,8 @@ namespace PMP {
 				//std::cout << surfaceID << ", " << nodeID << "\n";
 				const NodeID nodeID = surface.parentNode;
 				const TestChamberNode& node = m_nodeMap.at(nodeID);
-				out.push_back(generateTCQuadAt(node.m_center.toQVector3D(), surface.side, node.m_size, surfaceID, nodeID));
+				out.push_back(generateTCQuadAt(node.m_center.toQVector3D(), surface.side, node.m_size, sideID, nodeID));
+				sideID++;
 			}
 		}
 	}
@@ -41,6 +43,7 @@ namespace PMP {
 		if (m_surfaceMap.size() == 0) throw std::runtime_error("Attempted to generate quads for test chamber with no surface");
 		for (const auto& [surfaceID, surfaces] : m_surfaceMap)
 		{
+			int sideID = 0;
 			for (const auto& surface : surfaces)
 			{
 				if (surface.side == WallSide::NONE) continue;
@@ -50,9 +53,8 @@ namespace PMP {
 				{
 					if (node.m_center.z() + node.m_size / 2 > defaultRootNodeSize / 2 - gridSizeMin) continue;
 				}
-				//TODO: surfaceID and nodeID are the exact same value. why are they being passed in?
-				//std::cout << surfaceID << ", " << nodeID << "\n";
-				out.push_back(generateTCQuadAt(node.m_center.toQVector3D(), surface.side, node.m_size, surfaceID, nodeID));
+				out.push_back(generateTCQuadAt(node.m_center.toQVector3D(), surface.side, node.m_size, sideID, nodeID));
+				sideID++;
 			}
 		}
 		// generate extra quads to catch shadows
@@ -71,10 +73,10 @@ namespace PMP {
 		}
 		//walls to catch light bleeding from side walls
 		const QVector3D& rootCenter = m_nodeMap.at(m_rootNode).m_center.toQVector3D();
-		out.push_back(generateTCQuadAt(rootCenter, WallSide::POS_X, defaultRootNodeSize, m_rootNode, m_rootNode));
-		out.push_back(generateTCQuadAt(rootCenter, WallSide::POS_Y, defaultRootNodeSize, m_rootNode, m_rootNode));
-		out.push_back(generateTCQuadAt(rootCenter, WallSide::NEG_X, defaultRootNodeSize, m_rootNode, m_rootNode));
-		out.push_back(generateTCQuadAt(rootCenter, WallSide::NEG_Y, defaultRootNodeSize, m_rootNode, m_rootNode));
+		out.push_back(generateTCQuadAt(rootCenter, WallSide::POS_X, defaultRootNodeSize+25, m_rootNode, m_rootNode, 1.1f));
+		out.push_back(generateTCQuadAt(rootCenter, WallSide::POS_Y, defaultRootNodeSize+25, m_rootNode, m_rootNode, 1.1f));
+		out.push_back(generateTCQuadAt(rootCenter, WallSide::NEG_X, defaultRootNodeSize+25, m_rootNode, m_rootNode, 1.1f));
+		out.push_back(generateTCQuadAt(rootCenter, WallSide::NEG_Y, defaultRootNodeSize+25, m_rootNode, m_rootNode, 1.1f));
 		//Debugger::instance().drawDebugPoints();
 	}
 }
