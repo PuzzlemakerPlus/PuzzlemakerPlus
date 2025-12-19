@@ -8,6 +8,13 @@ namespace PMP
 {
 	QVector3D Lerp(const QVector3D& a, const QVector3D& b, float t) {return a + t * (b - a);}
 
+	WallSide getOpposite(WallSide side)
+	{
+		int s = static_cast<int>(side);
+		s += (int)(s % 2 == 0) * 2 - 1;
+		return static_cast<WallSide>(s);
+	}
+
 	bool WallFacesDirection(WallSide side, const QVector3D& dir) 
 	{
 		IntVector3D m_gNormal = getWallNormal(side);

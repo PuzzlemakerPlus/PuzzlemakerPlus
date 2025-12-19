@@ -3,6 +3,9 @@
 
 #include <QApplication>
 #include <iostream>
+
+#include "absl/strings/str_format.h"
+
 #include "undo.h"
 #include "selection.h"
 #include "test_chamber.h"
@@ -12,6 +15,7 @@
 
 int main(int argc, char* argv[])
 {
+	std::cout << absl::StrFormat("hello %s\n", "ABSL");
 	PMP::UndoStack::instance(); //Initialize Undostack singleton before anything else
 	QApplication a(argc, argv);
 	// Configure OpenGL format

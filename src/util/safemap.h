@@ -1,4 +1,9 @@
-#include <unordered_map>
+//#define USESTD
+#ifdef USESTD 
+#include <unordered_map> // 751354
+#else
+#include "absl/container/flat_hash_map.h" //525763
+#endif
 #pragma once
 
 // A wrapper around std::unordered_map that disables operator[] to prevent accidental insertion of default-constructed values.
@@ -6,7 +11,11 @@
 template <class K, class V, class Hash = std::hash<K>, class Eq = std::equal_to<K>>
 class SafeUnorderedMap {
 public:
+#ifdef USESTD
     using Map = std::unordered_map<K, V, Hash, Eq>;
+#else
+    using Map = absl::flat_hash_map<K, V, Hash, Eq>;
+#endif
     using iterator = typename Map::iterator;
     using const_iterator = typename Map::const_iterator;
 
@@ -22,6 +31,7 @@ public:
     auto emplace(Args&&... args) {
         return map_.emplace(std::forward<Args>(args)...);
     }
+
 
     size_t erase(const K& k) { return map_.erase(k); }
     size_t size() const { return map_.size(); }

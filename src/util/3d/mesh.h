@@ -22,6 +22,7 @@ namespace PMP
 		NEG_Z,
 		NONE
 	};
+	WallSide getOpposite(WallSide side);
 	// children indices for each face of a cube
 	constexpr int childrenOnFace[6][4] = {
 		{1,3,5,7}, // POS_X

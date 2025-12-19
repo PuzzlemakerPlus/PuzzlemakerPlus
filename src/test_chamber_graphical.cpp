@@ -15,7 +15,7 @@ namespace PMP {
 				if (surface.side == WallSide::NONE) continue;
 				const NodeID nodeID = surface.parentNode;
 				const TestChamberNode& node = m_nodeMap.at(nodeID);
-				out.push_back(generateQuadAt(node.m_center.toQVector3D(), surface.side, node.m_size));
+				out.push_back(generateQuadAt(node.getCenter().toQVector3D(), surface.side, node.getSize()));
 			}
 		}
 	}
@@ -32,7 +32,7 @@ namespace PMP {
 				//std::cout << surfaceID << ", " << nodeID << "\n";
 				const NodeID nodeID = surface.parentNode;
 				const TestChamberNode& node = m_nodeMap.at(nodeID);
-				out.push_back(generateTCQuadAt(node.m_center.toQVector3D(), surface.side, node.m_size, sideID, nodeID));
+				out.push_back(generateTCQuadAt(node.getCenter().toQVector3D(), surface.side, node.getSize(), sideID, nodeID));
 				sideID++;
 			}
 		}
@@ -51,9 +51,9 @@ namespace PMP {
 				const TestChamberNode& node = m_nodeMap.at(nodeID);
 				if (surface.side == WallSide::POS_Z)
 				{
-					if (node.m_center.z() + node.m_size / 2 > defaultRootNodeSize / 2 - gridSizeMin) continue;
+					if (node.getCenter().z() + node.getSize() / 2 > defaultRootNodeSize / 2 - gridSizeMin) continue;
 				}
-				out.push_back(generateTCQuadAt(node.m_center.toQVector3D(), surface.side, node.m_size, sideID, nodeID));
+				out.push_back(generateTCQuadAt(node.getCenter().toQVector3D(), surface.side, node.getSize(), sideID, nodeID));
 				sideID++;
 			}
 		}
@@ -65,18 +65,17 @@ namespace PMP {
 		for (const auto& nodeID : ceilingNodes)
 		{
 			const TestChamberNode& node = m_nodeMap.at(nodeID);
-			if (!node.m_active)
+			if (!node.getActive())
 			{
 				//Debugger::instance().addDebugPoint(m_nodeMap.at(nodeID).m_center.toQVector3D(), QVector3D(1.0f, 1.0f, 0));
-				out.push_back(generateTCQuadAt(node.m_center.toQVector3D(), WallSide::POS_Z, node.m_size, nodeID, nodeID));
+				out.push_back(generateTCQuadAt(node.getCenter().toQVector3D(), WallSide::POS_Z, node.getSize(), nodeID, nodeID));
 			}
 		}
 		//walls to catch light bleeding from side walls
-		const QVector3D& rootCenter = m_nodeMap.at(m_rootNode).m_center.toQVector3D();
+		const QVector3D& rootCenter = m_nodeMap.at(m_rootNode).getCenter().toQVector3D();
 		out.push_back(generateTCQuadAt(rootCenter, WallSide::POS_X, defaultRootNodeSize+25, m_rootNode, m_rootNode, 1.1f));
 		out.push_back(generateTCQuadAt(rootCenter, WallSide::POS_Y, defaultRootNodeSize+25, m_rootNode, m_rootNode, 1.1f));
 		out.push_back(generateTCQuadAt(rootCenter, WallSide::NEG_X, defaultRootNodeSize+25, m_rootNode, m_rootNode, 1.1f));
 		out.push_back(generateTCQuadAt(rootCenter, WallSide::NEG_Y, defaultRootNodeSize+25, m_rootNode, m_rootNode, 1.1f));
-		//Debugger::instance().drawDebugPoints();
 	}
 }

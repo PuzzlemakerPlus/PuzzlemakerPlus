@@ -4,6 +4,9 @@
 #include "util/scoped_timer.h"
 #include <iostream>
 #include <cassert>
+#include <array>
+#include <future>
+#include <cstdint>
 // source file for simple test chamber operations with no side effects
 // please keep all functions in this source file const or functions that dont change values inside the test chamber class
 namespace PMP
@@ -28,9 +31,9 @@ namespace PMP
 	{
 		uint8_t flags = 64; // start with 7th bit set to 1 (complete)
 		const TestChamberNode& currentNode = m_nodeMap.at(node);
-		if (currentNode.m_childIDs.has_value())
+		if (currentNode.hasChildren())
 		{
-			const auto& childIDs = currentNode.m_childIDs.valueRead();
+			const auto& childIDs = currentNode.readChildrenID();
 			std::array<uint8_t, 8> childFlags;
 			int enabledChildren = 0;
 			for (int i = 0; i < 8; i++)
@@ -52,7 +55,6 @@ namespace PMP
 				// if any side is incomplete, the node is incomplete 
 				// either all enabled or all diabled
 				setFlag(flags, 6, countSide % 4 == 0 && enabledChildren % 8 == 0 && readFlag(flags, 6));
-				
 			}
 		}
 		else {
@@ -67,13 +69,62 @@ namespace PMP
 		}
 		return flags;
 	}
+	uint8_t TestChamber::nodeSurfaceFlagThreaded(NodeID node) const
+	{
+		uint8_t flags = 64; // start with 7th bit set to 1 (complete)
+		const TestChamberNode& currentNode = m_nodeMap.at(node);
+		if (currentNode.hasChildren())
+		{
+			const auto& childIDs = currentNode.readChildrenID();
+			std::array<uint8_t, 8> childFlags;
+			std::array<std::future<uint8_t>, 8> futures;
+			int enabledChildren = 0;
+			for (int i = 0; i < 8; i++)
+			{
+				const NodeID child = childIDs[i];
+				futures[i] = std::async(std::launch::async, [this, child]() -> uint8_t {
+					return this->nodeSurfaceFlag(child);
+					});
+			}
+			for (int i = 0; i < 8; ++i)
+			{
+				childFlags[i] = futures[i].get();
+				if (isNodeActive(childIDs[i])) enabledChildren++;
+			}
+			for (int i = 0; i < 6; i++)
+			{
+				WallSide side = static_cast<WallSide>(i);
+				int countSide = 0;
+				for (int j : childrenOnFace[i])
+				{
+					countSide += (int)readFlag(childFlags[j], i);
+					setFlag(flags, 6, readFlag(childFlags[j], 6) && readFlag(flags, 6));
+				}
+				setFlag(flags, i, countSide == 4);
+				// set complete flag if all 4 children have the same state on this side
+				// if any side is incomplete, the node is incomplete 
+				// either all enabled or all diabled
+				setFlag(flags, 6, countSide % 4 == 0 && enabledChildren % 8 == 0 && readFlag(flags, 6));
+			}
+		}
+		else {
+			for (int i = 0; i < 6; i++)
+			{
+				WallSide side = static_cast<WallSide>(i);
+				if (isSurface(side, node)) {
+					setFlag(flags, i, true);
+				}
+			}
+		}
+		return flags;
+	}
 	bool TestChamber::canUnsubdivide(NodeID node) const
 	{	
 		return readFlag(nodeSurfaceFlag(node), 6);
 	}
 	bool TestChamber::areNeighborsSameSize(NodeID node) const {
 		const TestChamberNode& currentNode = m_nodeMap.at(node);
-		std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.m_size, currentNode.m_center);
+		std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.getSize(), currentNode.getCenter());
 		bool success = true;
 		for (int i = 0; i < 6; ++i)
 		{
@@ -87,18 +138,14 @@ namespace PMP
 	}
 	bool TestChamber::areNeighborsActive(NodeID node) const {
 		const TestChamberNode& currentNode = m_nodeMap.at(node);
-		std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.m_size, currentNode.m_center);
+		std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.getSize(), currentNode.getCenter());
 		bool success = true;
 		for (int i = 0; i < 6; ++i)
 		{
 			if (isPointOOB(neighborCoords[i].toQVector3D())) continue;
 			auto r = tryGetNodeAtCoord(neighborCoords[i]);
 			if (r != std::nullopt) {
-				if (m_nodeMap.at(r.value()).m_active) {
-					//Debugger::instance().addDebugPoint(m_nodeMap.at(r.value()).m_center.toQVector3D(), {0.0f,1.0f,0.0f});
-				}
-				else {
-					//Debugger::instance().addDebugPoint(m_nodeMap.at(r.value()).m_center.toQVector3D(), { 1.0f,0.0f,0.0f });
+				if (!m_nodeMap.at(r.value()).getActive()) {
 					success = false;
 				}
 			}
@@ -112,12 +159,28 @@ namespace PMP
 		int sign = (int)(x >= 0) * 2 - 1;
 		return ((x + half * sign) / s) * s;
 	}
+	
+	void TestChamber::setNeighbors(NodeID node) {
+		auto center = m_nodeMap.at(node).getCenter();
+		auto size = m_nodeMap.at(node).getSize();
+		auto neighborCenters = getNeighborNodeCenters(size, center);
+		auto& neighborArray = m_nodeMap.at(node).getNeighbors();
+		for (int i = 0; i < 6; i++)
+		{
+			auto n = tryGetNodeAtCoord(neighborCenters[i]);
+			if (n.has_value())
+			{
+				neighborArray[i] = n.value(); // set the value on this node
+				m_nodeMap.at(n.value()).getNeighbors()[static_cast<int>(getOpposite(static_cast<WallSide>(i)))] = node; // set the value on the neighbor
+			}
+		}
+	}
 
 	// level == 0 at root node
 	IntVector3D TestChamber::getClosestPossibleNodeCenterAtLevel(IntVector3D coord, unsigned int scale) const
 	{
-		IntVector3D rel = coord + IntVector3D(scale * 0.5f, scale * 0.5f, scale * 0.5f); //shift to positive space
-		return IntVector3D(snap(rel.x(), scale) - scale * 0.5f, snap(rel.y(), scale) - scale * 0.5f, snap(rel.z(), scale) - scale * 0.5f);
+		IntVector3D rel = coord + IntVector3D(scale / 2, scale / 2, scale / 2); //shift to positive space
+		return IntVector3D(snap(rel.x(), scale) - scale / 2, snap(rel.y(), scale) - scale / 2, snap(rel.z(), scale) - scale / 2);
 	}
 
 	NodeID TestChamber::getNodeOfSizeAtCoord(QVector3D coord, unsigned int size) const {
@@ -126,14 +189,14 @@ namespace PMP
 
 	NodeID TestChamber::getNodeOfSizeAtCoord(QVector3D coord, NodeID parentID, unsigned int size) const {
 		if (isPointOOB(coord)) return parentID;
-		if (m_nodeMap.at(parentID).m_size == size) return parentID; //found
-		if (!m_nodeMap.at(parentID).m_childIDs.has_value()) return parentID; //no more children to search. return this node
+		if (m_nodeMap.at(parentID).getSize() == size) return parentID; //found
+		if (!m_nodeMap.at(parentID).hasChildren()) return parentID; //no more children to search. return this node
 
 		// This should never fire because the search starts from the root node
 		// The only way this can be fired is if the requested size is larger than the root node size
-		if (m_nodeMap.at(parentID).m_size < size) throw std::runtime_error("Something went wrong trying to find node of specific size at the given coord. Did you try to find node larger than the root node?");
-		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
-		NodeID id = m_nodeMap.at(parentID).m_childIDs.valueRead().at(i);
+		if (m_nodeMap.at(parentID).getSize() < size) throw std::runtime_error("Something went wrong trying to find node of specific size at the given coord. Did you try to find node larger than the root node?");
+		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).getCenter());
+		NodeID id = m_nodeMap.at(parentID).readChildrenID().at(i);
 		return getNodeOfSizeAtCoord(coord, id, size);
 	}
 
@@ -145,11 +208,13 @@ namespace PMP
 	const NodeID TestChamber::searchNodeWithCoord(QVector3D coord, NodeID parentID) const
 	{
 		if (isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
-		if (!m_nodeMap.at(parentID).m_childIDs.has_value()) return parentID; //found
+		if (!m_nodeMap.at(parentID).hasChildren()) return parentID; //found
 
-		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
-		return searchNodeWithCoord(coord, m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
+		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).getCenter());
+		return searchNodeWithCoord(coord, m_nodeMap.at(parentID).readChildrenID().at(i));
 	}
+
+	//const NodeID TestChamber::searchNodeWithCoord
 
 	const NodeID TestChamber::searchNodeWithCoordSize(const QVector3D coord, unsigned int size) const
 	{
@@ -158,10 +223,10 @@ namespace PMP
 	const NodeID TestChamber::searchNodeWithCoordSize(const QVector3D coord, unsigned int size, NodeID parentID) const
 	{
 		if (isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
-		if (m_nodeMap.at(parentID).m_size == size) return parentID; //found
+		if (m_nodeMap.at(parentID).getSize() == size) return parentID; //found
 
-		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
-		return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
+		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).getCenter());
+		return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).readChildrenID().at(i));
 	}
 	const NodeID TestChamber::searchNodeWithCoordSize(const IntVector3D coord, unsigned int size) const
 	{
@@ -170,29 +235,27 @@ namespace PMP
 	const NodeID TestChamber::searchNodeWithCoordSize(const IntVector3D coord, unsigned int size, NodeID parentID) const
 	{
 		if (isPointOOB(coord)) throw std::runtime_error("Coordinate Out Of Bounds");
-		if (m_nodeMap.at(parentID).m_size == size) return parentID; //found
+		if (m_nodeMap.at(parentID).getSize() == size) return parentID; //found
 
-		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).m_center);
-		return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).m_childIDs.valueRead().at(i));
+		unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).getCenter());
+		return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).readChildrenID().at(i));
 	}
 
 	IntVector3D TestChamber::getNodeBBoxMin(NodeID id) const
 	{
 		const TestChamberNode& node = m_nodeMap.at(id);
-		assert(node.m_size % 2 == 0 && "How is node size not divisible by 2?");
-		int half = node.m_size / 2;
-		return IntVector3D(node.m_center.x() - half,
-			node.m_center.y() - half,
-			node.m_center.z() - half);
+		assert(node.getSize() % 2 == 0 && "How is node size not divisible by 2?");
+		int half = node.getSize() / 2;
+		auto c = node.getCenter();
+		return IntVector3D(c.x() - half, c.y() - half,c. z() - half);
 	}
 	IntVector3D TestChamber::getNodeBBoxMax(NodeID id) const
 	{
 		const TestChamberNode& node = m_nodeMap.at(id);
-		assert(node.m_size % 2 == 0 && "How is node size not divisible by 2?");
-		int half = node.m_size / 2;
-		return IntVector3D(node.m_center.x() + half,
-			node.m_center.y() + half,
-			node.m_center.z() + half);
+		assert(node.getSize() % 2 == 0 && "How is node size not divisible by 2?");
+		int half = node.getSize() / 2;
+		auto c = node.getCenter();
+		return IntVector3D(c.x() + half, c.y() + half, c.z() + half);
 	}
 	// Raycast function to find the closest hit on a surface
 	std::optional<RayHitResult> TestChamber::rayCast(Ray ray) const
@@ -209,11 +272,11 @@ namespace PMP
 				const TestChamberNode& node = m_nodeMap.at(surface.parentNode);
 
 				// Wall geometry
-				float halfSize = node.m_size / 2.0f;
+				float halfSize = node.getSize() / 2.0f;
 				QVector3D up = getWallUp(surface.side).toQVector3D();
 				QVector3D m_gNormal = getWallNormal(surface.side).toQVector3D();
 				QVector3D right = QVector3D::crossProduct(m_gNormal, up);
-				QVector3D center = getWallFaceCenter(node.m_center, node.m_size, m_gNormal).toQVector3D();
+				QVector3D center = getWallFaceCenter(node.getCenter(), node.getSize(), m_gNormal).toQVector3D();
 
 				QVector3D p0 = center + (-right - up) * halfSize;
 				QVector3D p1 = center + (right - up) * halfSize;
@@ -239,9 +302,9 @@ namespace PMP
 	bool TestChamber::isSurface(WallSide side, NodeID node) const
 	{
 		const TestChamberNode& ref = m_nodeMap.at(node);
-		const IntVector3D center = ref.m_center;
-		assert(ref.m_size % 2 == 0 && "node size should be an even numer");
-		const int halfSize = ref.m_size / 2;
+		const IntVector3D center = ref.getCenter();
+		assert(ref.getSize() % 2 == 0 && "node size should be an even numer");
+		const int halfSize = ref.getSize() / 2;
 		IntVector3D norm = getWallNormal(side);
 		IntVector3D offset = -(norm * halfSize + norm);
 		IntVector3D neighborCoord = center + offset;
@@ -257,11 +320,11 @@ namespace PMP
 	bool TestChamber::coordInNode(QVector3D coord, NodeID nodeID) const
 	{
 		const TestChamberNode& node = m_nodeMap.at(nodeID);
-		float halfSize = node.m_size / 2.0f;
-
-		return (coord.x() >= node.m_center.x() - halfSize && coord.x() <= node.m_center.x() + halfSize) &&
-			(coord.y() >= node.m_center.y() - halfSize && coord.y() <= node.m_center.y() + halfSize) &&
-			(coord.z() >= node.m_center.z() - halfSize && coord.z() <= node.m_center.z() + halfSize);
+		float halfSize = node.getSize() / 2.0f;
+		auto c = node.getCenter();
+		return (coord.x() >= c.x() - halfSize && coord.x() <= c.x() + halfSize) &&
+			(coord.y() >= c.y() - halfSize && coord.y() <= c.y() + halfSize) &&
+			(coord.z() >= c.z() - halfSize && coord.z() <= c.z() + halfSize);
 	}
 
 	std::optional<ChamberSurface> TestChamber::getSurface(NodeID node, WallSide side) const
@@ -273,22 +336,12 @@ namespace PMP
 
 	NodeID TestChamber::positionToNodeID(IntVector3D pos) const
 	{
-		// make sure all coordinates are positive
-		IntVector3D displaced = pos + IntVector3D(m_rootNodeWorldSize, m_rootNodeWorldSize, m_rootNodeWorldSize);
-		uint64_t x = static_cast<uint64_t>(std::llround(displaced.x()));
-		uint64_t y = static_cast<uint64_t>(std::llround(displaced.y()));
-		uint64_t z = static_cast<uint64_t>(std::llround(displaced.z()));
-
-		//good known magic numbers for hashing
-		uint64_t h = x * 73856093ULL ^ y * 19349663ULL ^ z * 83492791ULL;
-
-		// simple 64-bit scrambler
-		h ^= h >> 33;
-		h *= 0xff51afd7ed558ccdULL;
-		h ^= h >> 33;
-		h *= 0xc4ceb9fe1a85ec53ULL;
-		h ^= h >> 33;
-		return h;
+		// is this better than bitpacking?
+		int h = m_rootNodeWorldSize;
+		int D = 2 * h + 1;
+		return ((uint64_t)pos.x() + h) + ((uint64_t)pos.y() + h) * D + ((uint64_t)pos.z() + h) * D * D;
+		//static int i = 0;
+		//return i++;
 	}
 
 	bool TestChamber::isPointOOB(QVector3D coord) const
@@ -306,14 +359,14 @@ namespace PMP
 
 	IntVector3D TestChamber::getSurfaceCenter(ChamberSurface surface) const
 	{
-		return m_nodeMap.at(surface.parentNode).m_size * 0.5f * getWallNormal(surface.side) * -1 + m_nodeMap.at(surface.parentNode).m_center;
+		return m_nodeMap.at(surface.parentNode).getSize() * 0.5f * getWallNormal(surface.side) * -1 + m_nodeMap.at(surface.parentNode).getCenter();
 	}
 
 	void TestChamber::makeUSI(NodeID nodeID, UniqueSurfaceIdentifier& out, WallSide side) const
 	{
 		const TestChamberNode& node = m_nodeMap.at(nodeID);
-		out.size = node.m_size;
-		out.nodeCord = node.m_center;
+		out.size = node.getSize();
+		out.nodeCord = node.getCenter();
 		out.side = side;
 	}
 
@@ -321,7 +374,7 @@ namespace PMP
 	{
 		std::cout << "TestChamber has " << m_nodeMap.size() << " Node(s)\n";
 		for (const auto& [nodeId, node] : m_nodeMap) {
-			if (node.m_parentID.has_value()) std::cout << "NodeID: " << nodeId << ", child of " << node.m_parentID.value() << "\n";
+			if (node.hasChildren()) std::cout << "NodeID: " << nodeId << ", child of " << node.getParentID() << "\n";
 			else std::cout << "NodeID: " << nodeId << " has no parentID" << "\n";
 		}
 	}
@@ -345,7 +398,7 @@ namespace PMP
 			std::cout << (isLast ? "������ " : "������ ");
 		}
 #endif
-		std::cout << "Node " << id << " at " << printVector3D(m_nodeMap.at(id).m_center.toQVector3D()) << " with size " << m_nodeMap.at(id).m_size << "\n";
+		std::cout << "Node " << id << " at " << printVector3D(m_nodeMap.at(id).getCenter().toQVector3D()) << " with size " << m_nodeMap.at(id).getSize() << "\n";
 
 		const auto& childVec = children[id];
 		for (size_t i = 0; i < childVec.size(); ++i) {
@@ -363,8 +416,8 @@ namespace PMP
 		NodeID root = 0;
 
 		for (const auto& [id, node] : m_nodeMap) {
-			if (node.m_parentID.has_value()) {
-				children[*node.m_parentID].push_back(id);
+			if (node.hasParentID()) {
+				children[node.getParentID()].push_back(id);
 			}
 			else {
 				root = id;  // fallback assumption

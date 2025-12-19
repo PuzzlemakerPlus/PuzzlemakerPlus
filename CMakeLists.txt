@@ -23,6 +23,20 @@ find_package(Qt6 COMPONENTS
 			OpenGLWidgets 
 			REQUIRED)
 
+
+FetchContent_Declare(
+  absl
+  GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
+  # Pin to a known good version (recommended). Example tag format varies by release.
+  # You can also pin a commit hash for maximum reproducibility.
+  GIT_TAG 20240116.2
+)
+
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs")  # ON if you want .so/.dll
+set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "Abseil uses your C++ standard")
+
+FetchContent_MakeAvailable(absl)
+
 # FetchContent_Declare(
 #     assimp
 #     GIT_REPOSITORY https://github.com/assimp/assimp.git
@@ -101,6 +115,11 @@ target_link_libraries(PuzzlemakerPlus PRIVATE
 	Qt6::Widgets
 	Qt6::OpenGLWidgets
 	# assimp::assimp
+	absl::base
+	absl::strings
+	absl::str_format
+	absl::flat_hash_map
+	absl::log
 )
 
 # add_executable(octtreetest ${CMAKE_CURRENT_SOURCE_DIR}/tests/octtree_test.cpp

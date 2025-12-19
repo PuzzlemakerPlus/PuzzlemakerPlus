@@ -21,7 +21,7 @@ namespace PMP
 	// DO NOT USE THIS DIRECTLY, this is just used to initialize the value in the test chamber class
 	// Actually this can totally be used directly pretty sure I wrote the comment above but idk why -asd
 	// Kelsey: Lowered for now because 1024 is an easier value to work with
-	const unsigned int defaultRootNodeSize = 1024; // was 8192
+	const unsigned int defaultRootNodeSize = 8192; // was 8192
 
 	const float gridSizeDefault = 32;
 	const float gridSizeMin = 32;
@@ -42,7 +42,7 @@ namespace PMP
 
 		int getRootNodeSizeInt() const {return static_cast<int>(m_rootNodeWorldSize);};
 		unsigned int getRootNodeSize() const {return m_rootNodeWorldSize;};
-		QVector3D getNodeCenter(NodeID nodeID) const {return m_nodeMap.at(nodeID).m_center.toQVector3D();}
+		QVector3D getNodeCenter(NodeID nodeID) const {return m_nodeMap.at(nodeID).getCenter().toQVector3D(); }
 		const SafeUnorderedMap<NodeID, TestChamberNode>& getNodeMap() const {return m_nodeMap;};
 
 		std::optional<ChamberSurface> getSurface(NodeID node, WallSide side) const;
@@ -52,7 +52,7 @@ namespace PMP
 		// The neighbors may be nullopt if they do not exist (if the node is at the edge of the octree)
 		// The neighbors will either be the same size as the given node, or larger
 		// Recursive function that guarantees to find neighbors
-		void getNeighborNodes(NodeID node, std::array<std::optional<NodeID>, 6>& out) const;
+		//void getNeighborNodes(NodeID node, std::array<std::optional<NodeID>, 6>& out) const;
 
 		// Given a node, check if all its neighbors are the same size as itself
 		// very cheap operation Try to use this instead of getNeighborNodes whenever possible
@@ -76,8 +76,8 @@ namespace PMP
 		
 		// Is there surface on the given side of the node?
 		bool isSurface (WallSide side, NodeID node) const;
-		bool isNodeActive(NodeID node) const {return m_nodeMap.at(node).m_active;};
-		bool nodeHasChild(NodeID node) const {return m_nodeMap.at(node).m_childIDs.has_value();};
+		bool isNodeActive(NodeID node) const {return m_nodeMap.at(node).getActive();};
+		bool nodeHasChild(NodeID node) const {return m_nodeMap.at(node).hasChildren();};
 
 		// Find the smallest node that includes the give coordinate
 		// Recursive function that guarantees to find the node
@@ -105,6 +105,7 @@ namespace PMP
 
 		// Returns leaf nodes which touch the specified bbox
 		void getNodesTouchingBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out) const;
+		void setNeighbors(NodeID node);
 		// Calculates the potential coordinate for the center of a node at the given size that is closest to the given coordinate
 		// The returned coordinate may not correspond to an actual node
 		IntVector3D getClosestPossibleNodeCenterAtLevel(IntVector3D coord, unsigned int nodeSize) const;
@@ -120,6 +121,8 @@ namespace PMP
 
 		uint8_t nodeSurfaceFlag(NodeID node) const;
 
+		uint8_t nodeSurfaceFlagThreaded(NodeID node) const;
+
 		bool canUnsubdivide(NodeID node) const;
 		// pass in a possible candidates of nodes that needs to be checked for unsubdividing.
 		// needs a contiguous list of NodeIDs that may or may not repeat
@@ -132,8 +135,10 @@ namespace PMP
 
 		// Based on the octree structure, generate surfaces
 		void generateSurfaces();
+		void generateSurfacesThreaded();
 		
 
+		void eraseNode(NodeID nodeID);
 		// Extrude all surfaces selected
 		int extrudeSurfaces(Selector* selector);
 		// Receve all surfaces selected
@@ -145,6 +150,9 @@ namespace PMP
 		// - out will be set to the resulting nodes inside the bbox
 		void subdivideNodesToBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
 		void subdivideNodeToBBoxRecursive(NodeID node, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
+
+		// Instead of regenerating the entire surfacemap, update partially
+		void updateSurfaces();
 
 		NodeID subdivideNodeToCoordOptimized(QVector3D coord, NodeID parentID, unsigned int size);
 		// Returned node will always be a leaf node
@@ -183,6 +191,7 @@ namespace PMP
 		unsigned int m_rootNodeWorldSize;
 		
 		SafeUnorderedMap<NodeID, TestChamberNode> m_nodeMap;
+		std::unordered_set<NodeID> m_nodeDirty; // set of nodes that was modified this frame
 		SafeUnorderedMap<NodeID, std::array<ChamberSurface, 6>> m_surfaceMap;
 
 		int m_gridSize;
@@ -204,8 +213,8 @@ namespace PMP
 		{
 			const TestChamberNode& node = chamber.getNodeMap().at(nodeID);
 			UniqueVolumeIdentifier uvi;
-			uvi.size = node.m_size;
-			uvi.nodeCord = node.m_center;
+			uvi.size = node.getSize();
+			uvi.nodeCord = node.getCenter();
 			return uvi;
 		}
 	};
