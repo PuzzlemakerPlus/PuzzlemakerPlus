@@ -139,6 +139,7 @@ namespace PMP
 		
 
 		void eraseNode(NodeID nodeID);
+		void createDefaultSpace();
 		// Extrude all surfaces selected
 		int extrudeSurfaces(Selector* selector);
 		// Receve all surfaces selected

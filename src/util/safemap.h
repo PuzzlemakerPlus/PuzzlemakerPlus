@@ -1,8 +1,10 @@
 //#define USESTD
 #ifdef USESTD 
-#include <unordered_map> // 751354
+// relatively slow
+#include <unordered_map> // node based map
 #else
-#include "absl/container/flat_hash_map.h" //525763
+// faster
+#include "absl/container/flat_hash_map.h" // any mutation to the map invalidates pointers/references to items inside.
 #endif
 #pragma once
 

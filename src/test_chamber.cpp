@@ -33,6 +33,7 @@ namespace PMP
 		// Root node is not 0
 		m_rootNode = positionToNodeID({0,0,0}); // Warm up hash function
 		createOctreeNode(m_rootNode, std::nullopt, {0,0,0}, m_rootNodeWorldSize);
+		createDefaultSpace();
 	}
 
 	void TestChamber::createChildrenOfNode( NodeID parentID )
@@ -415,6 +416,22 @@ namespace PMP
 		m_nodeMap.erase(nodeID);
 		m_surfaceMap.erase(nodeID);
 	}
+	void TestChamber::createDefaultSpace()
+	{
+		QVector3D mins = { -1024,-1024,-1024 };
+		QVector3D maxs = { 1024,1024,1024 };
+		std::vector<NodeID> touchingNodes;
+		subdivideNodesToBBox(mins, maxs, touchingNodes);
+		std::unordered_set<NodeID> nodeSet;
+		for (int i = 0; i < touchingNodes.size(); i++)
+		{
+			nodeSet.insert(touchingNodes[i]);
+		}
+		for (auto& [id, node] : m_nodeMap)
+		{
+			m_nodeMap.at(id).setActive(nodeSet.find(id) != nodeSet.end());
+		}
+	}
 	int TestChamber::extrudeSurfaces(Selector* selector)
 	{
 		QVector3D mins = selector->getMins();
@@ -442,18 +459,18 @@ namespace PMP
 		}
 		UndoStack::instance().addAction(std::make_unique<TCExtrudeAction>(this, selector, extrudeUVIs, sv));*/
 
-		{
-			ScopedTimer timer = ScopedTimer("generateSurfaces");
-			generateSurfaces();
-		}
+		//{
+		//	ScopedTimer timer = ScopedTimer("generateSurfaces");
+		//	generateSurfaces();
+		//}
 		//{
 		//	ScopedTimer("generateSurfacesThreaded");
 		//	generateSurfacesThreaded();
 		//}
-		//{
-		//	ScopedTimer timer = ScopedTimer("updateSurfaces");
-		//	updateSurfaces();
-		//}
+		{
+			ScopedTimer timer = ScopedTimer("updateSurfaces");
+			updateSurfaces();
+		}
 
 		return nodesChanged;
 	}
