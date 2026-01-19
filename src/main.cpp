@@ -6,6 +6,8 @@
 
 #include "absl/strings/str_format.h"
 
+#include "widgets/main_window.h"
+
 #include "undo.h"
 #include "selection.h"
 #include "test_chamber.h"
@@ -15,9 +17,10 @@
 
 int main(int argc, char* argv[])
 {
-	std::cout << absl::StrFormat("hello %s\n", "ABSL");
-	PMP::UndoStack::instance(); //Initialize Undostack singleton before anything else
-	QApplication a(argc, argv);
+	//Initialize Undostack singleton before anything else
+	// NOTE: This will need to be made per-chamber if we implement tabbed UI later
+	PMP::UndoStack::instance();
+
 	// Configure OpenGL format
 	QSurfaceFormat format;
 	//QSurfaceFormat::setDefaultFormat(format);
@@ -32,33 +35,13 @@ int main(int argc, char* argv[])
 #else
 	format.setOption(QSurfaceFormat::DebugContext, false);
 #endif
-	
+
 	QSurfaceFormat::setDefaultFormat( format );
 
-	// TODO: We probably want the main viewport to be a child of a separate "base" panel
-	PMP::Viewport mainViewport(nullptr);
-	// Initialize debugger singleton with the main viewport
-	PMP::Debugger::instance(&mainViewport);
-	PMP::Selector selector;
-	mainViewport.setSelector(&selector);
-	mainViewport.resize(1280, 720);
-	mainViewport.setWindowTitle("Puzzlemaker Plus");
+	QApplication app(argc, argv);
 
-	mainViewport.show();
-	
-	PMP::TestChamber tc;
+	auto* mainWindow = new PMP::MainWindow;
+	mainWindow->show();
 
-	tc.printNodesTree();
-	tc.generateSurfaces();
-	std::cout << "Loaded Test Chamber" << std::endl;
-	
-	selector.setTestChamber(&tc);
-	mainViewport.setTestChamber(&tc);
-	mainViewport.loadTestChamberMesh();
-
-	//creates all the buttons for the palette Right now most of the data for each element is junk for demo
-	// Disabling this for now until we're ready to work on it more - Kelsey
-	//PMP::Palette Palette(&mainViewport);
-
-	return QApplication::exec();
+	return app.exec();
 }
