@@ -1,4 +1,6 @@
 #pragma once
+#include <unordered_set>
+
 #include "util/3d/mesh.h"
 #include "util/math.h"
 #include "util/optional_array.h"
