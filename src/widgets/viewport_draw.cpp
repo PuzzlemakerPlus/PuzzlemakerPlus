@@ -356,6 +356,7 @@ namespace PMP
 		// Return to Qt¡¯s default FBO
 		glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
 	}
+
 	void Viewport::drawDots(QMatrix4x4 view)
 	{
 		if (m_dotCount == 0) return;
@@ -716,6 +717,7 @@ namespace PMP
 
 		out = lightProj * lightView;
 	}
+
 	// QT Functions
 	void Viewport::paintGL()
 	{

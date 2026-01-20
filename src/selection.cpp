@@ -121,6 +121,7 @@ namespace PMP
 		m_startMins += offset;
 		m_startMaxs += offset;
 	}
+
 	void Selector::shiftSelection(const IntVector3D& offset)
 	{
 		m_mins += offset.toQVector3D();

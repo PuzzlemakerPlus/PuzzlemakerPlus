@@ -60,6 +60,12 @@ namespace PMP
 		ext->glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE,
 							   GL_DEBUG_SEVERITY_NOTIFICATION,
 							   0, nullptr, GL_FALSE);
+
+		m_glInitialized = true;
+		// Load mesh data if the test chamber was set before this gets called
+		if (m_testChamber)
+			reloadChamberMeshAndSelection();
+
 		std::cout << "ViewportGL initialized." << std::endl;
 	}
 
@@ -156,9 +162,13 @@ namespace PMP
 		m_blurShader.link();
 #endif
 	}
+
 	// needs a list of points to draw
 	void Viewport::loadDots(std::vector<DebugPoint> vertices)
 	{
+		if (!m_glInitialized)
+			return;
+
 		m_dotCount = vertices.size();
 		this->makeCurrent();
 		m_dotVAO.bind();
@@ -192,8 +202,12 @@ namespace PMP
 		m_dotVBO.release();
 		this->doneCurrent();
 	}
+
 	void Viewport::loadLines(std::vector<LineVertex> vertices)
 	{
+		if (!m_glInitialized)
+			return;
+
 		m_lineVertCount = vertices.size();
 
 		this->makeCurrent();
@@ -214,10 +228,12 @@ namespace PMP
 		m_lineVBO.release();
 		this->doneCurrent();
 	}
+
 	void Viewport::loadLines(Ray ray, float length, QVector3D colStart, QVector3D colEnd)
 	{
 		loadLines({{ray.origin, colStart}, {ray.origin + ray.direction * length, colEnd}});
 	}
+
 	void Viewport::loadSelectionLines()
 	{
 		Q_ASSERT(m_selector);
@@ -227,11 +243,15 @@ namespace PMP
 		MultiQuadCornersToLineWireframe(corners,lines);
 		loadLines(lines);
 	}
+
 	void Viewport::loadTestChamberMesh()
 	{
+		if (!m_glInitialized)
+			return;
+
 		Q_ASSERT(m_testChamber);
 		if(!m_testChamber) throw std::runtime_error("Can not load test chamber mesh without setting test chamber");
-		
+
 		std::vector<TestChamberQuad> quads;
 		m_testChamber->generateTCQuads(quads);
 		std::vector<TestChamberQuad> shadowQuads;
@@ -268,9 +288,9 @@ namespace PMP
 		m_shadowIndicesCount = shadowMesh.indices.size();
 		update();
 	}
+
 	void Viewport::resizeGL( int _width, int _height )
 	{
-		Q_ASSERT(m_selector);
 		const float aspect = (float)_width / (float)(_height > 0 ? _height : 1);
 		m_projection.setToIdentity();
 		// Source near clip plane value, might change later
@@ -284,6 +304,9 @@ namespace PMP
 
 	void Viewport::reloadChamberMeshAndSelection()
 	{
+		if (!m_glInitialized)
+			return;
+
 		loadTestChamberMesh();
 		loadSelectionLines();
 	}
@@ -315,6 +338,7 @@ namespace PMP
 		}
 		return true;
 	}
+
 	void Viewport::resizeEvent( QResizeEvent* event )
 	{
 		m_gridSizeLabel.resize(width(), m_gridSizeLabel.height());
@@ -323,6 +347,7 @@ namespace PMP
 		updateGridSizeLabel();
 		QOpenGLWidget::resizeEvent(event);
 	}
+
 	void Viewport::drawDragBox()
 	{
 		QPainter p(this); // safe in QOpenGLWidget
@@ -335,6 +360,7 @@ namespace PMP
 		p.setPen(pen);
 		p.drawRect(m_rect.adjusted(0, 0, -1, -1));
 	}
+
 	void Viewport::updateGridSizeLabel()
 	{
 		if ( !m_testChamber )
@@ -342,6 +368,7 @@ namespace PMP
 
 		m_gridSizeLabel.setText(QString("Grid Size: ") + QString::number(m_testChamber->getGridSize()));
 	}
+
 	void Viewport::generateAOKernel()
 	{
 		for (int i = 0; i < 64; ++i)
@@ -353,5 +380,12 @@ namespace PMP
 			sample *= scale;
 			m_aokernel[i] = sample;
 		}
+	}
+
+	void Viewport::resetCamera()
+	{
+		m_cameraTarget = QVector3D( 0.0f, 0.0f, 0.0f );
+		m_cameraAngles = camAngleDefault;
+		m_cameraDistance = cameraDistDefault;
 	}
 }

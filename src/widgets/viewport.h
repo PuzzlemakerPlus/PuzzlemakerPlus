@@ -105,6 +105,8 @@ namespace PMP
 
 	class Viewport : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core
 	{
+		Q_OBJECT
+
 	public:
 		Viewport(QWidget* parent) :
 			QOpenGLWidget(parent),
@@ -130,6 +132,7 @@ namespace PMP
 			m_frameTimer->start(10); // ~100 FPS
 
 			generateAOKernel();
+			setFocusPolicy(Qt::FocusPolicy::StrongFocus);
 		}
 
 		void loadDots(std::vector<DebugPoint> vertices);
@@ -138,6 +141,7 @@ namespace PMP
 		void loadLines(Ray ray, float length=20000.0f, QVector3D colStart=QVector3D(1.0f,0.0f,0.0f), QVector3D colEnd=QVector3D(0.0f,0.0f,1.0f));
 		void loadSelectionLines();
 		void loadTestChamberMesh();
+		void reloadChamberMeshAndSelection();
 		
 		void setFog(bool enable) {m_fog = enable;};
 		void setFogStart(float x) {m_fogStart = x;};
@@ -153,6 +157,8 @@ namespace PMP
 		void getViewMatrix(QMatrix4x4& out);
 
 		void getGlobalLightViewMatrix(QVector3D lightDir, QMatrix4x4& out);
+
+		void resetCamera();
 		
 	protected:
 		void createGraphicsObjects();
@@ -165,7 +171,6 @@ namespace PMP
 		void loadShaders();
 		void paintGL() override;
 		void resizeGL( int width, int height ) override;
-		void reloadChamberMeshAndSelection();
 		void getTextureSize(GLuint tex, int& width, int& height);
 		void initializeGL() override;
 		bool readSelectionRectCPU(ScreenSurfaceSet& out);
@@ -250,6 +255,8 @@ namespace PMP
 		QOpenGLBuffer m_chamberVBO;
 		QOpenGLBuffer m_chamberIBO;
 		GLsizei m_indicesCount = 0;
+		// Make sure we don't try to do operations with opengl objects until initGL has been called by Qt
+		bool m_glInitialized = false;
 		
 		QOpenGLShaderProgram m_dotShader;
 		QOpenGLVertexArrayObject m_dotVAO;

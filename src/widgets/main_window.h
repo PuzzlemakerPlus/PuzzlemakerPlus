@@ -25,8 +25,8 @@ namespace PMP
 
 
 	private:
-		Viewport m_mainViewport;
 		Selector m_selector;
+		Viewport* m_mainViewport;
 
 		std::unique_ptr<TestChamber> m_currentChamber;
 	};

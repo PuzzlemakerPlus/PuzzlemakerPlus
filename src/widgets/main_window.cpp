@@ -9,12 +9,12 @@
 
 #include "../util/debug.h"
 #include "palette.h"
+#include "../undo.h"
 
 namespace PMP
 {
 	MainWindow::MainWindow(QWidget* parent /* = nullptr */)
-		: QMainWindow(parent),
-		m_mainViewport(this)
+		: QMainWindow(parent)
 	{
 		// easter egg
 		if ( QRandomGenerator::global()->generate() % 10000 == 0 )
@@ -25,10 +25,11 @@ namespace PMP
 		// TODO: save window size across restarts
 		resize(1280, 720);
 
+		m_mainViewport = new Viewport(this);
 		// Initialize debugger singleton with the main viewport
-		PMP::Debugger::instance(&m_mainViewport);
-		m_mainViewport.setSelector(&m_selector);
-		setCentralWidget(&m_mainViewport);
+		PMP::Debugger::instance(m_mainViewport);
+		m_mainViewport->setSelector(&m_selector);
+		setCentralWidget(m_mainViewport);
 
 		newChamber();
 
@@ -52,12 +53,20 @@ namespace PMP
 		});
 
 		auto* editMenu = menuBar()->addMenu("Edit");
-		editMenu->addAction("Undo")->setEnabled(false);
-		editMenu->addAction("Redo")->setEnabled(false);
+		editMenu->addAction( "Undo", [this] {
+			UndoStack::instance().undo();
+			m_mainViewport->reloadChamberMeshAndSelection();
+		});
+		editMenu->addAction( "Redo", [this] {
+			UndoStack::instance().redo();
+			m_mainViewport->reloadChamberMeshAndSelection();
+		});
+		editMenu->addSeparator();
 		editMenu->addAction("Select all")->setEnabled(false);
 
 		auto* mapMenu = menuBar()->addMenu("Map");
 		mapMenu->addAction("Change style")->setEnabled(false);
+		mapMenu->addAction("Change music")->setEnabled(false);
 		mapMenu->addSeparator();
 		// NOTE: These are placeholders for mockup purposes - eventually these settings should be defined in packages
 		auto* coopAction = mapMenu->addAction("Cooperative puzzle");
@@ -71,6 +80,10 @@ namespace PMP
 		helpMenu->addAction( "Report a bug", [this] {
 			QDesktopServices::openUrl( { "https://github.com/PuzzlemakerPlus/PuzzlemakerPlus/issues/new" } );
 		});
+		helpMenu->addSeparator();
+		helpMenu->addAction("Editor tips")->setEnabled(false);
+		helpMenu->addAction("Puzzlecraft tips")->setEnabled(false);
+		helpMenu->addAction("Wiki")->setEnabled(false);
 		helpMenu->addSeparator();
 		helpMenu->addAction("About Puzzlemaker Plus")->setEnabled(false);
 		helpMenu->addAction("About Qt", [this] {
@@ -93,7 +106,11 @@ namespace PMP
 
 		// does this totally defeat the purpose of a unique_ptr idk
 		m_selector.setTestChamber(m_currentChamber.get());
-		m_mainViewport.setTestChamber(m_currentChamber.get());
-		m_mainViewport.loadTestChamberMesh();
+		m_mainViewport->setTestChamber(m_currentChamber.get());
+
+		m_selector.clearSelection();
+		m_mainViewport->resetCamera();
+
+		m_mainViewport->reloadChamberMeshAndSelection();
 	}
 }
