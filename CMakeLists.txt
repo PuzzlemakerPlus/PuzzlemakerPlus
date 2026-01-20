@@ -60,6 +60,8 @@ qt_add_executable(PuzzlemakerPlus
 	src/main.cpp
 
 	# Widgets
+	src/widgets/main_window.cpp
+	src/widgets/main_window.h
 	src/widgets/palette.cpp
 	src/widgets/palette.h
 	src/widgets/viewport_control.cpp
@@ -97,10 +99,12 @@ qt_add_executable(PuzzlemakerPlus
 	src/undo.h
 	src/undo.cpp
 
+	# Package system
+	src/util/file_handler.cpp
+	src/util/file_handler.h
+
 	# Resources
 	res/resources.qrc
-		src/util/file_handler.cpp
-		src/util/file_handler.h
 )
 set_target_properties(PuzzlemakerPlus
 	PROPERTIES RUNTIME_OUTPUT_DIRECTORY
