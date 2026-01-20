@@ -64,11 +64,12 @@ qt_add_executable(PuzzlemakerPlus
 	src/widgets/main_window.h
 	src/widgets/palette.cpp
 	src/widgets/palette.h
+	src/widgets/palette_element.cpp
+	src/widgets/palette_element.h
 	src/widgets/viewport_control.cpp
 	src/widgets/viewport_draw.cpp
 	src/widgets/viewport.cpp
 	src/widgets/viewport.h
-	src/widgets/PaletteElement.cpp
 
 	# Utils
 	src/util/optional_array.h

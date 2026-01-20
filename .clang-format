@@ -1,0 +1,33 @@
+---
+# microsoft style seems closest to what we were using previously
+BasedOnStyle: Microsoft
+
+# use tabs for indentation, not spaces
+UseTab:          ForIndentation
+# assume tabs are 1 char wide for formatting purposes
+# contributors can independently choose the actual tab width shown in their editor
+TabWidth:        1
+IndentWidth:     1
+AccessModifierOffset: -1
+
+# enforce spacing between functions for readability
+SeparateDefinitionBlocks: Always
+
+# adding these to avoid messing too much with existing formatting in certain places, might change later
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: Inline
+
+# sort includes by main include > std/library includes > PMP includes
+IncludeBlocks: Regroup
+IncludeIsMainRegex: '$?'
+IncludeCategories:
+  - Regex: '^<.*>'
+    Priority: 1
+  - Regex: '^".*"'
+    Priority: 2
+
+# everything is under PMP, so don't indent unless namespaces are nested
+NamespaceIndentation: Inner
+
+# stop git clients from bugging us about "no newline at end of file"
+InsertNewlineAtEOF: true

@@ -4,7 +4,8 @@
 #pragma once
 #include <fstream>
 
-class FileHandler {
+class FileHandler
+{
 
 private:
 	std::fstream m_file;
@@ -16,7 +17,6 @@ private:
 #endif
 
 public:
-
 	/* path can be in / or \ it corrects for you
 	 * the different modes are:
 	 *r for read,
@@ -32,7 +32,4 @@ public:
 	~FileHandler();
 
 	bool fileExists();
-
-
-
 };

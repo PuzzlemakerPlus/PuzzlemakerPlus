@@ -3,31 +3,30 @@
 #pragma once
 
 #include <memory>
+#include <qaction.h>
 #include <qmainwindow.h>
 #include <qwidget.h>
-#include <qaction.h>
 
-#include "viewport.h"
-#include "../test_chamber.h"
 #include "../selection.h"
+#include "../test_chamber.h"
+#include "viewport.h"
 
 namespace PMP
 {
-	class MainWindow : public QMainWindow
-	{
-		Q_OBJECT
+class MainWindow : public QMainWindow
+{
+	Q_OBJECT
 
-	public:
-		explicit MainWindow(QWidget* parent = nullptr);
+public:
+	explicit MainWindow(QWidget *parent = nullptr);
 
-		void newChamber();
-		// TODO: loadChamber etc.
+	void newChamber();
+	// TODO: loadChamber etc.
 
+private:
+	Selector m_selector;
+	Viewport *m_mainViewport;
 
-	private:
-		Selector m_selector;
-		Viewport* m_mainViewport;
-
-		std::unique_ptr<TestChamber> m_currentChamber;
-	};
-}
+	std::unique_ptr<TestChamber> m_currentChamber;
+};
+} // namespace PMP
