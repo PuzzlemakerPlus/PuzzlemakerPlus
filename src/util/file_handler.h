@@ -1,9 +1,7 @@
-//
-// Created by hannah on 2025-12-02.
-//
+// file_handler.h
+// TODO: Write description!
 
-#ifndef PUZZLEMAKERPLUS_FILEHANDLER_H
-#define PUZZLEMAKERPLUS_FILEHANDLER_H
+#pragma once
 #include <fstream>
 
 class FileHandler {
@@ -38,6 +36,3 @@ public:
 
 
 };
-
-
-#endif //PUZZLEMAKERPLUS_FILEHANDLER_H
