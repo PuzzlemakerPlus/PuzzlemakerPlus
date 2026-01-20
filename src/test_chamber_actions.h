@@ -1,4 +1,7 @@
+// test_chamber_actions.h
+// Defines undo/redo actions for the test chamber
 #pragma once
+
 #include <optional>
 #include <vector>
 

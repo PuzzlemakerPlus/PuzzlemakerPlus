@@ -1,7 +1,5 @@
-//
-// Created by hannah on 13/04/25.
-//
-
+// palette.cpp
+// Implements the item palette/list widget
 #include "palette.h"
 
 #include <QPushButton>

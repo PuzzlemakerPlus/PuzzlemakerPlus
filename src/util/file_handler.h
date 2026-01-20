@@ -1,7 +1,7 @@
 // file_handler.h
-// TODO: Write description!
-
+// Class for handling folder-based packages
 #pragma once
+
 #include <fstream>
 
 class FileHandler

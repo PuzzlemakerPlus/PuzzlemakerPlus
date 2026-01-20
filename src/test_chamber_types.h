@@ -1,4 +1,7 @@
+// test_chamber_types.h
+// Defines types used internally by the test chamber octree structure
 #pragma once
+
 #include <unordered_set>
 
 #include "util/3d/mesh.h"

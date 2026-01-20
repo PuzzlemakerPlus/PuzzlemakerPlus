@@ -1,7 +1,5 @@
-//
-// Created by hannah on 13/04/25.
-//
-
+// palette_element.cpp
+// Widget for individual palette items
 #include "palette_element.h"
 
 #include <QPushButton>

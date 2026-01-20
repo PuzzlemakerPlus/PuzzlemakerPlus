@@ -1,6 +1,7 @@
 // ray.h
 // Utility functions for ray casting
 #pragma once
+
 #include <qvectornd.h>
 
 namespace PMP

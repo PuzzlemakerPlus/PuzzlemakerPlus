@@ -1,4 +1,5 @@
-
+// selection.cpp
+// Handles chamber geometry selections
 #include "selection.h"
 
 #include <qvectornd.h>

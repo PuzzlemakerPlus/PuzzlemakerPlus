@@ -1,4 +1,7 @@
+// debug.h
+// Provides functionality for drawing 3D debug overlays
 #pragma once
+
 #include <QVector3D>
 #include <vector>
 

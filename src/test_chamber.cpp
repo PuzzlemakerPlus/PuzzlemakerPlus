@@ -1,5 +1,6 @@
-// octree_test.cpp
+// test_chamber.cpp
 // Implements the class that represents the test chamber itself and the octree nodes
+// See also: test_chamber_graphical.cpp, test_chamber_utils.cpp
 #include "test_chamber.h"
 
 #include <array>

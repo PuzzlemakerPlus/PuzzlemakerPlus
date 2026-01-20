@@ -1,6 +1,5 @@
-// math.h
+// math.cpp
 // Math related utility functions that aren't already covered by Qt or the standard library
-
 #include "math.h"
 
 #include <cmath>

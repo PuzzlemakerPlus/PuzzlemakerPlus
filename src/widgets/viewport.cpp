@@ -1,5 +1,6 @@
 // viewport.cpp
 // Implements the main editor viewport as an extension of QOpenGLWidget
+// See also: viewport_control.cpp and viewport_draw.cpp
 #include "viewport.h"
 
 #include <QMouseEvent>

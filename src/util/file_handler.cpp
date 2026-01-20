@@ -1,6 +1,5 @@
 // file_handler.cpp
-// TODO: Write description!
-
+// Class for handling folder-based packages
 #include "file_handler.h"
 
 #include <algorithm>

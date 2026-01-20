@@ -1,6 +1,5 @@
-//
-// Created by hannah on 13/04/25.
-//
+// palette.h
+// Implements the item palette/list widget
 #pragma once
 
 #include "palette_element.h"

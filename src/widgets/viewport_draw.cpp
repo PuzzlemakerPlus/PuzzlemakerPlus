@@ -1,3 +1,5 @@
+// viewport_draw.cpp
+// Functions for drawing the viewport
 #include "viewport.h"
 
 #include <iostream>

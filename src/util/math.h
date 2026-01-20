@@ -1,6 +1,7 @@
 // math.h
 // Math related utility functions that aren't already covered by Qt or the standard library
 #pragma once
+
 #include <qmatrix4x4.h>
 #include <qvector3d.h>
 

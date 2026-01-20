@@ -1,3 +1,5 @@
+// undo.cpp
+// Implements the undo/redo system as a stack of Undoable actions
 #include "undo.h"
 
 #include <memory>

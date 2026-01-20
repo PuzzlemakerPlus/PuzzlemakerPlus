@@ -1,4 +1,7 @@
-﻿#pragma once
+﻿// scoped_timer.h
+// Timer for performance profiling
+#pragma once
+
 #include <chrono>
 #include <iostream>
 

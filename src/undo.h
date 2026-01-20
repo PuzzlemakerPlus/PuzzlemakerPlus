@@ -1,4 +1,7 @@
+// undo.h
+// Implements the undo/redo system as a stack of Undoable actions
 #pragma once
+
 #include <deque>
 #include <memory>
 

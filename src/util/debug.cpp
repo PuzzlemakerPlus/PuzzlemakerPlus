@@ -1,3 +1,5 @@
+// debug.cpp
+// Provides functionality for drawing 3D debug overlays
 #include "debug.h"
 
 namespace PMP

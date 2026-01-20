@@ -1,4 +1,7 @@
+// selection.h
+// Handles chamber geometry selections
 #pragma once
+
 #include <optional>
 #include <qmatrix4x4.h>
 #include <qpoint.h>

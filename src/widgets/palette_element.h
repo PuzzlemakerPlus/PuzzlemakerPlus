@@ -1,7 +1,5 @@
-//
-// Created by hannah on 13/04/25.
-//
-
+// palette_element.h
+// Widget for individual palette items
 #pragma once
 
 #include <QAbstractButton>

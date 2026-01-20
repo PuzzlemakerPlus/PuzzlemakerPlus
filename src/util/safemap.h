@@ -1,3 +1,6 @@
+// safemap.h
+// Implements SafeUnorderedMap class (see below)
+
 // #define USESTD
 #ifdef USESTD
 // relatively slow
