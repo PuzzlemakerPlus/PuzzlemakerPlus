@@ -1,6 +1,5 @@
-//
-// Created by hannah on 2025-12-02.
-//
+// file_handler.cpp
+// TODO: Write description!
 
 #include "file_handler.h"
 #include <algorithm>
