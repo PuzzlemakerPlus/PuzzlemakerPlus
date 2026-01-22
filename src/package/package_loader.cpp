@@ -40,7 +40,7 @@ bool PackageLoader::scanDirectoryRecursive(std::string_view dir)
 				else
 				{
 					// not a package, so scan deeper
-					scanDirectoryRecursive(dirEntry.absoluteFilePath().toLocal8Bit().constData());
+					scanDirectoryRecursive(dirEntry.absoluteFilePath().toStdString());
 					continue;
 				}
 			}
@@ -54,7 +54,7 @@ bool PackageLoader::scanDirectoryRecursive(std::string_view dir)
 
 		// todo: package format lookup
 		qDebug() << "Added package " << dirEntry.fileName();
-		m_packageList.push_back(std::make_unique<Package>());
+		m_packageList.push_back(std::make_unique<Package>(dirEntry.baseName().toStdString()));
 		continue;
 	}
 
