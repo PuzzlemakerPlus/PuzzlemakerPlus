@@ -12,7 +12,7 @@
 
 namespace PMP
 {
-void Selector::getSelectionGeometry(std::vector<QVector3D> &out)
+void Selector::getSelectionGeometry(std::vector<QVector3D>& out)
 {
 	// TODO: this is a dumb hack, but it's late and I'm tired - Kelsey
 
@@ -48,7 +48,7 @@ void Selector::getSelectionGeometry(std::vector<QVector3D> &out)
 	out.push_back(QVector3D(m_mins.x(), m_maxs.y(), m_maxs.z()));
 }
 
-void Selector::getGridTileCorners(QVector3D &mins, QVector3D &maxs, const RayHitResult &hitResult)
+void Selector::getGridTileCorners(QVector3D& mins, QVector3D& maxs, const RayHitResult& hitResult)
 {
 	int gridSize = m_testChamber->getGridSize(); // for convenience
 	Q_ASSERT(gridSize >= 1 && "Grid size < 1 not supported");
@@ -70,7 +70,7 @@ void Selector::getGridTileCorners(QVector3D &mins, QVector3D &maxs, const RayHit
 	maxs = mins + QVector3D(gridSize, gridSize, gridSize) * sideMask.toQVector3D();
 }
 
-void Selector::startSelection(const RayHitResult &hitResult)
+void Selector::startSelection(const RayHitResult& hitResult)
 {
 	getGridTileCorners(m_mins, m_maxs, hitResult);
 	m_startMaxs = m_maxs;
@@ -82,7 +82,7 @@ void Selector::startSelection(const RayHitResult &hitResult)
 	m_selectionActive = true;
 }
 
-void Selector::updateSelection(const RayHitResult &hitResult)
+void Selector::updateSelection(const RayHitResult& hitResult)
 {
 	QVector3D mins, maxs;
 	getGridTileCorners(mins, maxs, hitResult);
@@ -111,7 +111,7 @@ void Selector::clearSelection()
 	m_surfaceNormal = IntVector3D(0, 0, 0);
 }
 
-void Selector::shiftSelection(const QVector3D &offset)
+void Selector::shiftSelection(const QVector3D& offset)
 {
 	m_mins += offset;
 	m_maxs += offset;
@@ -119,7 +119,7 @@ void Selector::shiftSelection(const QVector3D &offset)
 	m_startMaxs += offset;
 }
 
-void Selector::shiftSelection(const IntVector3D &offset)
+void Selector::shiftSelection(const IntVector3D& offset)
 {
 	m_mins += offset.toQVector3D();
 	m_maxs += offset.toQVector3D();

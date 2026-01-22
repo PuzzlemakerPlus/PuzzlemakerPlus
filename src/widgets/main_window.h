@@ -18,14 +18,14 @@ class MainWindow : public QMainWindow
 	Q_OBJECT
 
 public:
-	explicit MainWindow(QWidget *parent = nullptr);
+	explicit MainWindow(QWidget* parent = nullptr);
 
 	void newChamber();
 	// TODO: loadChamber etc.
 
 private:
 	Selector m_selector;
-	Viewport *m_mainViewport;
+	Viewport* m_mainViewport;
 
 	std::unique_ptr<TestChamber> m_currentChamber;
 };

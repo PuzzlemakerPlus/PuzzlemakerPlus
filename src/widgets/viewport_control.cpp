@@ -77,7 +77,7 @@ void Viewport::onFrameUpdate()
 	}
 }
 
-void Viewport::keyPressEvent(QKeyEvent *event)
+void Viewport::keyPressEvent(QKeyEvent* event)
 {
 	Q_ASSERT(m_selector);
 	Q_ASSERT(m_testChamber);
@@ -168,7 +168,7 @@ void Viewport::keyPressEvent(QKeyEvent *event)
 	}
 }
 
-void Viewport::mousePressEvent(QMouseEvent *event)
+void Viewport::mousePressEvent(QMouseEvent* event)
 {
 	Q_ASSERT(m_testChamber);
 	QMatrix4x4 viewMatrix;
@@ -220,7 +220,7 @@ void Viewport::mousePressEvent(QMouseEvent *event)
 	m_lastMousePos = QVector2D(event->position());
 }
 
-void Viewport::mouseMoveEvent(QMouseEvent *event)
+void Viewport::mouseMoveEvent(QMouseEvent* event)
 {
 	if (m_isDragging)
 	{
@@ -253,7 +253,7 @@ void Viewport::mouseMoveEvent(QMouseEvent *event)
 	}
 }
 
-void Viewport::mouseReleaseEvent(QMouseEvent *event)
+void Viewport::mouseReleaseEvent(QMouseEvent* event)
 {
 	QVector2D newPos = QVector2D(event->position());
 	// detects whether the mouse moved since last frame.
@@ -307,7 +307,7 @@ void Viewport::mouseReleaseEvent(QMouseEvent *event)
 	update();
 }
 
-void Viewport::wheelEvent(QWheelEvent *event)
+void Viewport::wheelEvent(QWheelEvent* event)
 {
 	float prev_dist = m_cameraDistance;
 	m_cameraDistance -= event->angleDelta().y() * 6.0f; // roughly matches PTI - make this customizable

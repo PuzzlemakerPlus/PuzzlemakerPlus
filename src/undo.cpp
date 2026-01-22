@@ -6,7 +6,7 @@
 
 namespace PMP
 {
-UndoStack &UndoStack::instance()
+UndoStack& UndoStack::instance()
 {
 	static UndoStack instance;
 	return instance;

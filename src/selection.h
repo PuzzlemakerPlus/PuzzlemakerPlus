@@ -20,21 +20,21 @@ public:
 	Selector() : m_selectionActive(false), m_isVolumeSelection(false), m_mins(), m_maxs() {}
 
 	// Returns corners of the selection
-	void getSelectionGeometry(std::vector<QVector3D> &out);
+	void getSelectionGeometry(std::vector<QVector3D>& out);
 
 	// Testchamber to make selection from
-	void setTestChamber(TestChamber *tc) { m_testChamber = tc; };
+	void setTestChamber(TestChamber* tc) { m_testChamber = tc; };
 
 	// New selection stuff
 	// Might be worth changing these to not take the ray hit result directly
-	void getGridTileCorners(QVector3D &mins, QVector3D &maxs, const RayHitResult &hitResult);
-	void startSelection(const RayHitResult &hitResult);
-	void updateSelection(const RayHitResult &hitResult);
+	void getGridTileCorners(QVector3D& mins, QVector3D& maxs, const RayHitResult& hitResult);
+	void startSelection(const RayHitResult& hitResult);
+	void updateSelection(const RayHitResult& hitResult);
 	void endSelection();
 	void clearSelection();
 	// Shift selection in world space
-	void shiftSelection(const QVector3D &offset);
-	void shiftSelection(const IntVector3D &offset);
+	void shiftSelection(const QVector3D& offset);
+	void shiftSelection(const IntVector3D& offset);
 
 	QVector3D getMins() { return m_mins; }
 
@@ -51,7 +51,7 @@ public:
 	}
 
 private:
-	TestChamber *m_testChamber = nullptr;
+	TestChamber* m_testChamber = nullptr;
 
 	// TODO: this needs more work to support multi selection
 	bool m_selectionActive;

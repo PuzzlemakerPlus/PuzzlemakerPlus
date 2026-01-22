@@ -45,27 +45,27 @@ void Viewport::createGraphicsObjects()
 	Q_ASSERT(vaoCheck && "All positions of VAO must have unique position");
 	glEnableVertexAttribArray(vertexPosLocation);
 	glVertexAttribPointer(vertexPosLocation, 3, GL_FLOAT, GL_FALSE, stride,
-	                      reinterpret_cast<const void *>(offsetof(TestChamberVertex, Position)));
+	                      reinterpret_cast<const void*>(offsetof(TestChamberVertex, Position)));
 
 	glEnableVertexAttribArray(vertexNormalLocation);
 	glVertexAttribPointer(vertexNormalLocation, 3, GL_FLOAT, GL_FALSE, stride,
-	                      reinterpret_cast<const void *>(offsetof(TestChamberVertex, Normal)));
+	                      reinterpret_cast<const void*>(offsetof(TestChamberVertex, Normal)));
 
 	glEnableVertexAttribArray(surfaceIDLocation);
 	glVertexAttribIPointer(surfaceIDLocation, 1, GL_UNSIGNED_INT, stride,
-	                       reinterpret_cast<const void *>(offsetof(TestChamberVertex, surfaceID)));
+	                       reinterpret_cast<const void*>(offsetof(TestChamberVertex, surfaceID)));
 
 	glEnableVertexAttribArray(parentIDLocation);
 	glVertexAttribIPointer(parentIDLocation, 1, GL_UNSIGNED_INT, stride,
-	                       reinterpret_cast<const void *>(offsetof(TestChamberVertex, parentNodeID)));
+	                       reinterpret_cast<const void*>(offsetof(TestChamberVertex, parentNodeID)));
 
 	glEnableVertexAttribArray(wallSideLocation);
 	glVertexAttribIPointer(wallSideLocation, 1, GL_UNSIGNED_INT, stride,
-	                       reinterpret_cast<const void *>(offsetof(TestChamberVertex, wallSide)));
+	                       reinterpret_cast<const void*>(offsetof(TestChamberVertex, wallSide)));
 
 	glEnableVertexAttribArray(wallSideLocation);
 	glVertexAttribPointer(texCoordLocation, 2, GL_FLOAT, GL_TRUE, stride,
-	                      reinterpret_cast<const void *>(offsetof(TestChamberVertex, texCoord)));
+	                      reinterpret_cast<const void*>(offsetof(TestChamberVertex, texCoord)));
 
 	m_chamberVAO.release();
 	m_chamberVBO.release();
@@ -77,23 +77,23 @@ void Viewport::createGraphicsObjects()
 
 	glEnableVertexAttribArray(vertexPosLocation);
 	glVertexAttribPointer(vertexPosLocation, 3, GL_FLOAT, GL_FALSE, stride,
-	                      reinterpret_cast<const void *>(offsetof(TestChamberVertex, Position)));
+	                      reinterpret_cast<const void*>(offsetof(TestChamberVertex, Position)));
 
 	glEnableVertexAttribArray(vertexNormalLocation);
 	glVertexAttribPointer(vertexNormalLocation, 3, GL_FLOAT, GL_FALSE, stride,
-	                      reinterpret_cast<const void *>(offsetof(TestChamberVertex, Normal)));
+	                      reinterpret_cast<const void*>(offsetof(TestChamberVertex, Normal)));
 
 	glEnableVertexAttribArray(surfaceIDLocation);
 	glVertexAttribIPointer(surfaceIDLocation, 1, GL_UNSIGNED_INT, stride,
-	                       reinterpret_cast<const void *>(offsetof(TestChamberVertex, surfaceID)));
+	                       reinterpret_cast<const void*>(offsetof(TestChamberVertex, surfaceID)));
 
 	glEnableVertexAttribArray(parentIDLocation);
 	glVertexAttribIPointer(parentIDLocation, 1, GL_UNSIGNED_INT, stride,
-	                       reinterpret_cast<const void *>(offsetof(TestChamberVertex, parentNodeID)));
+	                       reinterpret_cast<const void*>(offsetof(TestChamberVertex, parentNodeID)));
 
 	glEnableVertexAttribArray(wallSideLocation);
 	glVertexAttribIPointer(wallSideLocation, 1, GL_UNSIGNED_INT, stride,
-	                       reinterpret_cast<const void *>(offsetof(TestChamberVertex, wallSide)));
+	                       reinterpret_cast<const void*>(offsetof(TestChamberVertex, wallSide)));
 
 	m_chamberShadowVAO.release();
 	m_chamberShadowVBO.release();
@@ -113,9 +113,9 @@ void Viewport::createGraphicsObjects()
 	createSelectionFBO();
 	createShadowFBO();
 
-	const std::string_view verStr = reinterpret_cast<const char *>(glGetString(GL_VERSION));
-	const std::string_view vendor = reinterpret_cast<const char *>(glGetString(GL_VENDOR));
-	const std::string_view renderer = reinterpret_cast<const char *>(glGetString(GL_RENDERER));
+	const std::string_view verStr = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+	const std::string_view vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
+	const std::string_view renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 	qDebug() << "Version: " << verStr;
 	qDebug() << "Adapter: " << renderer;
 	qDebug() << "Vendor: " << vendor;
@@ -704,7 +704,7 @@ void Viewport::drawTestChamberSurfaceAttributes(QMatrix4x4 view)
 	glEnable(GL_DITHER);
 }
 
-void Viewport::getViewMatrix(QMatrix4x4 &out)
+void Viewport::getViewMatrix(QMatrix4x4& out)
 {
 	// Do camera offset from target point before rotating, easier that way
 	out.translate(QVector3D(0, 0, -m_cameraDistance));
@@ -713,7 +713,7 @@ void Viewport::getViewMatrix(QMatrix4x4 &out)
 }
 
 // lightDir needs to be normalized
-void Viewport::getGlobalLightViewMatrix(QVector3D lightDir, QMatrix4x4 &out)
+void Viewport::getGlobalLightViewMatrix(QVector3D lightDir, QMatrix4x4& out)
 {
 	//------------------------------------------------------------
 	// Choose a reasonable AABB for your level region

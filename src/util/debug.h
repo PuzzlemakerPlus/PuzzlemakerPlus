@@ -19,12 +19,12 @@ struct DebugPoint
 class Debugger
 {
 public:
-	static Debugger &instance(Viewport *vp = nullptr);
+	static Debugger& instance(Viewport* vp = nullptr);
 
 	int hasViewport() const { return m_viewport != nullptr; };
 
 	// Set the viewport for the debugger. Must be set before using the debugger.
-	void setViewport(Viewport *vp) { m_viewport = vp; };
+	void setViewport(Viewport* vp) { m_viewport = vp; };
 
 	void drawPoint(QVector3D point);
 	void drawPoints(std::vector<QVector3D> points);
@@ -37,8 +37,8 @@ public:
 
 private:
 	Debugger() = default;
-	Debugger(const Debugger &) = delete;
-	Viewport *m_viewport = nullptr;
+	Debugger(const Debugger&) = delete;
+	Viewport* m_viewport = nullptr;
 	std::vector<DebugPoint> m_debugPoints;
 };
 } // namespace PMP

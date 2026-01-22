@@ -26,26 +26,26 @@ struct SelectionVolume
 class TCAction : public Undoable
 {
 protected:
-	TCAction(TestChamber *tc, Selector *sel) : m_testChamber(tc), m_selector(sel) {}
+	TCAction(TestChamber* tc, Selector* sel) : m_testChamber(tc), m_selector(sel) {}
 
-	NodeID toNode(const UniqueSurfaceIdentifier &usi) const
+	NodeID toNode(const UniqueSurfaceIdentifier& usi) const
 	{
 		return m_testChamber->searchNodeWithCoordSize(usi.nodeCord, static_cast<unsigned int>(usi.size));
 	}
 
-	NodeID toNode(const UniqueVolumeIdentifier &uvi) const
+	NodeID toNode(const UniqueVolumeIdentifier& uvi) const
 	{
 		return m_testChamber->searchNodeWithCoordSize(uvi.nodeCord, static_cast<unsigned int>(uvi.size));
 	}
 
-	TestChamber *m_testChamber = nullptr;
-	Selector *m_selector = nullptr;
+	TestChamber* m_testChamber = nullptr;
+	Selector* m_selector = nullptr;
 };
 
 class TCExtrudeAction : public TCAction
 {
 public:
-	TCExtrudeAction(TestChamber *tc, Selector *sel, std::vector<UniqueVolumeIdentifier> extrudeUVIs,
+	TCExtrudeAction(TestChamber* tc, Selector* sel, std::vector<UniqueVolumeIdentifier> extrudeUVIs,
 	                SelectionVolume selectionVolume)
 	    : TCAction(tc, sel), m_extrudeUVIs(std::move(extrudeUVIs)), m_prevSelectionVolume(std::move(selectionVolume))
 	{
@@ -62,7 +62,7 @@ private:
 class TCRecedeAction : public TCAction
 {
 public:
-	TCRecedeAction(TestChamber *tc, Selector *sel, std::vector<UniqueVolumeIdentifier> recedeUVIs,
+	TCRecedeAction(TestChamber* tc, Selector* sel, std::vector<UniqueVolumeIdentifier> recedeUVIs,
 	               SelectionVolume selectionVolume)
 	    : TCAction(tc, sel), m_recedeUVIs(std::move(recedeUVIs)), m_prevSelectionVolume(std::move(selectionVolume))
 	{

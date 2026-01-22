@@ -10,39 +10,39 @@
 
 namespace PMP
 {
-void TestChamber::generateQuads(std::vector<Quad> &out) const
+void TestChamber::generateQuads(std::vector<Quad>& out) const
 {
 	if (m_surfaceMap.size() == 0)
 		throw std::runtime_error(
 		    "Attempted to generate quads for test chamber with no surface. Forgot to call GenerateSurfaces()?");
-	for (const auto &[_, surfaces] : m_surfaceMap)
+	for (const auto& [_, surfaces] : m_surfaceMap)
 	{
-		for (const auto &surface : surfaces)
+		for (const auto& surface : surfaces)
 		{
 			if (surface.side == WallSide::NONE)
 				continue;
 			const NodeID nodeID = surface.parentNode;
-			const TestChamberNode &node = m_nodeMap.at(nodeID);
+			const TestChamberNode& node = m_nodeMap.at(nodeID);
 			out.push_back(generateQuadAt(node.getCenter().toQVector3D(), surface.side, node.getSize()));
 		}
 	}
 }
 
-void TestChamber::generateTCQuads(std::vector<TestChamberQuad> &out) const
+void TestChamber::generateTCQuads(std::vector<TestChamberQuad>& out) const
 {
 	if (m_surfaceMap.size() == 0)
 		throw std::runtime_error("Attempted to generate quads for test chamber with no surface");
-	for (const auto &[surfaceID, surfaces] : m_surfaceMap)
+	for (const auto& [surfaceID, surfaces] : m_surfaceMap)
 	{
 		int sideID = 0;
-		for (const auto &surface : surfaces)
+		for (const auto& surface : surfaces)
 		{
 			if (surface.side == WallSide::NONE)
 				continue;
 			// TODO: surfaceID and nodeID are the exact same value. why are they being passed in?
 			// std::cout << surfaceID << ", " << nodeID << "\n";
 			const NodeID nodeID = surface.parentNode;
-			const TestChamberNode &node = m_nodeMap.at(nodeID);
+			const TestChamberNode& node = m_nodeMap.at(nodeID);
 			out.push_back(generateTCQuadAt(node.getCenter().toQVector3D(), surface.side, node.getSize(), sideID, nodeID));
 			sideID++;
 		}
@@ -50,19 +50,19 @@ void TestChamber::generateTCQuads(std::vector<TestChamberQuad> &out) const
 }
 
 // Same as above except only generate quads for shadow-casting surfaces
-void TestChamber::generateTCShadowQuads(std::vector<TestChamberQuad> &out) const
+void TestChamber::generateTCShadowQuads(std::vector<TestChamberQuad>& out) const
 {
 	if (m_surfaceMap.size() == 0)
 		throw std::runtime_error("Attempted to generate quads for test chamber with no surface");
-	for (const auto &[surfaceID, surfaces] : m_surfaceMap)
+	for (const auto& [surfaceID, surfaces] : m_surfaceMap)
 	{
 		int sideID = 0;
-		for (const auto &surface : surfaces)
+		for (const auto& surface : surfaces)
 		{
 			if (surface.side == WallSide::NONE)
 				continue;
 			const NodeID nodeID = surface.parentNode;
-			const TestChamberNode &node = m_nodeMap.at(nodeID);
+			const TestChamberNode& node = m_nodeMap.at(nodeID);
 			if (surface.side == WallSide::POS_Z)
 			{
 				if (node.getCenter().z() + node.getSize() / 2 > m_rootNodeWorldSize / 2 - gridSizeMin)
@@ -78,9 +78,9 @@ void TestChamber::generateTCShadowQuads(std::vector<TestChamberQuad> &out) const
 	    QVector3D(-(int)m_rootNodeWorldSize / 2, -(int)m_rootNodeWorldSize / 2, m_rootNodeWorldSize / 2 - gridSizeMin);
 	QVector3D chamberMax = QVector3D(m_rootNodeWorldSize / 2, m_rootNodeWorldSize / 2, m_rootNodeWorldSize / 2);
 	getNodesTouchingBBox(chamberMin, chamberMax, ceilingNodes);
-	for (const auto &nodeID : ceilingNodes)
+	for (const auto& nodeID : ceilingNodes)
 	{
-		const TestChamberNode &node = m_nodeMap.at(nodeID);
+		const TestChamberNode& node = m_nodeMap.at(nodeID);
 		if (!node.getActive())
 		{
 			// Debugger::instance().addDebugPoint(m_nodeMap.at(nodeID).m_center.toQVector3D(), QVector3D(1.0f, 1.0f,
@@ -89,7 +89,7 @@ void TestChamber::generateTCShadowQuads(std::vector<TestChamberQuad> &out) const
 		}
 	}
 	// walls to catch light bleeding from side walls
-	const QVector3D &rootCenter = m_nodeMap.at(m_rootNode).getCenter().toQVector3D();
+	const QVector3D& rootCenter = m_nodeMap.at(m_rootNode).getCenter().toQVector3D();
 	out.push_back(generateTCQuadAt(rootCenter, WallSide::POS_X, m_rootNodeWorldSize + 25, m_rootNode, m_rootNode, 1.1f));
 	out.push_back(generateTCQuadAt(rootCenter, WallSide::POS_Y, m_rootNodeWorldSize + 25, m_rootNode, m_rootNode, 1.1f));
 	out.push_back(generateTCQuadAt(rootCenter, WallSide::NEG_X, m_rootNodeWorldSize + 25, m_rootNode, m_rootNode, 1.1f));

@@ -26,17 +26,17 @@ public:
 
 	SafeUnorderedMap() = default;
 
-	V &at(const K &k) { return map_.at(k); }
+	V& at(const K& k) { return map_.at(k); }
 
-	const V &at(const K &k) const { return map_.at(k); }
+	const V& at(const K& k) const { return map_.at(k); }
 
-	iterator find(const K &k) { return map_.find(k); }
+	iterator find(const K& k) { return map_.find(k); }
 
-	const_iterator find(const K &k) const { return map_.find(k); }
+	const_iterator find(const K& k) const { return map_.find(k); }
 
-	template <class... Args> auto emplace(Args &&...args) { return map_.emplace(std::forward<Args>(args)...); }
+	template <class... Args> auto emplace(Args&&... args) { return map_.emplace(std::forward<Args>(args)...); }
 
-	size_t erase(const K &k) { return map_.erase(k); }
+	size_t erase(const K& k) { return map_.erase(k); }
 
 	size_t size() const { return map_.size(); }
 
@@ -56,10 +56,10 @@ public:
 
 	const_iterator cend() const { return map_.cend(); }
 
-	V &defaultConstruct(const K &k) { return map_[k]; }
+	V& defaultConstruct(const K& k) { return map_[k]; }
 
 private:
 	Map map_;
-	V &operator[](const K &) = delete;
-	const V &operator[](const K &) const = delete;
+	V& operator[](const K&) = delete;
+	const V& operator[](const K&) const = delete;
 };

@@ -28,7 +28,7 @@ public:
 	 *	(not sure how useful it will be)
 	 *Any combinations can be used
 	 */
-	FileHandler(std::string &path, const std::string &mode);
+	FileHandler(std::string& path, const std::string& mode);
 	~FileHandler();
 
 	bool fileExists();

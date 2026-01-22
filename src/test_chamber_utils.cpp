@@ -35,10 +35,10 @@ namespace PMP
 uint8_t TestChamber::nodeSurfaceFlag(NodeID node) const
 {
 	uint8_t flags = 64; // start with 7th bit set to 1 (complete)
-	const TestChamberNode &currentNode = m_nodeMap.at(node);
+	const TestChamberNode& currentNode = m_nodeMap.at(node);
 	if (currentNode.hasChildren())
 	{
-		const auto &childIDs = currentNode.readChildrenID();
+		const auto& childIDs = currentNode.readChildrenID();
 		std::array<uint8_t, 8> childFlags;
 		int enabledChildren = 0;
 		for (int i = 0; i < 8; i++)
@@ -81,10 +81,10 @@ uint8_t TestChamber::nodeSurfaceFlag(NodeID node) const
 uint8_t TestChamber::nodeSurfaceFlagThreaded(NodeID node) const
 {
 	uint8_t flags = 64; // start with 7th bit set to 1 (complete)
-	const TestChamberNode &currentNode = m_nodeMap.at(node);
+	const TestChamberNode& currentNode = m_nodeMap.at(node);
 	if (currentNode.hasChildren())
 	{
-		const auto &childIDs = currentNode.readChildrenID();
+		const auto& childIDs = currentNode.readChildrenID();
 		std::array<uint8_t, 8> childFlags;
 		std::array<std::future<uint8_t>, 8> futures;
 		int enabledChildren = 0;
@@ -136,7 +136,7 @@ bool TestChamber::canUnsubdivide(NodeID node) const
 
 bool TestChamber::areNeighborsSameSize(NodeID node) const
 {
-	const TestChamberNode &currentNode = m_nodeMap.at(node);
+	const TestChamberNode& currentNode = m_nodeMap.at(node);
 	std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.getSize(), currentNode.getCenter());
 	bool success = true;
 	for (int i = 0; i < 6; ++i)
@@ -154,7 +154,7 @@ bool TestChamber::areNeighborsSameSize(NodeID node) const
 
 bool TestChamber::areNeighborsActive(NodeID node) const
 {
-	const TestChamberNode &currentNode = m_nodeMap.at(node);
+	const TestChamberNode& currentNode = m_nodeMap.at(node);
 	std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.getSize(), currentNode.getCenter());
 	bool success = true;
 	for (int i = 0; i < 6; ++i)
@@ -186,7 +186,7 @@ void TestChamber::setNeighbors(NodeID node)
 	auto center = m_nodeMap.at(node).getCenter();
 	auto size = m_nodeMap.at(node).getSize();
 	auto neighborCenters = getNeighborNodeCenters(size, center);
-	auto &neighborArray = m_nodeMap.at(node).getNeighbors();
+	auto& neighborArray = m_nodeMap.at(node).getNeighbors();
 	for (int i = 0; i < 6; i++)
 	{
 		auto n = tryGetNodeAtCoord(neighborCenters[i]);
@@ -283,7 +283,7 @@ const NodeID TestChamber::searchNodeWithCoordSize(const IntVector3D coord, unsig
 
 IntVector3D TestChamber::getNodeBBoxMin(NodeID id) const
 {
-	const TestChamberNode &node = m_nodeMap.at(id);
+	const TestChamberNode& node = m_nodeMap.at(id);
 	assert(node.getSize() % 2 == 0 && "How is node size not divisible by 2?");
 	int half = node.getSize() / 2;
 	auto c = node.getCenter();
@@ -292,7 +292,7 @@ IntVector3D TestChamber::getNodeBBoxMin(NodeID id) const
 
 IntVector3D TestChamber::getNodeBBoxMax(NodeID id) const
 {
-	const TestChamberNode &node = m_nodeMap.at(id);
+	const TestChamberNode& node = m_nodeMap.at(id);
 	assert(node.getSize() % 2 == 0 && "How is node size not divisible by 2?");
 	int half = node.getSize() / 2;
 	auto c = node.getCenter();
@@ -305,15 +305,15 @@ std::optional<RayHitResult> TestChamber::rayCast(Ray ray) const
 	float closestT = std::numeric_limits<float>::infinity();
 	std::optional<RayHitResult> closestHit;
 	// Debugger::instance().clearDebugPoints();
-	for (const auto &[_, surfaces] : m_surfaceMap)
+	for (const auto& [_, surfaces] : m_surfaceMap)
 	{
-		for (const auto &surface : surfaces)
+		for (const auto& surface : surfaces)
 		{
 			if (surface.side == WallSide::NONE)
 				continue;
 			if (!WallFacesDirection(surface.side, ray.direction))
 				continue;
-			const TestChamberNode &node = m_nodeMap.at(surface.parentNode);
+			const TestChamberNode& node = m_nodeMap.at(surface.parentNode);
 
 			// Wall geometry
 			float halfSize = node.getSize() / 2.0f;
@@ -345,7 +345,7 @@ std::optional<RayHitResult> TestChamber::rayCast(Ray ray) const
 // Given a wallside of a node, should this wall be drawn
 bool TestChamber::isSurface(WallSide side, NodeID node) const
 {
-	const TestChamberNode &ref = m_nodeMap.at(node);
+	const TestChamberNode& ref = m_nodeMap.at(node);
 	const IntVector3D center = ref.getCenter();
 	assert(ref.getSize() % 2 == 0 && "node size should be an even numer");
 	const int halfSize = ref.getSize() / 2;
@@ -365,7 +365,7 @@ bool TestChamber::isSurface(WallSide side, NodeID node) const
 
 bool TestChamber::coordInNode(QVector3D coord, NodeID nodeID) const
 {
-	const TestChamberNode &node = m_nodeMap.at(nodeID);
+	const TestChamberNode& node = m_nodeMap.at(nodeID);
 	float halfSize = node.getSize() / 2.0f;
 	auto c = node.getCenter();
 	return (coord.x() >= c.x() - halfSize && coord.x() <= c.x() + halfSize) &&
@@ -411,9 +411,9 @@ IntVector3D TestChamber::getSurfaceCenter(ChamberSurface surface) const
 	       m_nodeMap.at(surface.parentNode).getCenter();
 }
 
-void TestChamber::makeUSI(NodeID nodeID, UniqueSurfaceIdentifier &out, WallSide side) const
+void TestChamber::makeUSI(NodeID nodeID, UniqueSurfaceIdentifier& out, WallSide side) const
 {
-	const TestChamberNode &node = m_nodeMap.at(nodeID);
+	const TestChamberNode& node = m_nodeMap.at(nodeID);
 	out.size = node.getSize();
 	out.nodeCord = node.getCenter();
 	out.side = side;
@@ -422,7 +422,7 @@ void TestChamber::makeUSI(NodeID nodeID, UniqueSurfaceIdentifier &out, WallSide 
 void TestChamber::printNodes()
 {
 	std::cout << "TestChamber has " << m_nodeMap.size() << " Node(s)\n";
-	for (const auto &[nodeId, node] : m_nodeMap)
+	for (const auto& [nodeId, node] : m_nodeMap)
 	{
 		if (node.hasChildren())
 			std::cout << "NodeID: " << nodeId << ", child of " << node.getParentID() << "\n";
@@ -431,14 +431,14 @@ void TestChamber::printNodes()
 	}
 }
 
-const char *printVector3D(QVector3D in)
+const char* printVector3D(QVector3D in)
 {
 	static char buffer[64];
 	snprintf(buffer, sizeof(buffer), "(%.2f, %.2f, %.2f)", in.x(), in.y(), in.z());
 	return buffer;
 }
 
-void TestChamber::_printNodesTree(std::map<NodeID, std::vector<NodeID>> &children, NodeID id, std::string prefix,
+void TestChamber::_printNodesTree(std::map<NodeID, std::vector<NodeID>>& children, NodeID id, std::string prefix,
                                   bool isLast)
 {
 	std::cout << prefix;
@@ -449,7 +449,7 @@ void TestChamber::_printNodesTree(std::map<NodeID, std::vector<NodeID>> &childre
 	std::cout << "Node " << id << " at " << printVector3D(m_nodeMap.at(id).getCenter().toQVector3D()) << " with size "
 	          << m_nodeMap.at(id).getSize() << "\n";
 
-	const auto &childVec = children[id];
+	const auto& childVec = children[id];
 	for (size_t i = 0; i < childVec.size(); ++i)
 	{
 		bool last = (i == childVec.size() - 1);
@@ -462,7 +462,7 @@ void TestChamber::printNodesTree()
 	std::map<NodeID, std::vector<NodeID>> children;
 	NodeID root = 0;
 
-	for (const auto &[id, node] : m_nodeMap)
+	for (const auto& [id, node] : m_nodeMap)
 	{
 		if (node.hasParentID())
 		{

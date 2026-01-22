@@ -38,7 +38,7 @@ TestChamber::TestChamber() : m_rootNodeWorldSize(defaultRootNodeSize), m_gridSiz
 
 void TestChamber::createChildrenOfNode(NodeID parentID)
 {
-	TestChamberNode &parentNode = m_nodeMap.at(parentID);
+	TestChamberNode& parentNode = m_nodeMap.at(parentID);
 
 	unsigned int parentSize = parentNode.getSize();
 	IntVector3D parentCenter = parentNode.getCenter();
@@ -68,9 +68,9 @@ void TestChamber::createChildrenOfNode(NodeID parentID)
 		children[i] = id;
 		m_nodeDirty.insert(id);
 	}
-	TestChamberNode &pn = m_nodeMap.at(parentID);
+	TestChamberNode& pn = m_nodeMap.at(parentID);
 	pn.setActive(true); // Make sure the parent node is active after creating children
-	std::array<NodeID, 8> &parentChildIds = pn.initializeChildren();
+	std::array<NodeID, 8>& parentChildIds = pn.initializeChildren();
 	for (unsigned int i = 0; i < 8; i++)
 	{
 		parentChildIds[i] = children[i];
@@ -100,7 +100,7 @@ void TestChamber::createOctreeNode(NodeID newID, std::optional<NodeID> parentID,
 
 int TestChamber::setNodeActive(NodeID node, bool active)
 {
-	auto &tcn = m_nodeMap.at(node);
+	auto& tcn = m_nodeMap.at(node);
 	// TODO: this is different from the comment. need to check if fixing this would break something
 	if (tcn.getActive() == false)
 		return 0; // State of the node has not changed
@@ -108,14 +108,14 @@ int TestChamber::setNodeActive(NodeID node, bool active)
 	// Also need to make sure all adjacent nodes have matching size.
 	// TODO: now that we have IntVector3D, this can be optimized further
 	std::array<IntVector3D, 6> outerCoords = getNeighborNodeCenters(tcn.getSize(), tcn.getCenter());
-	for (const auto &coord : outerCoords)
+	for (const auto& coord : outerCoords)
 	{
 		subdivideNodeToCoordOptimized(coord.toQVector3D(), 0, tcn.getSize());
 	}
 	return 1; // State of the node has changed
 }
 
-int TestChamber::setNodesActive(std::vector<NodeID> &nodes, bool active)
+int TestChamber::setNodesActive(std::vector<NodeID>& nodes, bool active)
 {
 	int nodesChanged = 0;
 	for (int i = 0; i < nodes.size(); i++)
@@ -126,10 +126,10 @@ int TestChamber::setNodesActive(std::vector<NodeID> &nodes, bool active)
 	// Match the sizes of adjacent nodes only after all nodes have had their active state set
 	for (int i = 0; i < nodes.size(); i++)
 	{
-		auto &tcn = m_nodeMap.at(nodes[i]);
+		auto& tcn = m_nodeMap.at(nodes[i]);
 		unsigned int size = tcn.getSize();
 		std::array<IntVector3D, 6> outerCoords = getNeighborNodeCenters(tcn.getSize(), tcn.getCenter());
-		for (const auto &coord : outerCoords)
+		for (const auto& coord : outerCoords)
 		{
 			NodeID done = subdivideNodeToCoordOptimized(coord.toQVector3D(), m_rootNode, size);
 			// Debugger::instance().addDebugPoint(coord.toQVector3D(), { 1.0f, 1.0f, 0.0f } );
@@ -139,15 +139,15 @@ int TestChamber::setNodesActive(std::vector<NodeID> &nodes, bool active)
 }
 
 // Assumes out is empty during non-recursive calls
-void TestChamber::getSurfaceChildren(std::vector<ChamberSurface> &out, NodeID node, WallSide side) const
+void TestChamber::getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WallSide side) const
 {
-	const auto &tcn = m_nodeMap.at(node);
+	const auto& tcn = m_nodeMap.at(node);
 	// Node has children
 	if (tcn.hasChildren())
 	{
-		const auto &children = tcn.readChildrenID();
+		const auto& children = tcn.readChildrenID();
 		// Iterate through all children and get their surfaces
-		for (const auto &childID : children)
+		for (const auto& childID : children)
 		{
 			getSurfaceChildren(out, childID, side);
 		}
@@ -196,7 +196,7 @@ NodeID TestChamber::getLeafNodeAtCoord(QVector3D coord, NodeID parentID)
 {
 	if (isPointOOB(coord))
 		throw std::runtime_error("Coordinate Out Of Bounds");
-	auto &tcp = m_nodeMap.at(parentID);
+	auto& tcp = m_nodeMap.at(parentID);
 	if (!tcp.hasChildren())
 		return parentID; // found
 	// at this point, we know the node has children and this node is still not the leaf node
@@ -220,7 +220,7 @@ NodeID TestChamber::subdivideNodeToCoord(QVector3D coord, NodeID parentID, unsig
 		return parentID;
 	unsigned int i;
 	{
-		auto &tcp = m_nodeMap.at(parentID);
+		auto& tcp = m_nodeMap.at(parentID);
 		if (tcp.getSize() < size)
 			throw std::runtime_error("Something went wrong trying to subdivide node");
 		if (tcp.getSize() == size)
@@ -229,13 +229,13 @@ NodeID TestChamber::subdivideNodeToCoord(QVector3D coord, NodeID parentID, unsig
 		if (!tcp.hasChildren())
 			createChildrenOfNode(parentID);
 	}
-	auto &tcp = m_nodeMap.at(parentID);
+	auto& tcp = m_nodeMap.at(parentID);
 	return subdivideNodeToCoord(coord, tcp.readChildrenID()[i], size);
 }
 
-std::array<IntVector3D, 4> TestChamber::getChamberSurfaceCorners(const ChamberSurface &surface)
+std::array<IntVector3D, 4> TestChamber::getChamberSurfaceCorners(const ChamberSurface& surface)
 {
-	const TestChamberNode &node = m_nodeMap.at(surface.parentNode);
+	const TestChamberNode& node = m_nodeMap.at(surface.parentNode);
 	float halfSize = node.getSize() / 2.0f;
 
 	IntVector3D m_gNormal = getWallNormal(surface.side);
@@ -252,10 +252,10 @@ std::array<IntVector3D, 4> TestChamber::getChamberSurfaceCorners(const ChamberSu
 	return {p0, p1, p2, p3};
 }
 
-void TestChamber::checkChildrenTouchingBBox(NodeID parentID, const QVector3D &mins, const QVector3D &maxs,
-                                            std::vector<NodeID> &out) const
+void TestChamber::checkChildrenTouchingBBox(NodeID parentID, const QVector3D& mins, const QVector3D& maxs,
+                                            std::vector<NodeID>& out) const
 {
-	const TestChamberNode &parent = m_nodeMap.at(parentID);
+	const TestChamberNode& parent = m_nodeMap.at(parentID);
 
 	if (!parent.hasChildren())
 	{
@@ -277,14 +277,14 @@ void TestChamber::checkChildrenTouchingBBox(NodeID parentID, const QVector3D &mi
 	}
 }
 
-void TestChamber::getNodesTouchingBBox(const QVector3D &mins, const QVector3D &maxs, std::vector<NodeID> &out) const
+void TestChamber::getNodesTouchingBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out) const
 {
 	ScopedTimer("getNodesTouchingBBox");
 	out.clear();
 	checkChildrenTouchingBBox(m_rootNode, mins, maxs, out);
 }
 
-void TestChamber::subdivideNodesToBBox(const QVector3D &mins, const QVector3D &maxs, std::vector<NodeID> &out)
+void TestChamber::subdivideNodesToBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out)
 {
 	// Get a list of all the nodes touching the bbox, then subdivide the ones that overlap the edge
 	std::vector<NodeID> touchingNodes;
@@ -298,8 +298,8 @@ void TestChamber::subdivideNodesToBBox(const QVector3D &mins, const QVector3D &m
 	}
 }
 
-void TestChamber::subdivideNodeToBBoxRecursive(NodeID node, const QVector3D &mins, const QVector3D &maxs,
-                                               std::vector<NodeID> &out)
+void TestChamber::subdivideNodeToBBoxRecursive(NodeID node, const QVector3D& mins, const QVector3D& maxs,
+                                               std::vector<NodeID>& out)
 {
 	// check if bbox intersect
 	IntVector3D nodeMin = getNodeBBoxMin(node);
@@ -314,7 +314,7 @@ void TestChamber::subdivideNodeToBBoxRecursive(NodeID node, const QVector3D &min
 		createChildrenOfNode(node);
 		for (int i = 0; i < 8; i++)
 		{
-			const auto &children = m_nodeMap.at(node).readChildrenID();
+			const auto& children = m_nodeMap.at(node).readChildrenID();
 			// std::cout << "subdividing " << children[i] << "\n";
 			//  keep subdividin'
 			subdivideNodeToBBoxRecursive(children[i], mins, maxs, out);
@@ -331,7 +331,7 @@ void TestChamber::updateSurfaces()
 	// std::cout << "m_surfaceMap Size: " << m_surfaceMap.size() << "\n";
 	// std::cout << "m_nodeDirty Size: " << m_nodeDirty.size() << "\n";
 	// std::cout << "m_nodeMap Size: " << m_nodeMap.size() << "\n";
-	for (const auto &id : m_nodeDirty)
+	for (const auto& id : m_nodeDirty)
 	{
 		if (m_nodeMap.find(id) == m_nodeMap.end() || id == 0)
 		{
@@ -344,7 +344,7 @@ void TestChamber::updateSurfaces()
 		}
 		else
 		{
-			std::array<ChamberSurface, 6> &walls = m_surfaceMap.defaultConstruct(id);
+			std::array<ChamberSurface, 6>& walls = m_surfaceMap.defaultConstruct(id);
 			for (int i = 0; i < 6; ++i)
 			{
 				WallSide side = static_cast<WallSide>(i);
@@ -366,14 +366,14 @@ void TestChamber::generateSurfaces()
 	m_surfaceMap.clear();
 	std::vector<NodeID> keys;
 	keys.reserve(m_nodeMap.size());
-	for (auto const &[k, _] : m_nodeMap)
+	for (auto const& [k, _] : m_nodeMap)
 		keys.push_back(k);
-	for (auto const &id : keys)
+	for (auto const& id : keys)
 	{
 		if (!isNodeActive(id) || nodeHasChild(id))
 			continue; // skip if node not active or if node has child
 		// node doesnt have children and node is active
-		std::array<ChamberSurface, 6> &walls = m_surfaceMap.defaultConstruct(id);
+		std::array<ChamberSurface, 6>& walls = m_surfaceMap.defaultConstruct(id);
 		for (int i = 0; i < 6; ++i)
 		{
 			WallSide side = static_cast<WallSide>(i);
@@ -401,7 +401,7 @@ void TestChamber::generateSurfacesThreaded()
 
 	std::vector<NodeID> keys;
 	keys.reserve(getNodeMap().size());
-	for (const auto &[k, v] : m_nodeMap)
+	for (const auto& [k, v] : m_nodeMap)
 		keys.push_back(k);
 	int launched = 0;
 	std::vector<NodeID>::iterator itStart;
@@ -445,7 +445,7 @@ void TestChamber::generateSurfacesThreaded()
 		std::vector<SurfaceFlags> chunk = futs[t].get();
 		for (SurfaceFlags flag : chunk)
 		{
-			std::array<ChamberSurface, 6> &walls = m_surfaceMap.defaultConstruct(flag.id);
+			std::array<ChamberSurface, 6>& walls = m_surfaceMap.defaultConstruct(flag.id);
 			for (int i = 0; i < 6; ++i)
 			{
 				if (flag.flags & (1u << i))
@@ -472,13 +472,13 @@ void TestChamber::createDefaultSpace()
 	{
 		nodeSet.insert(touchingNodes[i]);
 	}
-	for (auto &[id, node] : m_nodeMap)
+	for (auto& [id, node] : m_nodeMap)
 	{
 		m_nodeMap.at(id).setActive(nodeSet.find(id) != nodeSet.end());
 	}
 }
 
-int TestChamber::extrudeSurfaces(Selector *selector)
+int TestChamber::extrudeSurfaces(Selector* selector)
 {
 	QVector3D mins = selector->getMins();
 	QVector3D maxs = selector->getMaxs();
@@ -520,7 +520,7 @@ int TestChamber::extrudeSurfaces(Selector *selector)
 	return nodesChanged;
 }
 
-int TestChamber::recedeSurfaces(Selector *selector)
+int TestChamber::recedeSurfaces(Selector* selector)
 {
 	QVector3D mins = selector->getMins();
 	QVector3D maxs = selector->getMaxs();
@@ -556,13 +556,13 @@ int TestChamber::recedeSurfaces(Selector *selector)
 // does destroy the given node
 void TestChamber::destroyBranch(NodeID nodeID)
 {
-	auto &n = m_nodeMap.at(nodeID);
+	auto& n = m_nodeMap.at(nodeID);
 	if (!n.hasChildren())
 	{
 		m_nodeMap.erase(nodeID);
 		return;
 	}
-	const auto &child = n.readChildrenID();
+	const auto& child = n.readChildrenID();
 	for (int i = 0; i < 8; i++)
 	{
 		destroyBranch(child[i]);
@@ -573,14 +573,14 @@ void TestChamber::destroyBranch(NodeID nodeID)
 // does not destroy the given node
 void TestChamber::destroyChildrenOfNode(NodeID parentID)
 {
-	TestChamberNode &parentNode = m_nodeMap.at(parentID);
+	TestChamberNode& parentNode = m_nodeMap.at(parentID);
 	if (parentNode.hasChildren())
 	{
-		std::array<NodeID, 8> &parentChildIds = parentNode.getChildrenID();
+		std::array<NodeID, 8>& parentChildIds = parentNode.getChildrenID();
 		for (int i = 0; i < 8; ++i)
 		{
 			NodeID childID = parentChildIds[i];
-			TestChamberNode &childNode = m_nodeMap.at(childID);
+			TestChamberNode& childNode = m_nodeMap.at(childID);
 
 			if (childNode.hasChildren())
 				destroyChildrenOfNode(childID);
@@ -593,7 +593,7 @@ void TestChamber::destroyChildrenOfNode(NodeID parentID)
 	}
 }
 
-void TestChamber::unsubdivideNodes(NodeID *touchingNodes, int count, std::vector<NodeID> *out)
+void TestChamber::unsubdivideNodes(NodeID* touchingNodes, int count, std::vector<NodeID>* out)
 {
 	std::unordered_set<NodeID> parentsToCheck;
 	for (int i = 0; i < count; i++)
@@ -601,7 +601,7 @@ void TestChamber::unsubdivideNodes(NodeID *touchingNodes, int count, std::vector
 		NodeID parent = m_nodeMap.at(touchingNodes[i]).getParentID();
 		parentsToCheck.insert(parent);
 	}
-	for (const auto &parentID : parentsToCheck)
+	for (const auto& parentID : parentsToCheck)
 	{
 		auto it = m_nodeMap.find(parentID);
 		if (it == m_nodeMap.end())

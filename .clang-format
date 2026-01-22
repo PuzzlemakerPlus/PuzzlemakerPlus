@@ -10,6 +10,9 @@ TabWidth:        1
 IndentWidth:     1
 AccessModifierOffset: -1
 
+# align * and & to the type instead of the name
+PointerAlignment: Left
+
 # enforce spacing between functions for readability
 SeparateDefinitionBlocks: Always
 

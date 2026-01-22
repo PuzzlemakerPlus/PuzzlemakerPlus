@@ -8,7 +8,7 @@
 
 namespace PMP
 {
-QVector3D Lerp(const QVector3D &a, const QVector3D &b, float t)
+QVector3D Lerp(const QVector3D& a, const QVector3D& b, float t)
 {
 	return a + t * (b - a);
 }
@@ -20,7 +20,7 @@ WallSide getOpposite(WallSide side)
 	return static_cast<WallSide>(s);
 }
 
-bool WallFacesDirection(WallSide side, const QVector3D &dir)
+bool WallFacesDirection(WallSide side, const QVector3D& dir)
 {
 	IntVector3D m_gNormal = getWallNormal(side);
 	return m_gNormal.dot(dir) < 0;
@@ -217,10 +217,10 @@ TestChamberQuad generateTCQuadAt(QVector3D center, WallSide side, float size, un
 	return {face, {0, 1, 2, 0, 2, 3}};
 }
 
-void CreateMesh(std::vector<Quad> quads, Mesh &out)
+void CreateMesh(std::vector<Quad> quads, Mesh& out)
 {
 	unsigned int vertexOffset = 0;
-	for (const auto &quad : quads)
+	for (const auto& quad : quads)
 	{
 		// Add vertices
 		for (int i = 0; i < 4; i++)
@@ -236,10 +236,10 @@ void CreateMesh(std::vector<Quad> quads, Mesh &out)
 	}
 }
 
-void CreateTCMesh(std::vector<TestChamberQuad> quads, TestChamberMesh &out)
+void CreateTCMesh(std::vector<TestChamberQuad> quads, TestChamberMesh& out)
 {
 	unsigned int vertexOffset = 0;
-	for (const auto &quad : quads)
+	for (const auto& quad : quads)
 	{
 		// Add vertices
 		for (int i = 0; i < 4; i++)
@@ -255,8 +255,8 @@ void CreateTCMesh(std::vector<TestChamberQuad> quads, TestChamberMesh &out)
 	}
 }
 
-void generateWireframeGrid3D(int subdivisions, const QVector3D &A, const QVector3D &B, const QVector3D &C,
-                             const QVector3D &D, std::vector<LineVertex> &out, const QVector3D &color)
+void generateWireframeGrid3D(int subdivisions, const QVector3D& A, const QVector3D& B, const QVector3D& C,
+                             const QVector3D& D, std::vector<LineVertex>& out, const QVector3D& color)
 {
 	for (int i = 0; i <= subdivisions; ++i)
 	{
@@ -276,16 +276,16 @@ void generateWireframeGrid3D(int subdivisions, const QVector3D &A, const QVector
 	}
 }
 
-void QuadCornersToSubdividedLineWireframes(int subdivisions, const std::vector<QVector3D> &corners,
-                                           std::vector<LineVertex> &out, const QVector3D &color, int start)
+void QuadCornersToSubdividedLineWireframes(int subdivisions, const std::vector<QVector3D>& corners,
+                                           std::vector<LineVertex>& out, const QVector3D& color, int start)
 {
 	if (corners.size() != 4)
 		throw std::runtime_error("Subdividing multiple quads is not supported yet");
 	generateWireframeGrid3D(subdivisions, corners.at(0), corners.at(1), corners.at(2), corners.at(3), out, color);
 }
 
-void QuadCornersToLineWireframe(const std::vector<QVector3D> &corners, std::vector<LineVertex> &out,
-                                const QVector3D &color, int start)
+void QuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out,
+                                const QVector3D& color, int start)
 {
 	for (int i = start; i < start + 4; ++i)
 	{
@@ -294,8 +294,8 @@ void QuadCornersToLineWireframe(const std::vector<QVector3D> &corners, std::vect
 	}
 }
 
-void MultiQuadCornersToLineWireframe(const std::vector<QVector3D> &corners, std::vector<LineVertex> &out,
-                                     const QVector3D &color)
+void MultiQuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out,
+                                     const QVector3D& color)
 {
 	for (int i = 0; i < corners.size() / 4; i++)
 	{

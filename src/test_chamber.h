@@ -44,10 +44,10 @@ public:
 
 	QVector3D getNodeCenter(NodeID nodeID) const { return m_nodeMap.at(nodeID).getCenter().toQVector3D(); }
 
-	const SafeUnorderedMap<NodeID, TestChamberNode> &getNodeMap() const { return m_nodeMap; };
+	const SafeUnorderedMap<NodeID, TestChamberNode>& getNodeMap() const { return m_nodeMap; };
 
 	std::optional<ChamberSurface> getSurface(NodeID node, WallSide side) const;
-	void getSurfaceChildren(std::vector<ChamberSurface> &out, NodeID node, WallSide side) const;
+	void getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WallSide side) const;
 	bool coordInNode(QVector3D coord, NodeID nodeID) const;
 	// Find the neighboring nodes of the given node in all 6 directions
 	// The neighbors may be nullopt if they do not exist (if the node is at the edge of the octree)
@@ -67,10 +67,10 @@ public:
 	// Will return the node even if it has children
 	std::optional<NodeID> tryGetNodeAtCoord(IntVector3D coord) const;
 
-	std::array<IntVector3D, 4> getChamberSurfaceCorners(const ChamberSurface &surface);
+	std::array<IntVector3D, 4> getChamberSurfaceCorners(const ChamberSurface& surface);
 	IntVector3D getSurfaceCenter(ChamberSurface surface) const;
 
-	const SafeUnorderedMap<NodeID, std::array<ChamberSurface, 6>> &getSurfaceMap() const { return m_surfaceMap; }
+	const SafeUnorderedMap<NodeID, std::array<ChamberSurface, 6>>& getSurfaceMap() const { return m_surfaceMap; }
 
 	// Is the given coordinate out of bounds?
 	bool isPointOOB(QVector3D coord) const;
@@ -108,19 +108,19 @@ public:
 	// void getNodeBBox(NodeID id, std::array<QVector3D, 2>& out);
 
 	// Returns leaf nodes which touch the specified bbox
-	void getNodesTouchingBBox(const QVector3D &mins, const QVector3D &maxs, std::vector<NodeID> &out) const;
+	void getNodesTouchingBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out) const;
 	void setNeighbors(NodeID node);
 	// Calculates the potential coordinate for the center of a node at the given size that is closest to the given
 	// coordinate The returned coordinate may not correspond to an actual node
 	IntVector3D getClosestPossibleNodeCenterAtLevel(IntVector3D coord, unsigned int nodeSize) const;
 
 	// Based on generated surfaces, generate quads for rendering. This is to separate rendering logic with octree logic
-	void generateQuads(std::vector<Quad> &out) const;
-	void generateTCQuads(std::vector<TestChamberQuad> &out) const;
-	void generateTCShadowQuads(std::vector<TestChamberQuad> &out) const;
+	void generateQuads(std::vector<Quad>& out) const;
+	void generateTCQuads(std::vector<TestChamberQuad>& out) const;
+	void generateTCShadowQuads(std::vector<TestChamberQuad>& out) const;
 	// Creates a UniqueSurfaceIdentifer for the given node and side.
 	// USI should be the standard to long term description of a node to remove dependency on NodeID and SurfaceID
-	void makeUSI(NodeID node, UniqueSurfaceIdentifier &out, WallSide side = WallSide::NONE) const;
+	void makeUSI(NodeID node, UniqueSurfaceIdentifier& out, WallSide side = WallSide::NONE) const;
 	// Based on generated surfaces, generate quads for rendering. This is to separate rendering logic with octree logic
 
 	uint8_t nodeSurfaceFlag(NodeID node) const;
@@ -130,12 +130,12 @@ public:
 	bool canUnsubdivide(NodeID node) const;
 	// pass in a possible candidates of nodes that needs to be checked for unsubdividing.
 	// needs a contiguous list of NodeIDs that may or may not repeat
-	void unsubdivideNodes(NodeID *touchingNodes, int size, std::vector<NodeID> *out = NULL);
+	void unsubdivideNodes(NodeID* touchingNodes, int size, std::vector<NodeID>* out = NULL);
 
 	// Expand the tree until the coordinate is enclosed by a node of given size
 	NodeID subdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size);
 	int setNodeActive(NodeID node, bool active);
-	int setNodesActive(std::vector<NodeID> &nodes, bool active);
+	int setNodesActive(std::vector<NodeID>& nodes, bool active);
 
 	// Based on the octree structure, generate surfaces
 	void generateSurfaces();
@@ -144,16 +144,16 @@ public:
 	void eraseNode(NodeID nodeID);
 	void createDefaultSpace();
 	// Extrude all surfaces selected
-	int extrudeSurfaces(Selector *selector);
+	int extrudeSurfaces(Selector* selector);
 	// Receve all surfaces selected
-	int recedeSurfaces(Selector *selector);
+	int recedeSurfaces(Selector* selector);
 	// Recursively destroy a node and all its children
 	void destroyBranch(NodeID nodeID);
 
 	// Given a bounding box, subdivide all nodes within in so that their sides lie along the bounding box sides
 	// - out will be set to the resulting nodes inside the bbox
-	void subdivideNodesToBBox(const QVector3D &mins, const QVector3D &maxs, std::vector<NodeID> &out);
-	void subdivideNodeToBBoxRecursive(NodeID node, const QVector3D &mins, const QVector3D &maxs, std::vector<NodeID> &out);
+	void subdivideNodesToBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
+	void subdivideNodeToBBoxRecursive(NodeID node, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
 
 	// Instead of regenerating the entire surfacemap, update partially
 	void updateSurfaces();
@@ -180,11 +180,11 @@ private:
 	// std::nullopt for the parent ID means it's the root node
 	// - not making this a default value so it is a deliberate programming choice
 	void createOctreeNode(NodeID newID, std::optional<NodeID> parentID, IntVector3D center, unsigned int size);
-	void _printNodesTree(std::map<NodeID, std::vector<NodeID>> &children, NodeID id, std::string prefix, bool isLast);
+	void _printNodesTree(std::map<NodeID, std::vector<NodeID>>& children, NodeID id, std::string prefix, bool isLast);
 
 	// TODO: shorten this name?
-	void checkChildrenTouchingBBox(NodeID parentID, const QVector3D &mins, const QVector3D &maxs,
-	                               std::vector<NodeID> &out) const;
+	void checkChildrenTouchingBBox(NodeID parentID, const QVector3D& mins, const QVector3D& maxs,
+	                               std::vector<NodeID>& out) const;
 
 	const NodeID searchNodeWithCoordSize(QVector3D coord, unsigned int size, NodeID parentID) const;
 	const NodeID searchNodeWithCoordSize(IntVector3D coord, unsigned int size, NodeID parentID) const;
@@ -218,9 +218,9 @@ struct UniqueVolumeIdentifier
 	uint size;
 	IntVector3D nodeCord;
 
-	static UniqueVolumeIdentifier fromNodeID(const TestChamber &chamber, NodeID nodeID)
+	static UniqueVolumeIdentifier fromNodeID(const TestChamber& chamber, NodeID nodeID)
 	{
-		const TestChamberNode &node = chamber.getNodeMap().at(nodeID);
+		const TestChamberNode& node = chamber.getNodeMap().at(nodeID);
 		UniqueVolumeIdentifier uvi;
 		uvi.size = node.getSize();
 		uvi.nodeCord = node.getCenter();

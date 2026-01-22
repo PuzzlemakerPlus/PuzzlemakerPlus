@@ -13,7 +13,7 @@
 
 namespace PMP
 {
-MainWindow::MainWindow(QWidget *parent /* = nullptr */) : QMainWindow(parent)
+MainWindow::MainWindow(QWidget* parent /* = nullptr */) : QMainWindow(parent)
 {
 	// easter egg
 	if (QRandomGenerator::global()->generate() % 10000 == 0)
@@ -33,7 +33,7 @@ MainWindow::MainWindow(QWidget *parent /* = nullptr */) : QMainWindow(parent)
 	newChamber();
 
 	// Set up menu bar
-	auto *fileMenu = menuBar()->addMenu("File");
+	auto* fileMenu = menuBar()->addMenu("File");
 	fileMenu->addAction("New chamber", [this] { newChamber(); });
 	fileMenu->addAction("Open")->setEnabled(false);
 	fileMenu->addAction("Save")->setEnabled(false);
@@ -47,7 +47,7 @@ MainWindow::MainWindow(QWidget *parent /* = nullptr */) : QMainWindow(parent)
 	fileMenu->addAction("Settings")->setEnabled(false);
 	fileMenu->addAction("Exit editor", [this] { close(); });
 
-	auto *editMenu = menuBar()->addMenu("Edit");
+	auto* editMenu = menuBar()->addMenu("Edit");
 	editMenu->addAction("Undo", [this] {
 		UndoStack::instance().undo();
 		m_mainViewport->reloadChamberMeshAndSelection();
@@ -59,18 +59,18 @@ MainWindow::MainWindow(QWidget *parent /* = nullptr */) : QMainWindow(parent)
 	editMenu->addSeparator();
 	editMenu->addAction("Select all")->setEnabled(false);
 
-	auto *mapMenu = menuBar()->addMenu("Map");
+	auto* mapMenu = menuBar()->addMenu("Map");
 	mapMenu->addAction("Change style")->setEnabled(false);
 	mapMenu->addAction("Change music")->setEnabled(false);
 	mapMenu->addSeparator();
 	// NOTE: These are placeholders for mockup purposes - eventually these settings should be defined in packages
-	auto *coopAction = mapMenu->addAction("Cooperative puzzle");
+	auto* coopAction = mapMenu->addAction("Cooperative puzzle");
 	coopAction->setCheckable(true);
-	auto *multiCaveAction = mapMenu->addAction("Multiverse cave");
+	auto* multiCaveAction = mapMenu->addAction("Multiverse cave");
 	multiCaveAction->setCheckable(true);
 	multiCaveAction->setChecked(true);
 
-	auto *helpMenu = menuBar()->addMenu("Help");
+	auto* helpMenu = menuBar()->addMenu("Help");
 	helpMenu->addAction("Check for updates")->setEnabled(false);
 	helpMenu->addAction("Report a bug", [this] {
 		QDesktopServices::openUrl({"https://github.com/PuzzlemakerPlus/PuzzlemakerPlus/issues/new"});

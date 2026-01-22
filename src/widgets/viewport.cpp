@@ -24,7 +24,7 @@
 
 namespace PMP
 {
-void Viewport::getTextureSize(GLuint tex, int &width, int &height)
+void Viewport::getTextureSize(GLuint tex, int& width, int& height)
 {
 	glBindTexture(GL_TEXTURE_2D, tex);
 
@@ -40,7 +40,7 @@ void Viewport::initializeGL()
 	if (m_debugLogger.initialize())
 	{
 		connect(&m_debugLogger, &QOpenGLDebugLogger::messageLogged,
-		        [=](const QOpenGLDebugMessage &debugMessage) { qDebug() << debugMessage; });
+		        [=](const QOpenGLDebugMessage& debugMessage) { qDebug() << debugMessage; });
 		m_debugLogger.startLogging();
 		m_debugLogger.enableMessages();
 	}
@@ -54,7 +54,7 @@ void Viewport::initializeGL()
 
 	loadShaders();
 	createGraphicsObjects();
-	auto *ext = context()->extraFunctions();
+	auto* ext = context()->extraFunctions();
 	ext->glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE);
 
 	m_glInitialized = true;
@@ -307,7 +307,7 @@ void Viewport::reloadChamberMeshAndSelection()
 	loadSelectionLines();
 }
 
-bool Viewport::readSelectionRectCPU(ScreenSurfaceSet &out)
+bool Viewport::readSelectionRectCPU(ScreenSurfaceSet& out)
 {
 	// TODO: this setting does not seem to work on my windows machine
 	const int x = m_lastDragRect.left() * m_selectionTextureScale;
@@ -337,7 +337,7 @@ bool Viewport::readSelectionRectCPU(ScreenSurfaceSet &out)
 	return true;
 }
 
-void Viewport::resizeEvent(QResizeEvent *event)
+void Viewport::resizeEvent(QResizeEvent* event)
 {
 	m_gridSizeLabel.resize(width(), m_gridSizeLabel.height());
 	m_gridSizeLabel.move(width() - m_gridSizeLabel.width(), height() - m_gridSizeLabel.height());

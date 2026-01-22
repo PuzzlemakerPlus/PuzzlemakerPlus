@@ -4,11 +4,11 @@
 
 #include <QPushButton>
 
-PMP::Palette::Palette(QWidget *parent)
+PMP::Palette::Palette(QWidget* parent)
 {
 
 	// instantiate member variables
-	this->m_paletteElements = std::vector<PMP::PaletteElement *>();
+	this->m_paletteElements = std::vector<PMP::PaletteElement*>();
 
 	// TODO: Grab in elements of the Palette from a file elsewhere in code 10 Items is a random number to demo
 	for (int i = 0; i < 10; i++)
@@ -16,9 +16,9 @@ PMP::Palette::Palette(QWidget *parent)
 
 		// TODO: Eventually PMP::PaletteElement is probably going to be a custom implementation of QPushButton making
 		// this obsolete
-		auto *text = new QString("Element ");
+		auto* text = new QString("Element ");
 		text->append(std::to_string(i));
-		auto *button = new QPushButton(*text, parent);
+		auto* button = new QPushButton(*text, parent);
 		// randomly picked size for now
 		button->resize(75, 75);
 		// x: every other item move width to the right y: move height down every 2 items
@@ -34,25 +34,25 @@ PMP::Palette::Palette(QWidget *parent)
 	}
 }
 
-void PMP::Palette::addItem(PMP::PaletteElement *item)
+void PMP::Palette::addItem(PMP::PaletteElement* item)
 {
 	this->m_paletteElements.push_back(item);
 }
 
-void PMP::Palette::addItems(std::vector<PMP::PaletteElement *> &newElements)
+void PMP::Palette::addItems(std::vector<PMP::PaletteElement*>& newElements)
 {
-	for (PMP::PaletteElement *element : newElements)
+	for (PMP::PaletteElement* element : newElements)
 	{
 		addItem(element);
 	}
 }
 
-PMP::PaletteElement *PMP::Palette::getItem(int index)
+PMP::PaletteElement* PMP::Palette::getItem(int index)
 {
 	return this->m_paletteElements.at(index);
 }
 
-std::vector<PMP::PaletteElement *> PMP::Palette::getItems()
+std::vector<PMP::PaletteElement*> PMP::Palette::getItems()
 {
 	return this->m_paletteElements;
 }

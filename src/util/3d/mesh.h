@@ -87,7 +87,7 @@ struct LineVertex
 	LineVertex(QVector3D position, QVector3D color) : pos(position), col(color) {}
 };
 
-inline const char *to_string(WallSide s)
+inline const char* to_string(WallSide s)
 {
 	switch (s)
 	{
@@ -101,9 +101,9 @@ inline const char *to_string(WallSide s)
 	}
 }
 
-bool WallFacesDirection(WallSide side, const QVector3D &dir);
+bool WallFacesDirection(WallSide side, const QVector3D& dir);
 
-QVector3D Lerp(const QVector3D &a, const QVector3D &b, float t);
+QVector3D Lerp(const QVector3D& a, const QVector3D& b, float t);
 IntVector3D getWallNormal(WallSide side);
 IntVector3D getWallUp(WallSide side);
 
@@ -113,11 +113,11 @@ Quad generateQuadAt(QVector3D center, WallSide side, float size);
 TestChamberQuad generateTCQuadAt(QVector3D center, WallSide side, float size, unsigned int surfaceID,
                                  unsigned int parentID, float margin = 1.0f);
 
-void CreateMesh(std::vector<Quad> quads, Mesh &out);
-void CreateTCMesh(std::vector<TestChamberQuad> quads, TestChamberMesh &out);
+void CreateMesh(std::vector<Quad> quads, Mesh& out);
+void CreateTCMesh(std::vector<TestChamberQuad> quads, TestChamberMesh& out);
 
-void QuadCornersToLineWireframe(const std::vector<QVector3D> &corners, std::vector<LineVertex> &out,
-                                const QVector3D &color = QVector3D(0.0f, 0.0f, 0.0f), int start = 0);
-void MultiQuadCornersToLineWireframe(const std::vector<QVector3D> &corners, std::vector<LineVertex> &out,
-                                     const QVector3D &color = QVector3D(0.0f, 0.0f, 0.0f));
+void QuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out,
+                                const QVector3D& color = QVector3D(0.0f, 0.0f, 0.0f), int start = 0);
+void MultiQuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out,
+                                     const QVector3D& color = QVector3D(0.0f, 0.0f, 0.0f));
 } // namespace PMP

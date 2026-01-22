@@ -67,7 +67,7 @@ struct ScreenSurface
 	}
 
 	// Needed for unordered_* key equality
-	friend bool operator==(const ScreenSurface &a, const ScreenSurface &b) noexcept
+	friend bool operator==(const ScreenSurface& a, const ScreenSurface& b) noexcept
 	{
 		return a.parentID == b.parentID && a.surfaceID == b.surfaceID && a.wallSide == b.wallSide;
 	}
@@ -86,7 +86,7 @@ struct ScreenSurfaceHash
 		return x;
 	}
 
-	std::size_t operator()(const ScreenSurface &s) const noexcept
+	std::size_t operator()(const ScreenSurface& s) const noexcept
 	{
 		std::uint64_t seed = 0;
 		auto combine = [&](std::uint64_t v) {
@@ -102,7 +102,7 @@ struct ScreenSurfaceHash
 
 struct ScreenSurfaceEq
 {
-	bool operator()(const ScreenSurface &a, const ScreenSurface &b) const noexcept
+	bool operator()(const ScreenSurface& a, const ScreenSurface& b) const noexcept
 	{
 		return a.parentID == b.parentID && a.surfaceID == b.surfaceID && a.wallSide == b.wallSide;
 	}
@@ -115,7 +115,7 @@ class Viewport : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core
 	Q_OBJECT
 
 public:
-	Viewport(QWidget *parent)
+	Viewport(QWidget* parent)
 	    : QOpenGLWidget(parent), QOpenGLFunctions_3_3_Core(),
 #ifndef NDEBUG
 	      m_debugLogger(this),
@@ -150,7 +150,7 @@ public:
 
 	void setFogColor(QVector3D col) { m_fogCol = col; };
 
-	void setTestChamber(TestChamber *tc)
+	void setTestChamber(TestChamber* tc)
 	{
 		m_testChamber = tc;
 		updateGridSizeLabel();
@@ -158,15 +158,15 @@ public:
 
 	void drawTestChamberSurfaceAttributes(QMatrix4x4 view);
 
-	void setSelector(Selector *s) { m_selector = s; };
+	void setSelector(Selector* s) { m_selector = s; };
 
 	GLuint blurTexture(GLuint texture);
 
 	QMatrix4x4 getProjectionMatrix() { return m_projection; };
 
-	void getViewMatrix(QMatrix4x4 &out);
+	void getViewMatrix(QMatrix4x4& out);
 
-	void getGlobalLightViewMatrix(QVector3D lightDir, QMatrix4x4 &out);
+	void getGlobalLightViewMatrix(QVector3D lightDir, QMatrix4x4& out);
 
 	void resetCamera();
 
@@ -181,18 +181,18 @@ protected:
 	void loadShaders();
 	void paintGL() override;
 	void resizeGL(int width, int height) override;
-	void getTextureSize(GLuint tex, int &width, int &height);
+	void getTextureSize(GLuint tex, int& width, int& height);
 	void initializeGL() override;
-	bool readSelectionRectCPU(ScreenSurfaceSet &out);
+	bool readSelectionRectCPU(ScreenSurfaceSet& out);
 
 	void onFrameUpdate();
-	void keyPressEvent(QKeyEvent *event) override;
-	void mousePressEvent(QMouseEvent *event) override;
-	void mouseMoveEvent(QMouseEvent *event) override;
-	void mouseReleaseEvent(QMouseEvent *event) override;
-	void wheelEvent(QWheelEvent *event) override;
+	void keyPressEvent(QKeyEvent* event) override;
+	void mousePressEvent(QMouseEvent* event) override;
+	void mouseMoveEvent(QMouseEvent* event) override;
+	void mouseReleaseEvent(QMouseEvent* event) override;
+	void wheelEvent(QWheelEvent* event) override;
 
-	void resizeEvent(QResizeEvent *event) override;
+	void resizeEvent(QResizeEvent* event) override;
 
 	void drawDots(QMatrix4x4 view);
 	void drawLines(QMatrix4x4 view);
@@ -203,7 +203,7 @@ protected:
 	void drawAO(QMatrix4x4 view);
 	void drawDragBox();
 
-	void setSelecting(bool on, const QRect &r = {})
+	void setSelecting(bool on, const QRect& r = {})
 	{
 		m_isDragging = on;
 		m_rect = r;
@@ -215,8 +215,8 @@ protected:
 	void generateAOKernel();
 
 private:
-	TestChamber *m_testChamber = nullptr;
-	Selector *m_selector = nullptr;
+	TestChamber* m_testChamber = nullptr;
+	Selector* m_selector = nullptr;
 
 	// Camera transformation matrices
 	// (Chamber geometry won't use a model matrix, item model matrices will be stored in the item class)
@@ -243,7 +243,7 @@ private:
 	QVector3D m_orbitVelocity;
 
 	// Timer for onFrameUpdate()
-	QTimer *m_frameTimer = new QTimer(this);
+	QTimer* m_frameTimer = new QTimer(this);
 
 	// Fog control
 	bool m_fog = false;

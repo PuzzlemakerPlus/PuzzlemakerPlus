@@ -20,14 +20,14 @@ public:
 class UndoStack
 {
 public:
-	static UndoStack &instance();
+	static UndoStack& instance();
 	void addAction(std::unique_ptr<Undoable> action);
 	void undo();
 	void redo();
 
 private:
 	UndoStack() = default;
-	UndoStack(const UndoStack &) = delete;
+	UndoStack(const UndoStack&) = delete;
 	int m_pos; // 0 is current
 	std::deque<std::unique_ptr<Undoable>> m_stack;
 };

@@ -24,8 +24,8 @@ Ray screenPosToWorldRay(int width, int height, QPoint mousePos, QMatrix4x4 proje
 	return Ray{rayOrigin, rayWorld}; // Define your Ray struct as needed
 }
 
-bool rayIntersectsTriangle(const Ray &ray, const QVector3D &v0, const QVector3D &v1, const QVector3D &v2, float &t,
-                           QVector3D &hitPos, float epsilon)
+bool rayIntersectsTriangle(const Ray& ray, const QVector3D& v0, const QVector3D& v1, const QVector3D& v2, float& t,
+                           QVector3D& hitPos, float epsilon)
 {
 	QVector3D edge1 = v1 - v0;
 	QVector3D edge2 = v2 - v0;
@@ -57,8 +57,8 @@ bool rayIntersectsTriangle(const Ray &ray, const QVector3D &v0, const QVector3D 
 	return false;
 }
 
-bool rayIntersectsQuad(const Ray &ray, const QVector3D &p0, const QVector3D &p1, const QVector3D &p2,
-                       const QVector3D &p3, float &t, QVector3D &hitPos)
+bool rayIntersectsQuad(const Ray& ray, const QVector3D& p0, const QVector3D& p1, const QVector3D& p2,
+                       const QVector3D& p3, float& t, QVector3D& hitPos)
 {
 	// Two triangle tests
 	if (rayIntersectsTriangle(ray, p0, p1, p2, t, hitPos))
@@ -68,7 +68,7 @@ bool rayIntersectsQuad(const Ray &ray, const QVector3D &p0, const QVector3D &p1,
 	return false;
 }
 
-bool rayIntersectsAABB(Ray ray, QVector3D center, float size, float &tHit)
+bool rayIntersectsAABB(Ray ray, QVector3D center, float size, float& tHit)
 {
 	const float halfSize = size / 2.0f;
 	QVector3D min = center - QVector3D(halfSize, halfSize, halfSize);

@@ -4,7 +4,7 @@
 
 #include <algorithm>
 
-FileHandler::FileHandler(std::string &path, const std::string &mode)
+FileHandler::FileHandler(std::string& path, const std::string& mode)
 {
 
 #ifndef _WIN32

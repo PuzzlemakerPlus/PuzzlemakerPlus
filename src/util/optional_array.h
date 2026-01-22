@@ -18,7 +18,7 @@ public:
 	const bool has_value() const { return m_IsFilled; }
 
 	// For read-only access to the array contents
-	const std::array<T, S> &valueRead() const
+	const std::array<T, S>& valueRead() const
 	{
 		if (has_value())
 		{
@@ -30,7 +30,7 @@ public:
 		}
 	}
 
-	std::array<T, S> &value()
+	std::array<T, S>& value()
 	{
 		if (has_value())
 		{
@@ -43,7 +43,7 @@ public:
 	}
 
 	// Returns array and initializes it if it's empty
-	std::array<T, S> &value_initialize()
+	std::array<T, S>& value_initialize()
 	{
 		if (!m_IsFilled)
 		{

@@ -4,7 +4,7 @@
 
 namespace PMP
 {
-Debugger &Debugger::instance(Viewport *vp)
+Debugger& Debugger::instance(Viewport* vp)
 {
 	static Debugger instance;
 	if (!instance.hasViewport())

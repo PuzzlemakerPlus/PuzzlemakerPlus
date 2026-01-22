@@ -35,12 +35,12 @@ struct RayHitResult
 class TestChamberNode
 {
 public:
-	TestChamberNode(std::unordered_set<NodeID> &dirtyNodeSet, NodeID id, IntVector3D center, unsigned int size)
+	TestChamberNode(std::unordered_set<NodeID>& dirtyNodeSet, NodeID id, IntVector3D center, unsigned int size)
 	    : m_dirtyNodeSet(dirtyNodeSet), m_id(id), m_size(size), m_active(true), m_center(center)
 	{
 	} // Constructor without parent, used for root node only
 
-	TestChamberNode(std::unordered_set<NodeID> &dirtyNodeSet, NodeID id, NodeID parentID, IntVector3D center,
+	TestChamberNode(std::unordered_set<NodeID>& dirtyNodeSet, NodeID id, NodeID parentID, IntVector3D center,
 	                unsigned int size, bool active)
 	    : m_dirtyNodeSet(dirtyNodeSet), m_id(id), m_size(size), m_active(active), m_center(center), m_parentID(parentID)
 	{
@@ -53,9 +53,9 @@ public:
 
 	const bool hasChildren() const { return m_childIDs.has_value(); }
 
-	std::array<NodeID, 8> &getChildrenID() { return m_childIDs.value(); }
+	std::array<NodeID, 8>& getChildrenID() { return m_childIDs.value(); }
 
-	const std::array<NodeID, 8> &readChildrenID() const { return m_childIDs.valueRead(); }
+	const std::array<NodeID, 8>& readChildrenID() const { return m_childIDs.valueRead(); }
 
 	void resetChildrenID()
 	{
@@ -85,7 +85,7 @@ public:
 
 	unsigned int getSize() const { return m_size; }
 
-	std::array<NodeID, 8> &initializeChildren()
+	std::array<NodeID, 8>& initializeChildren()
 	{
 		m_dirtyNodeSet.insert(m_id);
 		return m_childIDs.value_initialize();
@@ -93,10 +93,10 @@ public:
 
 	NodeID getNeighbor(WallSide direction) const { return m_neighbors[static_cast<int>(direction)]; }
 
-	std::array<NodeID, 6> &getNeighbors() { return m_neighbors; }
+	std::array<NodeID, 6>& getNeighbors() { return m_neighbors; }
 
 private:
-	std::unordered_set<NodeID> &m_dirtyNodeSet;
+	std::unordered_set<NodeID>& m_dirtyNodeSet;
 	const NodeID m_id;
 	const IntVector3D m_center; // Position of the center of the node in world units
 	const unsigned int m_size;  // Size of the node in world units
