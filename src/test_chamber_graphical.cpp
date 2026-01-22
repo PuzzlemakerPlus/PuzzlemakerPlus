@@ -65,7 +65,7 @@ void TestChamber::generateTCShadowQuads(std::vector<TestChamberQuad> &out) const
 			const TestChamberNode &node = m_nodeMap.at(nodeID);
 			if (surface.side == WallSide::POS_Z)
 			{
-				if (node.getCenter().z() + node.getSize() / 2 > defaultRootNodeSize / 2 - gridSizeMin)
+				if (node.getCenter().z() + node.getSize() / 2 > m_rootNodeWorldSize / 2 - gridSizeMin)
 					continue;
 			}
 			out.push_back(generateTCQuadAt(node.getCenter().toQVector3D(), surface.side, node.getSize(), sideID, nodeID));
@@ -75,8 +75,8 @@ void TestChamber::generateTCShadowQuads(std::vector<TestChamberQuad> &out) const
 	// generate extra quads to catch shadows
 	std::vector<NodeID> ceilingNodes;
 	QVector3D chamberMin =
-	    QVector3D(-(int)defaultRootNodeSize / 2, -(int)defaultRootNodeSize / 2, defaultRootNodeSize / 2 - gridSizeMin);
-	QVector3D chamberMax = QVector3D(defaultRootNodeSize / 2, defaultRootNodeSize / 2, defaultRootNodeSize / 2);
+	    QVector3D(-(int)m_rootNodeWorldSize / 2, -(int)m_rootNodeWorldSize / 2, m_rootNodeWorldSize / 2 - gridSizeMin);
+	QVector3D chamberMax = QVector3D(m_rootNodeWorldSize / 2, m_rootNodeWorldSize / 2, m_rootNodeWorldSize / 2);
 	getNodesTouchingBBox(chamberMin, chamberMax, ceilingNodes);
 	for (const auto &nodeID : ceilingNodes)
 	{
@@ -90,9 +90,9 @@ void TestChamber::generateTCShadowQuads(std::vector<TestChamberQuad> &out) const
 	}
 	// walls to catch light bleeding from side walls
 	const QVector3D &rootCenter = m_nodeMap.at(m_rootNode).getCenter().toQVector3D();
-	out.push_back(generateTCQuadAt(rootCenter, WallSide::POS_X, defaultRootNodeSize + 25, m_rootNode, m_rootNode, 1.1f));
-	out.push_back(generateTCQuadAt(rootCenter, WallSide::POS_Y, defaultRootNodeSize + 25, m_rootNode, m_rootNode, 1.1f));
-	out.push_back(generateTCQuadAt(rootCenter, WallSide::NEG_X, defaultRootNodeSize + 25, m_rootNode, m_rootNode, 1.1f));
-	out.push_back(generateTCQuadAt(rootCenter, WallSide::NEG_Y, defaultRootNodeSize + 25, m_rootNode, m_rootNode, 1.1f));
+	out.push_back(generateTCQuadAt(rootCenter, WallSide::POS_X, m_rootNodeWorldSize + 25, m_rootNode, m_rootNode, 1.1f));
+	out.push_back(generateTCQuadAt(rootCenter, WallSide::POS_Y, m_rootNodeWorldSize + 25, m_rootNode, m_rootNode, 1.1f));
+	out.push_back(generateTCQuadAt(rootCenter, WallSide::NEG_X, m_rootNodeWorldSize + 25, m_rootNode, m_rootNode, 1.1f));
+	out.push_back(generateTCQuadAt(rootCenter, WallSide::NEG_Y, m_rootNodeWorldSize + 25, m_rootNode, m_rootNode, 1.1f));
 }
 } // namespace PMP

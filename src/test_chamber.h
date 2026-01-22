@@ -18,9 +18,9 @@
 namespace PMP
 {
 // DO NOT USE THIS DIRECTLY, this is just used to initialize the value in the test chamber class
-// Actually this can totally be used directly pretty sure I wrote the comment above but idk why -asd
-// Kelsey: Lowered for now because 1024 is an easier value to work with
-const unsigned int defaultRootNodeSize = 8192; // was 8192
+// There are certain behaviors I would like to implement later that depend on the root node size not being hardcoded
+// - Kelsey
+const unsigned int defaultRootNodeSize = 8192;
 
 const float gridSizeDefault = 32;
 const float gridSizeMin = 32;
