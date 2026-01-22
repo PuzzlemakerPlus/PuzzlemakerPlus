@@ -1,5 +1,5 @@
 // file_handler.cpp
-// Class for handling folder-based packages
+// Class for handling file access
 #include "file_handler.h"
 
 #include <algorithm>

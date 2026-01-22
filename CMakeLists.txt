@@ -101,6 +101,9 @@ qt_add_executable(PuzzlemakerPlus
 	src/undo.cpp
 
 	# Package system
+	src/package/package_loader.cpp
+	src/package/package_loader.h
+
 	src/util/file_handler.cpp
 	src/util/file_handler.h
 

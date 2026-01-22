@@ -1,5 +1,5 @@
 // file_handler.h
-// Class for handling folder-based packages
+// Class for handling file access
 #pragma once
 
 #include <fstream>

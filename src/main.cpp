@@ -3,8 +3,10 @@
 
 #include <QApplication>
 #include <iostream>
+#include <qdebug.h>
 
 #include "absl/strings/str_format.h"
+#include "package/package_loader.h"
 #include "selection.h"
 #include "test_chamber.h"
 #include "undo.h"
@@ -13,7 +15,7 @@
 #include "widgets/palette.h"
 #include "widgets/viewport.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 	// Initialize Undostack singleton before anything else
 	//  NOTE: This will need to be made per-chamber if we implement tabbed UI later
@@ -36,9 +38,14 @@ int main(int argc, char *argv[])
 
 	QSurfaceFormat::setDefaultFormat(format);
 
+	// scan for packages
+	auto* packageLoader = new PMP::PackageLoader("./packages");
+	if (!packageLoader->scanPackages())
+		qDebug() << "No packages!";
+
 	QApplication app(argc, argv);
 
-	auto *mainWindow = new PMP::MainWindow;
+	auto* mainWindow = new PMP::MainWindow;
 	mainWindow->show();
 
 	return app.exec();
