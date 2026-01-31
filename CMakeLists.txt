@@ -23,19 +23,24 @@ find_package(Qt6 COMPONENTS
 			OpenGLWidgets 
 			REQUIRED)
 
-
+# fetch libraries we want to use
 FetchContent_Declare(
   absl
   GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
-  # Pin to a known good version (recommended). Example tag format varies by release.
-  # You can also pin a commit hash for maximum reproducibility.
   GIT_TAG 20240116.2
+)
+
+FetchContent_Declare(
+  sourcepp
+  GIT_REPOSITORY https://github.com/craftablescience/sourcepp.git
+  GIT_TAG v2026.1.3
 )
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs")  # ON if you want .so/.dll
 set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "Abseil uses your C++ standard")
 
 FetchContent_MakeAvailable(absl)
+FetchContent_MakeAvailable(sourcepp)
 
 # FetchContent_Declare(
 #     assimp
@@ -82,6 +87,9 @@ qt_add_executable(PuzzlemakerPlus
 	src/util/math.cpp
 	src/util/math.h
 	src/util/scoped_timer.h
+	# May remove in favor of QFile
+	src/util/file_handler.cpp
+	src/util/file_handler.h
 
 
 	# This is a test chamber. Four walls, ceiling and a floor
@@ -103,9 +111,13 @@ qt_add_executable(PuzzlemakerPlus
 	# Package system
 	src/package/package_loader.cpp
 	src/package/package_loader.h
-
-	src/util/file_handler.cpp
-	src/util/file_handler.h
+	src/package/package.cpp
+	src/package/package.h
+	src/package/package_format.h
+	src/package/formats/dir_format.cpp
+	src/package/formats/dir_format.h
+	src/package/formats/vpkpp_format.cpp
+	src/package/formats/vpkpp_format.h
 
 	# Resources
 	res/resources.qrc
@@ -122,12 +134,16 @@ target_link_libraries(PuzzlemakerPlus PRIVATE
 	Qt6::Gui
 	Qt6::Widgets
 	Qt6::OpenGLWidgets
+
 	# assimp::assimp
+
 	absl::base
 	absl::strings
 	absl::str_format
 	absl::flat_hash_map
 	absl::log
+
+	sourcepp::vpkpp
 )
 
 # add_executable(octtreetest ${CMAKE_CURRENT_SOURCE_DIR}/tests/octtree_test.cpp
