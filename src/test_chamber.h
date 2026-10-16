@@ -155,9 +155,6 @@ public:
 	void subdivideNodesToBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
 	void subdivideNodeToBBoxRecursive(NodeID node, const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out);
 
-	// Instead of regenerating the entire surfacemap, update partially
-	void updateSurfaces();
-
 	NodeID subdivideNodeToCoordOptimized(QVector3D coord, NodeID parentID, unsigned int size);
 	// Returned node will always be a leaf node
 	NodeID getLeafNodeAtCoord(QVector3D coord);
@@ -197,7 +194,7 @@ private:
 	unsigned int m_rootNodeWorldSize;
 
 	SafeUnorderedMap<NodeID, TestChamberNode> m_nodeMap;
-	std::unordered_set<NodeID> m_nodeDirty; // set of nodes that was modified this frame
+	
 	SafeUnorderedMap<NodeID, std::array<ChamberSurface, 6>> m_surfaceMap;
 
 	int m_gridSize;

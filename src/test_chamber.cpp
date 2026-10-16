@@ -66,7 +66,6 @@ void TestChamber::createChildrenOfNode(NodeID parentID)
 		NodeID id = positionToNodeID(pos);
 		createOctreeNode(id, parentID, pos, parentSize / 2);
 		children[i] = id;
-		m_nodeDirty.insert(id);
 	}
 	TestChamberNode& pn = m_nodeMap.at(parentID);
 	pn.setActive(true); // Make sure the parent node is active after creating children
@@ -91,10 +90,10 @@ void TestChamber::createOctreeNode(NodeID newID, std::optional<NodeID> parentID,
 		throw std::runtime_error("Hash collision");
 	}
 	if (parentID.has_value())
-		m_nodeMap.emplace(newID, TestChamberNode(m_nodeDirty, newID, parentID.value(), center, size,
+		m_nodeMap.emplace(newID, TestChamberNode(newID, parentID.value(), center, size,
 		                                         m_nodeMap.at(parentID.value()).getActive()));
 	else
-		m_nodeMap.emplace(newID, TestChamberNode(m_nodeDirty, newID, center, size));
+		m_nodeMap.emplace(newID, TestChamberNode(newID, center, size));
 	setNeighbors(newID);
 }
 
@@ -326,41 +325,6 @@ void TestChamber::subdivideNodeToBBoxRecursive(NodeID node, const QVector3D& min
 	}
 }
 
-void TestChamber::updateSurfaces()
-{
-	// std::cout << "m_surfaceMap Size: " << m_surfaceMap.size() << "\n";
-	// std::cout << "m_nodeDirty Size: " << m_nodeDirty.size() << "\n";
-	// std::cout << "m_nodeMap Size: " << m_nodeMap.size() << "\n";
-	for (const auto& id : m_nodeDirty)
-	{
-		if (m_nodeMap.find(id) == m_nodeMap.end() || id == 0)
-		{
-			continue;
-		}
-		if (!isNodeActive(id) || nodeHasChild(id))
-		{
-			// delete all surfaces
-			m_surfaceMap.erase(id);
-		}
-		else
-		{
-			std::array<ChamberSurface, 6>& walls = m_surfaceMap.defaultConstruct(id);
-			for (int i = 0; i < 6; ++i)
-			{
-				WallSide side = static_cast<WallSide>(i);
-				// notice how WallSide indices are used for surface side
-				// so you can access the respective side by walls[static_cast<int>(WallSide::POS_X)] etc.
-				if (isSurface(side, id))
-				{
-					walls[i] = {id, side};
-				}
-			}
-		}
-	}
-	m_nodeDirty.clear();
-	std::cout << "Done updating surfaces " << "\n";
-}
-
 void TestChamber::generateSurfaces()
 {
 	m_surfaceMap.clear();
@@ -504,18 +468,18 @@ int TestChamber::extrudeSurfaces(Selector* selector)
 	}
 	UndoStack::instance().addAction(std::make_unique<TCExtrudeAction>(this, selector, extrudeUVIs, sv));*/
 
-	//{
-	//	ScopedTimer timer = ScopedTimer("generateSurfaces");
-	//	generateSurfaces();
-	//}
+	{
+		ScopedTimer timer = ScopedTimer("generateSurfaces");
+		generateSurfaces();
+	}
 	//{
 	//	ScopedTimer("generateSurfacesThreaded");
 	//	generateSurfacesThreaded();
 	//}
-	{
-		ScopedTimer timer = ScopedTimer("updateSurfaces");
-		updateSurfaces();
-	}
+	// {
+	// 	ScopedTimer timer = ScopedTimer("updateSurfaces");
+	// 	updateSurfaces();
+	// }
 
 	return nodesChanged;
 }
@@ -586,9 +550,7 @@ void TestChamber::destroyChildrenOfNode(NodeID parentID)
 				destroyChildrenOfNode(childID);
 
 			m_nodeMap.erase(childID);
-			m_nodeDirty.insert(childID);
 		}
-		m_nodeDirty.insert(parentID);
 		parentNode.resetChildrenID();
 	}
 }

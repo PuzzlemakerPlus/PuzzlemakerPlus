@@ -43,6 +43,7 @@ CMakePresets.json
 
 # Clangd
 .cache
+build-clang
 
 # Qt
 .qt

@@ -35,14 +35,14 @@ struct RayHitResult
 class TestChamberNode
 {
 public:
-	TestChamberNode(std::unordered_set<NodeID>& dirtyNodeSet, NodeID id, IntVector3D center, unsigned int size)
-	    : m_dirtyNodeSet(dirtyNodeSet), m_id(id), m_size(size), m_active(true), m_center(center)
+	TestChamberNode(NodeID id, IntVector3D center, unsigned int size)
+	    : m_id(id), m_size(size), m_active(true), m_center(center)
 	{
 	} // Constructor without parent, used for root node only
 
-	TestChamberNode(std::unordered_set<NodeID>& dirtyNodeSet, NodeID id, NodeID parentID, IntVector3D center,
+	TestChamberNode(NodeID id, NodeID parentID, IntVector3D center,
 	                unsigned int size, bool active)
-	    : m_dirtyNodeSet(dirtyNodeSet), m_id(id), m_size(size), m_active(active), m_center(center), m_parentID(parentID)
+	    : m_id(id), m_size(size), m_active(active), m_center(center), m_parentID(parentID)
 	{
 	}
 
@@ -59,7 +59,6 @@ public:
 
 	void resetChildrenID()
 	{
-		m_dirtyNodeSet.insert(m_id);
 		m_childIDs.reset();
 	}
 
@@ -69,15 +68,7 @@ public:
 	{
 		if (m_active != active)
 		{
-			m_dirtyNodeSet.insert(m_id);
 			m_active = active;
-			for (int i = 0; i < 6; i++)
-			{
-				if (m_neighbors[i] != 0)
-				{
-					m_dirtyNodeSet.insert(m_neighbors[i]);
-				}
-			}
 		}
 	}
 
@@ -87,7 +78,6 @@ public:
 
 	std::array<NodeID, 8>& initializeChildren()
 	{
-		m_dirtyNodeSet.insert(m_id);
 		return m_childIDs.value_initialize();
 	}
 
@@ -96,7 +86,6 @@ public:
 	std::array<NodeID, 6>& getNeighbors() { return m_neighbors; }
 
 private:
-	std::unordered_set<NodeID>& m_dirtyNodeSet;
 	const NodeID m_id;
 	const IntVector3D m_center; // Position of the center of the node in world units
 	const unsigned int m_size;  // Size of the node in world units
