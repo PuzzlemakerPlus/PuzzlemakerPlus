@@ -16,19 +16,18 @@ public:
 	virtual int redo() = 0;
 };
 
-// Singleton stack for keeping track of all actions
+// per-chamber stack 
 class UndoStack
 {
 public:
-	static UndoStack& instance();
+	UndoStack() = default;
 	void addAction(std::unique_ptr<Undoable> action);
 	void undo();
 	void redo();
 
 private:
-	UndoStack() = default;
-	UndoStack(const UndoStack&) = delete;
-	int m_pos; // 0 is current
+	UndoStack(const UndoStack&) = delete; //dont allow move
+	size_t m_pos = 0; // number of applied actions
 	std::deque<std::unique_ptr<Undoable>> m_stack;
 };
 } // namespace PMP

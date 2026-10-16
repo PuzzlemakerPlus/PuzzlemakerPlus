@@ -90,8 +90,8 @@ void TestChamber::createOctreeNode(NodeID newID, std::optional<NodeID> parentID,
 		throw std::runtime_error("Hash collision");
 	}
 	if (parentID.has_value())
-		m_nodeMap.emplace(newID, TestChamberNode(newID, parentID.value(), center, size,
-		                                         m_nodeMap.at(parentID.value()).getActive()));
+		m_nodeMap.emplace(newID,
+		                  TestChamberNode(newID, parentID.value(), center, size, m_nodeMap.at(parentID.value()).getActive()));
 	else
 		m_nodeMap.emplace(newID, TestChamberNode(newID, center, size));
 	setNeighbors(newID);
@@ -114,6 +114,19 @@ int TestChamber::setNodeActive(NodeID node, bool active)
 	return 1; // State of the node has changed
 }
 
+void TestChamber::matchNeighborSizes(const std::vector<NodeID>& nodes)
+{
+	for (NodeID id : nodes)
+	{
+		const TestChamberNode& tcn = m_nodeMap.at(id);
+		const unsigned int size = tcn.getSize();
+		// copy out before subdividing: subdividing inserts into m_nodeMap and can invalidate tcn
+		const std::array<IntVector3D, 6> outerCoords = getNeighborNodeCenters(size, tcn.getCenter());
+		for (const auto& coord : outerCoords)
+			subdivideNodeToCoordOptimized(coord.toQVector3D(), m_rootNode, size);
+	}
+}
+
 int TestChamber::setNodesActive(std::vector<NodeID>& nodes, bool active)
 {
 	int nodesChanged = 0;
@@ -123,18 +136,34 @@ int TestChamber::setNodesActive(std::vector<NodeID>& nodes, bool active)
 		nodesChanged++;
 	}
 	// Match the sizes of adjacent nodes only after all nodes have had their active state set
-	for (int i = 0; i < nodes.size(); i++)
-	{
-		auto& tcn = m_nodeMap.at(nodes[i]);
-		unsigned int size = tcn.getSize();
-		std::array<IntVector3D, 6> outerCoords = getNeighborNodeCenters(tcn.getSize(), tcn.getCenter());
-		for (const auto& coord : outerCoords)
-		{
-			NodeID done = subdivideNodeToCoordOptimized(coord.toQVector3D(), m_rootNode, size);
-			// Debugger::instance().addDebugPoint(coord.toQVector3D(), { 1.0f, 1.0f, 0.0f } );
-		}
-	}
+	matchNeighborSizes(nodes);
 	return nodesChanged; // State of the node has changed
+}
+
+void TestChamber::setVolumesActive(const std::vector<UniqueVolumeIdentifier>& volumes, bool active)
+{
+	std::vector<NodeID> nodes;
+	nodes.reserve(volumes.size());
+	// Pass 1: recreate every node and set its state. If later edits split it, set every leaf under it too.
+	for (const UniqueVolumeIdentifier& uvi : volumes)
+	{
+		NodeID id = subdivideNodeToCoordOptimized(uvi.nodeCord.toQVector3D(), m_rootNode, uvi.size);
+		std::vector<NodeID> stack = {id};
+		while (!stack.empty())
+		{
+			TestChamberNode& node = m_nodeMap.at(stack.back());
+			stack.pop_back();
+			node.setActive(active);
+			if (node.hasChildren())
+				for (NodeID child : node.readChildrenID())
+					stack.push_back(child);
+		}
+		nodes.push_back(id);
+	}
+	// Pass 2: only after every state is set, so nodes split here inherit the correct state
+	matchNeighborSizes(nodes);
+	unsubdivideNodes(nodes.data(), nodes.size());
+	generateSurfacesThreaded();
 }
 
 // Assumes out is empty during non-recursive calls
@@ -360,16 +389,16 @@ void TestChamber::generateSurfacesThreaded()
 	};
 
 	m_surfaceMap.clear();
-	constexpr int numThreads = 8;
-	std::array<std::future<std::vector<SurfaceFlags>>, numThreads> futs; // returns a surface flag per node
+	const unsigned numThreads = std::max(1u, std::thread::hardware_concurrency());
+	std::vector<std::future<std::vector<SurfaceFlags>>> futs(numThreads); // returns a surface flag per node
 
 	std::vector<NodeID> keys;
 	keys.reserve(getNodeMap().size());
 	for (const auto& [k, v] : m_nodeMap)
 		keys.push_back(k);
 	int launched = 0;
-	std::vector<NodeID>::iterator itStart;
-	std::vector<NodeID>::iterator itEnd;
+	//	std::vector<NodeID>::iterator itStart;
+	//	std::vector<NodeID>::iterator itEnd;
 
 	for (unsigned t = 0; t < numThreads; ++t)
 	{
@@ -444,6 +473,7 @@ void TestChamber::createDefaultSpace()
 
 int TestChamber::extrudeSurfaces(Selector* selector)
 {
+	const Selector selBefore = *selector; // before shiftSelection moves it
 	QVector3D mins = selector->getMins();
 	QVector3D maxs = selector->getMaxs();
 	if (!selector->isVolumeSelection())
@@ -458,34 +488,30 @@ int TestChamber::extrudeSurfaces(Selector* selector)
 	std::vector<NodeID> touchingNodes;
 	subdivideNodesToBBox(mins, maxs, touchingNodes);
 
+	std::vector<UniqueVolumeIdentifier> changed; // only nodes that actually go from open to solid
+	for (NodeID id : touchingNodes)
+		if (isNodeActive(id))
+			changed.push_back(UniqueVolumeIdentifier::fromNodeID(*this, id));
+
 	int nodesChanged = setNodesActive(touchingNodes, false);
-	// TODO: Hook up to undo/redo
-	/*std::vector<UniqueVolumeIdentifier> extrudeUVIs;
-	SelectionVolume sv = { mins, maxs };
-	for ( const auto& nodeID : touchingNodes )
-	{
-	    extrudeUVIs.push_back(UniqueVolumeIdentifier::fromNodeID(*this, nodeID));
-	}
-	UndoStack::instance().addAction(std::make_unique<TCExtrudeAction>(this, selector, extrudeUVIs, sv));*/
 
-	{
-		ScopedTimer timer = ScopedTimer("generateSurfaces");
-		generateSurfaces();
-	}
-	//{
-	//	ScopedTimer("generateSurfacesThreaded");
-	//	generateSurfacesThreaded();
-	//}
 	// {
-	// 	ScopedTimer timer = ScopedTimer("updateSurfaces");
-	// 	updateSurfaces();
+	// 	ScopedTimer timer = ScopedTimer("generateSurfaces");
+	// 	generateSurfaces();
 	// }
+	{
+		ScopedTimer timer = ScopedTimer("generateSurfacesThreaded");
+		generateSurfacesThreaded();
+	}
 
+	if (!changed.empty())
+		m_undoStack.addAction(TCEditAction::extrude(this, selector, std::move(changed), selBefore, *selector));
 	return nodesChanged;
 }
 
 int TestChamber::recedeSurfaces(Selector* selector)
 {
+	const Selector selBefore = *selector; // before shiftSelection moves it
 	QVector3D mins = selector->getMins();
 	QVector3D maxs = selector->getMaxs();
 	if (!selector->isVolumeSelection())
@@ -499,21 +525,26 @@ int TestChamber::recedeSurfaces(Selector* selector)
 	}
 	std::vector<NodeID> touchingNodes;
 	subdivideNodesToBBox(mins, maxs, touchingNodes);
+
+	// recorded before unsubdivideNodes merges them; undo recreates them at these sizes
+	std::vector<UniqueVolumeIdentifier> changed; // only nodes that actually go from solid to open
+	for (NodeID id : touchingNodes)
+		if (!isNodeActive(id))
+			changed.push_back(UniqueVolumeIdentifier::fromNodeID(*this, id));
+
 	int nodesChanged = setNodesActive(touchingNodes, true);
-	// TODO: Hook up to undo/redo
 	unsubdivideNodes(touchingNodes.data(), touchingNodes.size());
+	// {
+	// 	ScopedTimer timer = ScopedTimer("generateSurfaces");
+	// 	generateSurfaces();
+	// }
 	{
-		ScopedTimer timer = ScopedTimer("generateSurfaces");
-		generateSurfaces();
+		ScopedTimer timer = ScopedTimer("generateSurfacesThreaded");
+		generateSurfacesThreaded();
 	}
-	//{
-	//	ScopedTimer("generateSurfacesThreaded");
-	//	generateSurfacesThreaded();
-	//}
-	//{
-	//	ScopedTimer("updateSurfaces");
-	//	updateSurfaces();
-	//}
+
+	if (!changed.empty())
+		m_undoStack.addAction(TCEditAction::recede(this, selector, std::move(changed), selBefore, *selector));
 	return nodesChanged;
 }
 
@@ -570,6 +601,12 @@ void TestChamber::unsubdivideNodes(NodeID* touchingNodes, int count, std::vector
 			continue;                    // node was deleted
 		if (canUnsubdivide(parentID)) // detecting the nodes to unsubdivide seem to work properly
 		{
+			// The merged node takes its leaves' state (uniform if canUnsubdivide passed).
+			// Parents are always flagged active, so without this, merging solid leaves would open them up.
+			NodeID leaf = parentID;
+			while (nodeHasChild(leaf))
+				leaf = m_nodeMap.at(leaf).readChildrenID()[0];
+			m_nodeMap.at(parentID).setActive(isNodeActive(leaf));
 			destroyChildrenOfNode(parentID);
 			// std::cout << "Destroyed children of " << parentID << "\n";
 		}

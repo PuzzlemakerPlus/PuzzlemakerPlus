@@ -84,12 +84,12 @@ void Viewport::keyPressEvent(QKeyEvent* event)
 	bool actionPerformed = false;
 	if (event->matches(QKeySequence::Undo))
 	{
-		UndoStack::instance().undo();
+		m_testChamber->undoStack().undo();
 		actionPerformed = true;
 	}
 	else if (event->matches(QKeySequence::Redo))
 	{
-		UndoStack::instance().redo();
+		m_testChamber->undoStack().redo();
 		actionPerformed = true;
 	}
 	else

@@ -40,10 +40,12 @@ CMakeSettings.json
 # Visual Studio Code
 build
 CMakePresets.json
+build-msvc
 
 # Clangd
 .cache
 build-clang
+
 
 # Qt
 .qt

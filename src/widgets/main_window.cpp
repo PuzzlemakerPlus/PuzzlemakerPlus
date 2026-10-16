@@ -49,11 +49,11 @@ MainWindow::MainWindow(QWidget* parent /* = nullptr */) : QMainWindow(parent)
 
 	auto* editMenu = menuBar()->addMenu("Edit");
 	editMenu->addAction("Undo", [this] {
-		UndoStack::instance().undo();
+		m_currentChamber->undoStack().undo();
 		m_mainViewport->reloadChamberMeshAndSelection();
 	});
 	editMenu->addAction("Redo", [this] {
-		UndoStack::instance().redo();
+		m_currentChamber->undoStack().redo();
 		m_mainViewport->reloadChamberMeshAndSelection();
 	});
 	editMenu->addSeparator();

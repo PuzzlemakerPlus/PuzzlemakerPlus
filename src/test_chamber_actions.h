@@ -2,77 +2,64 @@
 // Defines undo/redo actions for the test chamber
 #pragma once
 
-#include <optional>
+#include <memory>
 #include <vector>
 
 #include "selection.h"
 #include "test_chamber.h"
-#include "test_chamber_types.h"
 #include "undo.h"
-#include "util/3d/mesh.h"
 
 // For handling undo and redo of actions done on test chambers
-// DO NOT store pointers of surfaces as it will be lost
-// Instead, use UniqueSurfaceIdentifier for NodeID/SurfaceID-agnostic design
+// DO NOT store NodeIDs or pointers to nodes/surfaces, the octree may split or merge them
+// Instead, use UniqueVolumeIdentifier for NodeID-agnostic design
 
 namespace PMP
 {
-struct SelectionVolume
-{
-	IntVector3D mins;
-	IntVector3D maxs;
-};
-
-class TCAction : public Undoable
-{
-protected:
-	TCAction(TestChamber* tc, Selector* sel) : m_testChamber(tc), m_selector(sel) {}
-
-	NodeID toNode(const UniqueSurfaceIdentifier& usi) const
-	{
-		return m_testChamber->searchNodeWithCoordSize(usi.nodeCord, static_cast<unsigned int>(usi.size));
-	}
-
-	NodeID toNode(const UniqueVolumeIdentifier& uvi) const
-	{
-		return m_testChamber->searchNodeWithCoordSize(uvi.nodeCord, static_cast<unsigned int>(uvi.size));
-	}
-
-	TestChamber* m_testChamber = nullptr;
-	Selector* m_selector = nullptr;
-};
-
-class TCExtrudeAction : public TCAction
+// A geometry edit: a set of volumes that all switched to one state
+// Extrude records the volumes that went open -> solid, recede the ones that went solid -> open
+class TCEditAction : public Undoable
 {
 public:
-	TCExtrudeAction(TestChamber* tc, Selector* sel, std::vector<UniqueVolumeIdentifier> extrudeUVIs,
-	                SelectionVolume selectionVolume)
-	    : TCAction(tc, sel), m_extrudeUVIs(std::move(extrudeUVIs)), m_prevSelectionVolume(std::move(selectionVolume))
+	TCEditAction(TestChamber* tc, Selector* sel, std::vector<UniqueVolumeIdentifier> volumes, bool newState,
+	             Selector selBefore, Selector selAfter)
+	    : m_testChamber(tc), m_selector(sel), m_volumes(std::move(volumes)), m_newState(newState),
+	      m_selBefore(selBefore), m_selAfter(selAfter)
 	{
 	}
 
-	int undo() override;
-	int redo() override;
-
-private:
-	std::vector<UniqueVolumeIdentifier> m_extrudeUVIs;
-	SelectionVolume m_prevSelectionVolume;
-};
-
-class TCRecedeAction : public TCAction
-{
-public:
-	TCRecedeAction(TestChamber* tc, Selector* sel, std::vector<UniqueVolumeIdentifier> recedeUVIs,
-	               SelectionVolume selectionVolume)
-	    : TCAction(tc, sel), m_recedeUVIs(std::move(recedeUVIs)), m_prevSelectionVolume(std::move(selectionVolume))
+	//helper function for creating extrude action
+	static std::unique_ptr<TCEditAction> extrude(TestChamber* tc, Selector* sel,
+	                                             std::vector<UniqueVolumeIdentifier> volumes, Selector selBefore,
+	                                             Selector selAfter)
 	{
+		return std::make_unique<TCEditAction>(tc, sel, std::move(volumes), false, selBefore, selAfter);
 	}
 
-	int undo() override;
-	int redo() override;
+	//helper function for creating recede action
+	static std::unique_ptr<TCEditAction> recede(TestChamber* tc, Selector* sel,
+	                                            std::vector<UniqueVolumeIdentifier> volumes, Selector selBefore,
+	                                            Selector selAfter)
+	{
+		return std::make_unique<TCEditAction>(tc, sel, std::move(volumes), true, selBefore, selAfter);
+	}
+
+	int undo() override { return apply(!m_newState, m_selBefore); }
+
+	int redo() override { return apply(m_newState, m_selAfter); }
 
 private:
-	std::vector<UniqueVolumeIdentifier> m_recedeUVIs;
-	SelectionVolume m_prevSelectionVolume;
+	int apply(bool state, const Selector& sel)
+	{
+		m_testChamber->setVolumesActive(m_volumes, state);
+		*m_selector = sel;
+		return 1;
+	}
+
+	TestChamber* m_testChamber;
+	Selector* m_selector;
+	std::vector<UniqueVolumeIdentifier> m_volumes;
+	bool m_newState;
+	Selector m_selBefore;
+	Selector m_selAfter;
 };
 } // namespace PMP

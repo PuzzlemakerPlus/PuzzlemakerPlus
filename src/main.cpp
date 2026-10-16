@@ -17,10 +17,6 @@
 
 int main(int argc, char* argv[])
 {
-	// Initialize Undostack singleton before anything else
-	//  NOTE: This will need to be made per-chamber if we implement tabbed UI later
-	PMP::UndoStack::instance();
-
 	// Configure OpenGL format
 	QSurfaceFormat format;
 	// QSurfaceFormat::setDefaultFormat(format);

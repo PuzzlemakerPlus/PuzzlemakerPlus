@@ -6,12 +6,6 @@
 
 namespace PMP
 {
-UndoStack& UndoStack::instance()
-{
-	static UndoStack instance;
-	return instance;
-}
-
 void UndoStack::addAction(std::unique_ptr<Undoable> action)
 {
 	while (m_stack.size() > m_pos)

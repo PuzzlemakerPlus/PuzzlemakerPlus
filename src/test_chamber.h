@@ -10,10 +10,12 @@
 
 #include "selection.h"
 #include "test_chamber_types.h"
+#include "undo.h"
 #include "util/3d/mesh.h"
 #include "util/3d/ray.h"
 #include "util/math.h"
 #include "util/safemap.h"
+
 
 namespace PMP
 {
@@ -26,8 +28,7 @@ const float gridSizeDefault = 32;
 const float gridSizeMin = 32;
 const float gridSizeMax = 256;
 
-struct UniqueSurfaceIdentifier;
-struct UniqueVolumeIdensifier;
+struct UniqueVolumeIdentifier;
 
 class TestChamber
 {
@@ -118,9 +119,6 @@ public:
 	void generateQuads(std::vector<Quad>& out) const;
 	void generateTCQuads(std::vector<TestChamberQuad>& out) const;
 	void generateTCShadowQuads(std::vector<TestChamberQuad>& out) const;
-	// Creates a UniqueSurfaceIdentifer for the given node and side.
-	// USI should be the standard to long term description of a node to remove dependency on NodeID and SurfaceID
-	void makeUSI(NodeID node, UniqueSurfaceIdentifier& out, WallSide side = WallSide::NONE) const;
 	// Based on generated surfaces, generate quads for rendering. This is to separate rendering logic with octree logic
 
 	uint8_t nodeSurfaceFlag(NodeID node) const;
@@ -169,6 +167,14 @@ public:
 
 	int getGridSize() { return m_gridSize; }
 
+	UndoStack& undoStack() { return m_undoStack; }
+
+	// Subdivides the neighbors of each node down to that node's size
+	void matchNeighborSizes(const std::vector<NodeID>& nodes);
+	// For undo/redo: recreates each volume at its recorded size, sets it (and anything under it) to `active`,
+	// then merges and rebuilds surfaces
+	void setVolumesActive(const std::vector<UniqueVolumeIdentifier>& volumes, bool active);
+
 private:
 	// Hash function to convert position to unique node ID
 	// The position must be a known center point of a node
@@ -194,19 +200,12 @@ private:
 	unsigned int m_rootNodeWorldSize;
 
 	SafeUnorderedMap<NodeID, TestChamberNode> m_nodeMap;
-	
+
 	SafeUnorderedMap<NodeID, std::array<ChamberSurface, 6>> m_surfaceMap;
 
 	int m_gridSize;
-};
 
-// Based on the information in this struct, it is possible to identify a surface without knowing its parentID or
-// surfaceID
-struct UniqueSurfaceIdentifier
-{
-	uint size;
-	IntVector3D nodeCord;
-	WallSide side = WallSide::NONE;
+	UndoStack m_undoStack;
 };
 
 // Based on the information in this struct, it is possible to identify a volume without knowing its NodeID

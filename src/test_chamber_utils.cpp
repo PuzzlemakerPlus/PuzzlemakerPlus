@@ -411,14 +411,6 @@ IntVector3D TestChamber::getSurfaceCenter(ChamberSurface surface) const
 	       m_nodeMap.at(surface.parentNode).getCenter();
 }
 
-void TestChamber::makeUSI(NodeID nodeID, UniqueSurfaceIdentifier& out, WallSide side) const
-{
-	const TestChamberNode& node = m_nodeMap.at(nodeID);
-	out.size = node.getSize();
-	out.nodeCord = node.getCenter();
-	out.side = side;
-}
-
 void TestChamber::printNodes()
 {
 	std::cout << "TestChamber has " << m_nodeMap.size() << " Node(s)\n";

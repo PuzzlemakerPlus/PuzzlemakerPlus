@@ -95,7 +95,6 @@ qt_add_executable(PuzzlemakerPlus
 	# This is a test chamber. Four walls, ceiling and a floor
 	# ✅ Good enough for science! ❎ Not Aperture Science!
 	src/test_chamber_actions.h
-	src/test_chamber_actions.cpp
 	src/test_chamber_graphical.cpp
 	src/test_chamber_utils.cpp
 	src/test_chamber_types.h
