@@ -349,7 +349,7 @@ void Viewport::resizeSelectionFBO(GLsizei baseW, GLsizei baseH)
 	const int W = std::max(1, int(std::floor(baseW * m_selectionTextureScale)));
 	const int H = std::max(1, int(std::floor(baseH * m_selectionTextureScale)));
 
-	// If you haven¡¯t created the FBO yet, make it once.
+	// If you haven't created the FBO yet, make it once.
 	if (!m_selectionFBO)
 	{
 		createSelectionFBO(); // your existing function
@@ -383,7 +383,7 @@ void Viewport::resizeSelectionFBO(GLsizei baseW, GLsizei baseH)
 		qWarning() << "Selection FBO incomplete after resize, status =" << Qt::hex << status;
 	}
 
-	// Return to Qt¡¯s default FBO
+	// Return to Qt's default FBO
 	glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
 }
 
