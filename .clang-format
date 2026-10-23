@@ -4,10 +4,6 @@ BasedOnStyle: Microsoft
 
 # use tabs for indentation, not spaces
 UseTab:          ForIndentation
-# assume tabs are 1 char wide for formatting purposes
-# contributors can independently choose the actual tab width shown in their editor
-TabWidth:        1
-IndentWidth:     1
 AccessModifierOffset: -1
 
 # align * and & to the type instead of the name
