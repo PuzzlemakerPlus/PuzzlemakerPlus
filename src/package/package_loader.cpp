@@ -6,28 +6,28 @@
 #include <qdirlisting.h>
 #include <qfileinfo.h>
 
+#include "formats/archive_format.h"
 #include "formats/dir_format.h"
-#include "formats/vpkpp_format.h"
 #include "package.h"
 #include "package_format.h"
 
 namespace PMP
 {
 
-bool PackageLoader::scanPackages()
+unsigned long PackageLoader::scanPackages()
 {
 	if (!std::filesystem::exists(m_packageDir.data()))
 	{
 		qDebug() << "Specified package directory is not present!";
-		return false;
+		return 0;
 	}
 
 	return scanDirectoryRecursive(m_packageDir);
 }
 
-bool PackageLoader::scanDirectoryRecursive(std::string_view dir)
+unsigned long PackageLoader::scanDirectoryRecursive(std::string_view dir)
 {
-	// Have to do recursion manually because folders which are packages shouldn't be scanned
+	// Have to recurse manually because folders which are packages shouldn't be scanned
 	// BEE seems to pick up hidden packages, guess we should too???
 	QDirListing dirList(dir.data(), QDirListing::IteratorFlag::IncludeHidden);
 	for (const auto& dirEntry : dirList)
@@ -41,16 +41,15 @@ bool PackageLoader::scanDirectoryRecursive(std::string_view dir)
 				if (QFileInfo::exists(dirEntry.absoluteFilePath() + "/info.txt"))
 				{
 					// TODO: Show dialog informing users that BEE2 packages are not supported
-					qDebug() << "Skipped BEE package" << dirEntry.fileName();
-					continue;
+					qDebug() << "Ignoring BEE package" << dirEntry.fileName();
 				}
 				else
 				{
 					// not a package, so scan deeper
 					qDebug() << "Scanning recursive directory" << dirEntry.fileName();
 					scanDirectoryRecursive(dirEntry.absoluteFilePath().toStdString());
-					continue;
 				}
+				continue;
 			}
 
 			format = std::make_unique<DirFormat>(dirEntry.absoluteFilePath().toStdString());
@@ -61,35 +60,33 @@ bool PackageLoader::scanDirectoryRecursive(std::string_view dir)
 			if (extension == "bee_pack")
 			{
 				// TODO: Show dialog informing users that BEE2 packages are not supported
-				qDebug() << "Skipped BEE package" << dirEntry.fileName();
+				qDebug() << "Ignoring BEE package" << dirEntry.fileName();
 				continue;
 			}
-			// VPKpp supports a bunch of formats, but to avoid confusion, we are only allowing
-			// ZIP (optionally renamed to PMPACK) and VPK formats to be used in PMP
-			// TODO: pmpack doesn't work because sourcepp doesn't know that extension
-			else if (extension == "zip" || extension == "vpk" || extension == "pmpack")
+			// Since we really only have 2 package formats, I'm just doing this with a simple
+			// if/else for now, we can add a more advanced lookup system later if needed
+			if (extension == "zip" || extension == "vpk" || extension == "pmpack")
 			{
-				format = std::make_unique<VpkPPFormat>(dirEntry.absoluteFilePath().toStdString());
+				format = std::make_unique<ArchiveFormat>(dirEntry.absoluteFilePath().toStdString());
 				if (!format->init())
 				{
-					qDebug() << "Failed to load package" << dirEntry.fileName();
+					qDebug() << "Failed to load" << dirEntry.fileName() << "- invalid or corrupt";
 				}
 			}
 			else
 			{
 				// not a package
-				qDebug() << "Skipped non-package" << dirEntry.fileName();
 				continue;
 			}
 		}
 
-		// transfer format unique_ptr ownership to the package
-		m_packageList.push_back(std::make_unique<Package>(dirEntry.baseName().toStdString(), format.release()));
-		qDebug() << "Added package " << dirEntry.fileName();
-		continue;
+		qDebug() << "Loading " << dirEntry.fileName();
+		auto package = std::make_unique<Package>(format.release());
+		if (!package->isInvalid())
+			m_packageList.push_back(std::move(package));
 	}
 
-	return (m_packageList.size() > 0);
+	return m_packageList.size();
 }
 
 } // namespace PMP

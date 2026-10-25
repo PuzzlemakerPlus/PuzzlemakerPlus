@@ -13,14 +13,24 @@ namespace PMP
 class Package
 {
 public:
-	Package(std::string_view name, PackageFormat* format) : m_packageName(name), m_format(format) {}
+	Package(PackageFormat* format);
 
-	std::optional<std::vector<std::byte>> readFileBinary(std::filesystem::path path);
-	std::optional<std::string> readFileText(std::filesystem::path path);
+	[[nodiscard]] std::optional<std::vector<std::byte>> readFileBinary(std::filesystem::path path) const;
+	[[nodiscard]] std::optional<std::string> readFileText(std::filesystem::path path) const;
+
+	// Returns if the package failed to initialize properly so the package loader can ignore it
+	[[nodiscard]] bool isInvalid() const {return m_isInvalid;}
 
 private:
+	// Metadata that is loaded from package.kv
+	std::string m_packageID;
 	std::string m_packageName;
+	std::string m_packageDescription;
+	std::string m_packageAuthor;
+
 	std::unique_ptr<PackageFormat> m_format;
+
+	bool m_isInvalid = false;
 };
 
 } // namespace PMP

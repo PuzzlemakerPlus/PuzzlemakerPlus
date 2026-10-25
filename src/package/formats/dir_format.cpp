@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <qdebug.h>
 
 namespace PMP
@@ -48,13 +49,8 @@ std::optional<std::string> DirFormat::readFileText(std::filesystem::path path)
 		return std::nullopt;
 	}
 
-	auto size = stream.tellg();
-	std::string out;
-	out.reserve(size);
-
-	// read the whole file
 	stream.seekg(0);
-	stream.read(&out[0], size);
+	std::string out(std::istreambuf_iterator<char>(stream), {});
 	return out;
 }
 

@@ -115,8 +115,8 @@ qt_add_executable(PuzzlemakerPlus
 	src/package/package_format.h
 	src/package/formats/dir_format.cpp
 	src/package/formats/dir_format.h
-	src/package/formats/vpkpp_format.cpp
-	src/package/formats/vpkpp_format.h
+	src/package/formats/archive_format.cpp
+	src/package/formats/archive_format.h
 
 	# Resources
 	res/resources.qrc
@@ -143,6 +143,7 @@ target_link_libraries(PuzzlemakerPlus PRIVATE
 	absl::log
 
 	sourcepp::vpkpp
+    sourcepp::kvpp
 )
 
 # add_executable(octtreetest ${CMAKE_CURRENT_SOURCE_DIR}/tests/octtree_test.cpp

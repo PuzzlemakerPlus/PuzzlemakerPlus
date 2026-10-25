@@ -36,8 +36,8 @@ int main(int argc, char* argv[])
 
 	// scan for packages
 	auto* packageLoader = new PMP::PackageLoader("./packages");
-	if (!packageLoader->scanPackages())
-		qDebug() << "No packages!";
+	unsigned long packageCount = packageLoader->scanPackages();
+	qDebug() << packageCount << "packages loaded";
 
 	QApplication app(argc, argv);
 

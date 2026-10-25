@@ -1,5 +1,5 @@
-// vpkpp_format.h
-// Implements package formats using the vpkpp library (covers VPKs and ZIPs)
+// archive_format.h
+// Implements VPK and ZIP package formats (both covered by the vpkpp library)
 #pragma once
 
 #include "../package_format.h"
@@ -8,12 +8,12 @@
 namespace PMP
 {
 
-class VpkPPFormat : public PackageFormat
+class ArchiveFormat : public PackageFormat
 {
 public:
-	VpkPPFormat(std::filesystem::path packagePath) : PackageFormat(packagePath) {}
+	ArchiveFormat(std::filesystem::path packagePath) : PackageFormat(packagePath) {}
 
-	VpkPPFormat() = delete;
+	ArchiveFormat() = delete;
 
 	virtual bool init();
 

@@ -18,12 +18,12 @@ class PackageLoader
 public:
 	PackageLoader(std::string_view packageDir) : m_packageDir(packageDir) {}
 
-	bool scanPackages();
+	unsigned long scanPackages();
 
 protected:
 	// Scans a folder for packages. Subfolders that are not themselves packages
 	// will be scanned for further packages.
-	bool scanDirectoryRecursive(std::string_view dir);
+	unsigned long scanDirectoryRecursive(std::string_view dir);
 
 private:
 	std::string m_packageDir;
