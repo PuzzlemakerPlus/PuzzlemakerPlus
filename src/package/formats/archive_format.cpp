@@ -36,14 +36,12 @@ bool ArchiveFormat::fileExists(std::filesystem::path path)
 
 std::optional<std::vector<std::byte>> ArchiveFormat::readFileBinary(std::filesystem::path path)
 {
-	// TODO: I think this is going to be copying this twice - probably really slow for large files
-	return m_packFile->readEntry(path.string());
+	return std::move(m_packFile->readEntry(path.string()));
 }
 
 std::optional<std::string> ArchiveFormat::readFileText(std::filesystem::path path)
 {
-	// TODO: see above
-	return m_packFile->readEntryText(path.string());
+	return std::move(m_packFile->readEntryText(path.string()));
 }
 
 } // namespace PMP

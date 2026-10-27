@@ -64,9 +64,15 @@ qt_add_executable(PuzzlemakerPlus
 	# Entry point
 	src/main.cpp
 
-	# Widgets
+	# Main window
 	src/widgets/main_window.cpp
 	src/widgets/main_window.h
+
+	# Dialogs
+	src/widgets/dialogs/settings.cpp
+	src/widgets/dialogs/settings.h
+
+	# Widgets
 	src/widgets/palette.cpp
 	src/widgets/palette.h
 	src/widgets/palette_element.cpp
@@ -87,10 +93,6 @@ qt_add_executable(PuzzlemakerPlus
 	src/util/math.cpp
 	src/util/math.h
 	src/util/scoped_timer.h
-	# May remove in favor of QFile
-	src/util/file_handler.cpp
-	src/util/file_handler.h
-
 
 	# This is a test chamber. Four walls, ceiling and a floor
 	# ✅ Good enough for science! ❎ Not Aperture Science!

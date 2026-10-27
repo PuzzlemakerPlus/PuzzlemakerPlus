@@ -34,11 +34,6 @@ int main(int argc, char* argv[])
 
 	QSurfaceFormat::setDefaultFormat(format);
 
-	// scan for packages
-	auto* packageLoader = new PMP::PackageLoader("./packages");
-	unsigned long packageCount = packageLoader->scanPackages();
-	qDebug() << packageCount << "packages loaded";
-
 	QApplication app(argc, argv);
 
 	auto* mainWindow = new PMP::MainWindow;

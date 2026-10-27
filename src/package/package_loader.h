@@ -16,14 +16,16 @@ namespace PMP
 class PackageLoader
 {
 public:
-	PackageLoader(std::string_view packageDir) : m_packageDir(packageDir) {}
+	explicit PackageLoader(std::string_view packageDir) : m_packageDir(packageDir) {}
 
-	unsigned long scanPackages();
+	unsigned int scanPackages();
+
+	const auto& getPackageList() {return m_packageList;}
 
 protected:
 	// Scans a folder for packages. Subfolders that are not themselves packages
 	// will be scanned for further packages.
-	unsigned long scanDirectoryRecursive(std::string_view dir);
+	unsigned int scanDirectoryRecursive(std::string_view dir);
 
 private:
 	std::string m_packageDir;

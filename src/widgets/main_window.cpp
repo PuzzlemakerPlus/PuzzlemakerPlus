@@ -9,6 +9,8 @@
 
 #include "../undo.h"
 #include "../util/debug.h"
+#include "../package/package_loader.h"
+#include "dialogs/settings.h"
 #include "palette.h"
 
 namespace PMP
@@ -30,6 +32,12 @@ MainWindow::MainWindow(QWidget* parent /* = nullptr */) : QMainWindow(parent)
 	m_mainViewport->setSelector(&m_selector);
 	setCentralWidget(m_mainViewport);
 
+	// scan for packages (should this go here?)
+	// TODO: make package folder location configurable
+	m_packageLoader = std::make_unique<PackageLoader>("./packages");
+	unsigned long packageCount = m_packageLoader->scanPackages();
+	qDebug() << packageCount << "packages loaded";
+
 	newChamber();
 
 	// Set up menu bar
@@ -44,7 +52,10 @@ MainWindow::MainWindow(QWidget* parent /* = nullptr */) : QMainWindow(parent)
 	fileMenu->addAction("Rebuild")->setEnabled(false);
 	fileMenu->addAction("Publish")->setEnabled(false);
 	fileMenu->addSeparator();
-	fileMenu->addAction("Settings")->setEnabled(false);
+	fileMenu->addAction("Settings", [this] {
+		SettingsDialog theSettings(m_packageLoader->getPackageList(), this);
+		theSettings.exec();
+	});
 	fileMenu->addAction("Exit editor", [this] { close(); });
 
 	auto* editMenu = menuBar()->addMenu("Edit");
