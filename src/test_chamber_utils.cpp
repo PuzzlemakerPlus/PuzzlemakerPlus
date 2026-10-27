@@ -78,57 +78,6 @@ uint8_t TestChamber::nodeSurfaceFlag(NodeID node) const
 	return flags;
 }
 
-uint8_t TestChamber::nodeSurfaceFlagThreaded(NodeID node) const
-{
-	uint8_t flags = 64; // start with 7th bit set to 1 (complete)
-	const TestChamberNode& currentNode = m_nodeMap.at(node);
-	if (currentNode.hasChildren())
-	{
-		const auto& childIDs = currentNode.readChildrenID();
-		std::array<uint8_t, 8> childFlags;
-		std::array<std::future<uint8_t>, 8> futures;
-		int enabledChildren = 0;
-		for (int i = 0; i < 8; i++)
-		{
-			const NodeID child = childIDs[i];
-			futures[i] = std::async(std::launch::async, [this, child]() -> uint8_t { return this->nodeSurfaceFlag(child); });
-		}
-		for (int i = 0; i < 8; ++i)
-		{
-			childFlags[i] = futures[i].get();
-			if (isNodeActive(childIDs[i]))
-				enabledChildren++;
-		}
-		for (int i = 0; i < 6; i++)
-		{
-			WallSide side = static_cast<WallSide>(i);
-			int countSide = 0;
-			for (int j : childrenOnFace[i])
-			{
-				countSide += (int)readFlag(childFlags[j], i);
-				setFlag(flags, 6, readFlag(childFlags[j], 6) && readFlag(flags, 6));
-			}
-			setFlag(flags, i, countSide == 4);
-			// set complete flag if all 4 children have the same state on this side
-			// if any side is incomplete, the node is incomplete
-			// either all enabled or all diabled
-			setFlag(flags, 6, countSide % 4 == 0 && enabledChildren % 8 == 0 && readFlag(flags, 6));
-		}
-	}
-	else
-	{
-		for (int i = 0; i < 6; i++)
-		{
-			WallSide side = static_cast<WallSide>(i);
-			if (isSurface(side, currentNode))
-			{
-				setFlag(flags, i, true);
-			}
-		}
-	}
-	return flags;
-}
-
 bool TestChamber::canUnsubdivide(NodeID node) const
 {
 	return readFlag(nodeSurfaceFlag(node), 6);

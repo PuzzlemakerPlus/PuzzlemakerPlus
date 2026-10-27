@@ -307,7 +307,6 @@ void TestChamber::checkChildrenTouchingBBox(NodeID parentID, const QVector3D& mi
 
 void TestChamber::getNodesTouchingBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out) const
 {
-	ScopedTimer("getNodesTouchingBBox");
 	out.clear();
 	checkChildrenTouchingBBox(m_rootNode, mins, maxs, out);
 }
@@ -385,14 +384,15 @@ void TestChamber::generateSurfacesThreaded()
 	};
 
 	m_surfaceMap.clear();
-	
+
 	std::vector<const TestChamberNode*> nodes;
 	nodes.reserve(getNodeMap().size());
 	for (const auto& [id, node] : m_nodeMap)
-	if (node.getActive() && !node.hasChildren()) // threads ignore these nodes anyways so cull them early
-	nodes.push_back(&node);
-	//decide on thread count after the nodes
-	const unsigned numThreads = (unsigned)std::min<size_t>(std::max(1u, std::thread::hardware_concurrency()),  nodes.size());
+		if (node.getActive() && !node.hasChildren()) // threads ignore these nodes anyways so cull them early
+			nodes.push_back(&node);
+	// decide on thread count after the nodes
+	const unsigned numThreads =
+	    (unsigned)std::min<size_t>(std::max(1u, std::thread::hardware_concurrency()), nodes.size());
 	// one slot per node, each thread writes only its own range so no locking is needed
 	std::vector<SurfaceFlags> results(nodes.size());
 	std::vector<std::future<void>> futs;
@@ -579,13 +579,17 @@ void TestChamber::unsubdivideNodes(NodeID* touchingNodes, int count, std::vector
 		NodeID parent = m_nodeMap.at(touchingNodes[i]).getParentID();
 		parentsToCheck.insert(parent);
 	}
-	for (const auto& parentID : parentsToCheck)
+	// merging nodes may allow more nodes to be merged
+	while (!parentsToCheck.empty())
 	{
-		auto it = m_nodeMap.find(parentID);
-		if (it == m_nodeMap.end())
-			continue;                 // node was deleted
-		if (canUnsubdivide(parentID)) // detecting the nodes to unsubdivide seem to work properly
+		std::unordered_set<NodeID> next;
+		for (const auto& parentID : parentsToCheck)
 		{
+			auto it = m_nodeMap.find(parentID);
+			if (it == m_nodeMap.end())
+				continue;                 // node was deleted
+			if (!canUnsubdivide(parentID)) // detecting the nodes to unsubdivide seem to work properly
+				continue;
 			// The merged node takes its leaves' state (uniform if canUnsubdivide passed).
 			// Parents are always flagged active, so without this, merging solid leaves would open them up.
 			NodeID leaf = parentID;
@@ -593,8 +597,20 @@ void TestChamber::unsubdivideNodes(NodeID* touchingNodes, int count, std::vector
 				leaf = m_nodeMap.at(leaf).readChildrenID()[0];
 			m_nodeMap.at(parentID).setActive(isNodeActive(leaf));
 			destroyChildrenOfNode(parentID);
-			// std::cout << "Destroyed children of " << parentID << "\n";
+			const TestChamberNode& merged = m_nodeMap.at(parentID);
+			if (merged.hasParentID())
+			{
+				// Only climb when all siblings are uniform leaves, so the next check stays at 8 leaves
+				// instead of recursing through a large subtree that will most likely fail
+				const NodeID grandparentID = merged.getParentID();
+				bool uniform = true;
+				for (NodeID c : m_nodeMap.at(grandparentID).readChildrenID())
+					uniform &= !nodeHasChild(c) && isNodeActive(c) == merged.getActive();
+				if (uniform)
+					next.insert(grandparentID);
+			}
 		}
+		parentsToCheck = std::move(next);
 	}
 	if (out) // add the remaining nodes to out
 	{

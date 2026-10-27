@@ -67,7 +67,7 @@ bool boundingBoxEdgesIntersect(const QVector3D& mins1, const QVector3D& maxs1, c
 // random float between 0 and 1
 float randf()
 {
-	std::mt19937 rng(std::random_device{}());
+	static std::mt19937 rng(std::random_device{}());
 	static std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 	return dist(rng);
 }

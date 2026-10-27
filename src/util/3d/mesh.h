@@ -113,8 +113,8 @@ Quad generateQuadAt(QVector3D center, WallSide side, float size);
 TestChamberQuad generateTCQuadAt(QVector3D center, WallSide side, float size, unsigned int surfaceID,
                                  unsigned int parentID, float margin = 1.0f);
 
-void CreateMesh(std::vector<Quad> quads, Mesh& out);
-void CreateTCMesh(std::vector<TestChamberQuad> quads, TestChamberMesh& out);
+void CreateMesh(const std::vector<Quad>& quads, Mesh& out);
+void CreateTCMesh(const std::vector<TestChamberQuad>& quads, TestChamberMesh& out);
 
 void QuadCornersToLineWireframe(const std::vector<QVector3D>& corners, std::vector<LineVertex>& out,
                                 const QVector3D& color = QVector3D(0.0f, 0.0f, 0.0f), int start = 0);

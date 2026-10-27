@@ -5,7 +5,6 @@
 #include <map>
 #include <optional>
 #include <qvectornd.h>
-#include <unordered_map>
 #include <vector>
 
 #include "selection.h"
@@ -125,8 +124,6 @@ public:
 	// Based on generated surfaces, generate quads for rendering. This is to separate rendering logic with octree logic
 
 	uint8_t nodeSurfaceFlag(NodeID node) const;
-
-	uint8_t nodeSurfaceFlagThreaded(NodeID node) const;
 
 	bool canUnsubdivide(NodeID node) const;
 	// pass in a possible candidates of nodes that needs to be checked for unsubdividing.

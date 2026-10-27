@@ -217,8 +217,10 @@ TestChamberQuad generateTCQuadAt(QVector3D center, WallSide side, float size, un
 	return {face, {0, 1, 2, 0, 2, 3}};
 }
 
-void CreateMesh(std::vector<Quad> quads, Mesh& out)
+void CreateMesh(const std::vector<Quad>& quads, Mesh& out)
 {
+	out.vertices.reserve(out.vertices.size() + quads.size() * 4);
+	out.indices.reserve(out.indices.size() + quads.size() * 6);
 	unsigned int vertexOffset = 0;
 	for (const auto& quad : quads)
 	{
@@ -236,8 +238,10 @@ void CreateMesh(std::vector<Quad> quads, Mesh& out)
 	}
 }
 
-void CreateTCMesh(std::vector<TestChamberQuad> quads, TestChamberMesh& out)
+void CreateTCMesh(const std::vector<TestChamberQuad>& quads, TestChamberMesh& out)
 {
+	out.vertices.reserve(out.vertices.size() + quads.size() * 4);
+	out.indices.reserve(out.indices.size() + quads.size() * 6);
 	unsigned int vertexOffset = 0;
 	for (const auto& quad : quads)
 	{
