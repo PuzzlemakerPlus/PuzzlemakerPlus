@@ -14,7 +14,7 @@
 namespace PMP
 {
 
-unsigned long PackageLoader::scanPackages()
+unsigned int PackageLoader::scanPackages()
 {
 	if (!std::filesystem::exists(m_packageDir.data()))
 	{
@@ -25,7 +25,7 @@ unsigned long PackageLoader::scanPackages()
 	return scanDirectoryRecursive(m_packageDir);
 }
 
-unsigned long PackageLoader::scanDirectoryRecursive(std::string_view dir)
+unsigned int PackageLoader::scanDirectoryRecursive(std::string_view dir)
 {
 	// Have to recurse manually because folders which are packages shouldn't be scanned
 	// BEE seems to pick up hidden packages, guess we should too???

@@ -21,6 +21,11 @@ public:
 	// Returns if the package failed to initialize properly so the package loader can ignore it
 	[[nodiscard]] bool isInvalid() const {return m_isInvalid;}
 
+	[[nodiscard]] std::string_view getID() const {return m_packageID;}
+	[[nodiscard]] std::string_view getName() const {return m_packageName;}
+	[[nodiscard]] std::string_view getDescription() const {return m_packageDescription;}
+	[[nodiscard]] std::string_view getAuthor() const {return m_packageAuthor;}
+
 private:
 	// Metadata that is loaded from package.kv
 	std::string m_packageID;

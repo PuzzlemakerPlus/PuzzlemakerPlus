@@ -64,9 +64,15 @@ qt_add_executable(PuzzlemakerPlus
 	# Entry point
 	src/main.cpp
 
-	# Widgets
+	# Main window
 	src/widgets/main_window.cpp
 	src/widgets/main_window.h
+
+	# Dialogs
+	src/widgets/dialogs/settings.cpp
+	src/widgets/dialogs/settings.h
+
+	# Widgets
 	src/widgets/palette.cpp
 	src/widgets/palette.h
 	src/widgets/palette_element.cpp
