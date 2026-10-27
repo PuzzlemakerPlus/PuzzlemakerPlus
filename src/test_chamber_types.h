@@ -45,7 +45,7 @@ public:
 	    : m_id(id), m_size(size), m_active(active), m_center(center), m_parentID(parentID)
 	{
 	}
-
+	NodeID getID() const { return m_id; }
 	// only the root node doesnt have a parent
 	bool hasParentID() const { return m_parentID.has_value(); }
 

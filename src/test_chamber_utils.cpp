@@ -68,7 +68,7 @@ uint8_t TestChamber::nodeSurfaceFlag(NodeID node) const
 		for (int i = 0; i < 6; i++)
 		{
 			WallSide side = static_cast<WallSide>(i);
-			if (isSurface(side, node))
+			if (isSurface(side, currentNode))
 			{
 				setFlag(flags, i, true);
 			}
@@ -120,7 +120,7 @@ uint8_t TestChamber::nodeSurfaceFlagThreaded(NodeID node) const
 		for (int i = 0; i < 6; i++)
 		{
 			WallSide side = static_cast<WallSide>(i);
-			if (isSurface(side, node))
+			if (isSurface(side, currentNode))
 			{
 				setFlag(flags, i, true);
 			}
@@ -343,9 +343,8 @@ std::optional<RayHitResult> TestChamber::rayCast(Ray ray) const
 }
 
 // Given a wallside of a node, should this wall be drawn
-bool TestChamber::isSurface(WallSide side, NodeID node) const
+bool TestChamber::isSurface(WallSide side, const TestChamberNode& ref) const
 {
-	const TestChamberNode& ref = m_nodeMap.at(node);
 	const IntVector3D center = ref.getCenter();
 	assert(ref.getSize() % 2 == 0 && "node size should be an even numer");
 	const int halfSize = ref.getSize() / 2;
@@ -353,14 +352,25 @@ bool TestChamber::isSurface(WallSide side, NodeID node) const
 	IntVector3D offset = -(norm * halfSize + norm);
 	IntVector3D neighborCoord = center + offset;
 
-	bool isVisible = isPointOOB(neighborCoord); // if coordinate behind this surface is OOB, this surface should be
-	                                            // drawn
-	if (!isVisible)
-	{ // the coordinate behind this surface is in bound
-		NodeID neighborId = searchNodeWithCoord(neighborCoord.toQVector3D());
-		isVisible = !isNodeActive(neighborId); // check if the node behind this surface is inactive
+	if (isPointOOB(neighborCoord))
+		return true;                                                     // nothing behind this surface, so it should be drawn
+	return !isNodeActive(findLeafNear(neighborCoord, ref.getSize())); // drawn if the node behind it is inactive
+}
+
+//hash lookup
+NodeID TestChamber::findLeafNear(IntVector3D coord, unsigned int size) const
+{
+	//try to find for all grid sizes
+	for (unsigned int s = size; s <= m_rootNodeWorldSize; s *= 2)
+	{
+		std::optional<NodeID> id = tryGetNodeAtCoord(getClosestPossibleNodeCenterAtLevel(coord, s));
+		if (id.has_value())
+			return nodeHasChild(*id) ? searchNodeWithCoord(coord.toQVector3D(), *id) : *id;
 	}
-	return isVisible;
+	// fallback. realistically shouldnt fire unless there is an 'offgrid' node
+	// this fallback I think will catch offgrid nodes as long as it is properly part of tree
+	// can a node be offgrid and also be part of the tree?
+	return searchNodeWithCoord(coord.toQVector3D());
 }
 
 bool TestChamber::coordInNode(QVector3D coord, NodeID nodeID) const

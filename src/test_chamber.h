@@ -79,6 +79,7 @@ public:
 
 	// Is there surface on the given side of the node?
 	bool isSurface(WallSide side, NodeID node) const;
+	bool isSurface(WallSide side, const TestChamberNode& p) const;
 
 	bool isNodeActive(NodeID node) const { return m_nodeMap.at(node).getActive(); };
 
@@ -88,6 +89,8 @@ public:
 	// Recursive function that guarantees to find the node
 	const NodeID searchNodeWithCoord(QVector3D coord) const;
 	const NodeID searchNodeWithCoord(QVector3D coord, NodeID parentID) const;
+	NodeID findLeafNear(IntVector3D coord, unsigned int size) const;
+	
 	// Uses the hash function to try to locate the node that uses the given coord as the centere coordinate
 	// const std::optional<NodeID> searchNodeWithCoord(IntVector3D coord) const;
 

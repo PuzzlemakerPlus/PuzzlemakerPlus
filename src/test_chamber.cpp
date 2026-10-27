@@ -90,8 +90,8 @@ void TestChamber::createOctreeNode(NodeID newID, std::optional<NodeID> parentID,
 		throw std::runtime_error("Hash collision");
 	}
 	if (parentID.has_value())
-		m_nodeMap.emplace(newID,
-		                  TestChamberNode(newID, parentID.value(), center, size, m_nodeMap.at(parentID.value()).getActive()));
+		m_nodeMap.emplace(
+		    newID, TestChamberNode(newID, parentID.value(), center, size, m_nodeMap.at(parentID.value()).getActive()));
 	else
 		m_nodeMap.emplace(newID, TestChamberNode(newID, center, size));
 	setNeighbors(newID);
@@ -357,11 +357,7 @@ void TestChamber::subdivideNodeToBBoxRecursive(NodeID node, const QVector3D& min
 void TestChamber::generateSurfaces()
 {
 	m_surfaceMap.clear();
-	std::vector<NodeID> keys;
-	keys.reserve(m_nodeMap.size());
-	for (auto const& [k, _] : m_nodeMap)
-		keys.push_back(k);
-	for (auto const& id : keys)
+	for (auto& [id, v] : m_nodeMap)
 	{
 		if (!isNodeActive(id) || nodeHasChild(id))
 			continue; // skip if node not active or if node has child
@@ -372,7 +368,7 @@ void TestChamber::generateSurfaces()
 			WallSide side = static_cast<WallSide>(i);
 			// notice how WallSide indices are used for surface side
 			// so you can access the respective side by walls[static_cast<int>(WallSide::POS_X)] etc.
-			if (isSurface(side, id))
+			if (isSurface(side, v))
 			{
 				walls[i] = {id, side};
 			}
@@ -389,55 +385,44 @@ void TestChamber::generateSurfacesThreaded()
 	};
 
 	m_surfaceMap.clear();
-	const unsigned numThreads = std::max(1u, std::thread::hardware_concurrency());
-	std::vector<std::future<std::vector<SurfaceFlags>>> futs(numThreads); // returns a surface flag per node
-
-	std::vector<NodeID> keys;
-	keys.reserve(getNodeMap().size());
-	for (const auto& [k, v] : m_nodeMap)
-		keys.push_back(k);
-	int launched = 0;
-	//	std::vector<NodeID>::iterator itStart;
-	//	std::vector<NodeID>::iterator itEnd;
-
+	
+	std::vector<const TestChamberNode*> nodes;
+	nodes.reserve(getNodeMap().size());
+	for (const auto& [id, node] : m_nodeMap)
+	if (node.getActive() && !node.hasChildren()) // threads ignore these nodes anyways so cull them early
+	nodes.push_back(&node);
+	//decide on thread count after the nodes
+	const unsigned numThreads = (unsigned)std::min<size_t>(std::max(1u, std::thread::hardware_concurrency()),  nodes.size());
+	// one slot per node, each thread writes only its own range so no locking is needed
+	std::vector<SurfaceFlags> results(nodes.size());
+	std::vector<std::future<void>> futs;
+	futs.reserve(numThreads);
 	for (unsigned t = 0; t < numThreads; ++t)
 	{
-		const size_t begin = (keys.size() * t) / numThreads;
-		const size_t end = (keys.size() * (t + 1)) / numThreads;
-		if (begin >= end)
-			break; // empty chunk (happens when keys.size() < numThreads)
-		launched++;
-		auto itStart = keys.begin() + begin;
-		auto itEnd = keys.begin() + end;
-		auto workerfunc = [this, itStart, itEnd]() -> std::vector<SurfaceFlags> {
-			std::vector<SurfaceFlags> out;
-			out.reserve(itEnd - itStart);
-			for (auto it = itStart; it != itEnd; ++it)
+		const size_t begin = (nodes.size() * t) / numThreads;
+		const size_t end = (nodes.size() * (t + 1)) / numThreads;
+		futs.push_back(std::async(std::launch::async, [this, &nodes, &results, begin, end]() {
+			for (size_t k = begin; k < end; ++k)
 			{
-				NodeID id = *it;
-				if (!isNodeActive(id) || nodeHasChild(id))
-					continue;
+				const TestChamberNode& n = *nodes[k];
 				uint8_t flags = 0;
 				for (int i = 0; i < 6; ++i)
 				{
-					WallSide side = static_cast<WallSide>(i);
-					if (isSurface(side, id))
-					{
+					if (isSurface(static_cast<WallSide>(i), n))
 						flags |= uint8_t(1u << i);
-					}
 				}
-				SurfaceFlags f = {id, flags};
-				out.push_back(f);
+				results[k] = {n.getID(), flags};
 			}
-			return out;
-		};
-		futs[t] = std::async(std::launch::async, workerfunc);
+		}));
 	}
-	for (unsigned t = 0; t < launched; ++t)
+	for (unsigned t = 0; t < numThreads; ++t)
 	{
-		std::vector<SurfaceFlags> chunk = futs[t].get();
-		for (SurfaceFlags flag : chunk)
+		futs[t].get(); // wait for this thread only, later ones keep running while this range is merged
+		const size_t begin = (nodes.size() * t) / numThreads;
+		const size_t end = (nodes.size() * (t + 1)) / numThreads;
+		for (size_t k = begin; k < end; ++k)
 		{
+			const SurfaceFlags& flag = results[k];
 			std::array<ChamberSurface, 6>& walls = m_surfaceMap.defaultConstruct(flag.id);
 			for (int i = 0; i < 6; ++i)
 			{
@@ -598,7 +583,7 @@ void TestChamber::unsubdivideNodes(NodeID* touchingNodes, int count, std::vector
 	{
 		auto it = m_nodeMap.find(parentID);
 		if (it == m_nodeMap.end())
-			continue;                    // node was deleted
+			continue;                 // node was deleted
 		if (canUnsubdivide(parentID)) // detecting the nodes to unsubdivide seem to work properly
 		{
 			// The merged node takes its leaves' state (uniform if canUnsubdivide passed).
