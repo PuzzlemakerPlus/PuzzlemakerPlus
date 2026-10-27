@@ -178,6 +178,8 @@ target_link_libraries(PuzzlemakerPlus PRIVATE
 # )
 
 set_property(TARGET PuzzlemakerPlus PROPERTY VS_DEBUGGER_COMMAND "$<TARGET_FILE:PuzzlemakerPlus>")
+set_property(TARGET PuzzlemakerPlus PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin")
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT PuzzlemakerPlus)
 
 message("windeployqt6.exe at ${qt_bin_path}/windeployqt6.exe")
 function(windeployqt target)

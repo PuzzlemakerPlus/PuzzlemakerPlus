@@ -53,3 +53,5 @@ build-clang
 .vscode
 /CMakeUserPresets.json
 debug.log
+
+arch.c
