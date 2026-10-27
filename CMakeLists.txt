@@ -93,10 +93,6 @@ qt_add_executable(PuzzlemakerPlus
 	src/util/math.cpp
 	src/util/math.h
 	src/util/scoped_timer.h
-	# May remove in favor of QFile
-	src/util/file_handler.cpp
-	src/util/file_handler.h
-
 
 	# This is a test chamber. Four walls, ceiling and a floor
 	# ✅ Good enough for science! ❎ Not Aperture Science!
