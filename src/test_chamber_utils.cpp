@@ -83,45 +83,6 @@ bool TestChamber::canUnsubdivide(NodeID node) const
 	return readFlag(nodeSurfaceFlag(node), 6);
 }
 
-bool TestChamber::areNeighborsSameSize(NodeID node) const
-{
-	const TestChamberNode& currentNode = m_nodeMap.at(node);
-	std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.getSize(), currentNode.getCenter());
-	bool success = true;
-	for (int i = 0; i < 6; ++i)
-	{
-		if (isPointOOB(neighborCoords[i].toQVector3D()))
-			continue;
-		auto r = tryGetNodeAtCoord(neighborCoords[i].toQVector3D());
-		if (r == std::nullopt)
-		{
-			success = false; // Neighbor does not exist
-		}
-	}
-	return success;
-}
-
-bool TestChamber::areNeighborsActive(NodeID node) const
-{
-	const TestChamberNode& currentNode = m_nodeMap.at(node);
-	std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.getSize(), currentNode.getCenter());
-	bool success = true;
-	for (int i = 0; i < 6; ++i)
-	{
-		if (isPointOOB(neighborCoords[i].toQVector3D()))
-			continue;
-		auto r = tryGetNodeAtCoord(neighborCoords[i]);
-		if (r != std::nullopt)
-		{
-			if (!m_nodeMap.at(r.value()).getActive())
-			{
-				success = false;
-			}
-		}
-	}
-	return success;
-}
-
 int snap(int x, int s)
 {
 	assert(s > 0 && "s must be positive");
@@ -130,54 +91,12 @@ int snap(int x, int s)
 	return ((x + half * sign) / s) * s;
 }
 
-void TestChamber::setNeighbors(NodeID node)
-{
-	auto center = m_nodeMap.at(node).getCenter();
-	auto size = m_nodeMap.at(node).getSize();
-	auto neighborCenters = getNeighborNodeCenters(size, center);
-	auto& neighborArray = m_nodeMap.at(node).getNeighbors();
-	for (int i = 0; i < 6; i++)
-	{
-		auto n = tryGetNodeAtCoord(neighborCenters[i]);
-		if (n.has_value())
-		{
-			neighborArray[i] = n.value(); // set the value on this node
-			m_nodeMap.at(n.value()).getNeighbors()[static_cast<int>(getOpposite(static_cast<WallSide>(i)))] =
-			    node; // set the value on the neighbor
-		}
-	}
-}
-
 // level == 0 at root node
 IntVector3D TestChamber::getClosestPossibleNodeCenterAtLevel(IntVector3D coord, unsigned int scale) const
 {
 	IntVector3D rel = coord + IntVector3D(scale / 2, scale / 2, scale / 2); // shift to positive space
 	return IntVector3D(snap(rel.x(), scale) - scale / 2, snap(rel.y(), scale) - scale / 2,
 	                   snap(rel.z(), scale) - scale / 2);
-}
-
-NodeID TestChamber::getNodeOfSizeAtCoord(QVector3D coord, unsigned int size) const
-{
-	return getNodeOfSizeAtCoord(coord, m_rootNode, size);
-}
-
-NodeID TestChamber::getNodeOfSizeAtCoord(QVector3D coord, NodeID parentID, unsigned int size) const
-{
-	if (isPointOOB(coord))
-		return parentID;
-	if (m_nodeMap.at(parentID).getSize() == size)
-		return parentID; // found
-	if (!m_nodeMap.at(parentID).hasChildren())
-		return parentID; // no more children to search. return this node
-
-	// This should never fire because the search starts from the root node
-	// The only way this can be fired is if the requested size is larger than the root node size
-	if (m_nodeMap.at(parentID).getSize() < size)
-		throw std::runtime_error("Something went wrong trying to find node of specific size at the given coord. Did "
-		                         "you try to find node larger than the root node?");
-	unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).getCenter());
-	NodeID id = m_nodeMap.at(parentID).readChildrenID().at(i);
-	return getNodeOfSizeAtCoord(coord, id, size);
 }
 
 const NodeID TestChamber::searchNodeWithCoord(QVector3D coord) const
@@ -194,40 +113,6 @@ const NodeID TestChamber::searchNodeWithCoord(QVector3D coord, NodeID parentID) 
 
 	unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).getCenter());
 	return searchNodeWithCoord(coord, m_nodeMap.at(parentID).readChildrenID().at(i));
-}
-
-// const NodeID TestChamber::searchNodeWithCoord
-
-const NodeID TestChamber::searchNodeWithCoordSize(const QVector3D coord, unsigned int size) const
-{
-	return searchNodeWithCoordSize(coord, size, m_rootNode);
-}
-
-const NodeID TestChamber::searchNodeWithCoordSize(const QVector3D coord, unsigned int size, NodeID parentID) const
-{
-	if (isPointOOB(coord))
-		throw std::runtime_error("Coordinate Out Of Bounds");
-	if (m_nodeMap.at(parentID).getSize() == size)
-		return parentID; // found
-
-	unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).getCenter());
-	return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).readChildrenID().at(i));
-}
-
-const NodeID TestChamber::searchNodeWithCoordSize(const IntVector3D coord, unsigned int size) const
-{
-	return searchNodeWithCoordSize(coord, size, m_rootNode);
-}
-
-const NodeID TestChamber::searchNodeWithCoordSize(const IntVector3D coord, unsigned int size, NodeID parentID) const
-{
-	if (isPointOOB(coord))
-		throw std::runtime_error("Coordinate Out Of Bounds");
-	if (m_nodeMap.at(parentID).getSize() == size)
-		return parentID; // found
-
-	unsigned int i = getChildOrder(coord, m_nodeMap.at(parentID).getCenter());
-	return searchNodeWithCoordSize(coord, size, m_nodeMap.at(parentID).readChildrenID().at(i));
 }
 
 IntVector3D TestChamber::getNodeBBoxMin(NodeID id) const
@@ -320,16 +205,6 @@ NodeID TestChamber::findLeafNear(IntVector3D coord, unsigned int size) const
 	// this fallback I think will catch offgrid nodes as long as it is properly part of tree
 	// can a node be offgrid and also be part of the tree?
 	return searchNodeWithCoord(coord.toQVector3D());
-}
-
-bool TestChamber::coordInNode(QVector3D coord, NodeID nodeID) const
-{
-	const TestChamberNode& node = m_nodeMap.at(nodeID);
-	float halfSize = node.getSize() / 2.0f;
-	auto c = node.getCenter();
-	return (coord.x() >= c.x() - halfSize && coord.x() <= c.x() + halfSize) &&
-	       (coord.y() >= c.y() - halfSize && coord.y() <= c.y() + halfSize) &&
-	       (coord.z() >= c.z() - halfSize && coord.z() <= c.z() + halfSize);
 }
 
 std::optional<ChamberSurface> TestChamber::getSurface(NodeID node, WallSide side) const

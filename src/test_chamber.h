@@ -40,26 +40,12 @@ public:
 
 	int getRootNodeSizeInt() const { return static_cast<int>(m_rootNodeWorldSize); };
 
-	unsigned int getRootNodeSize() const { return m_rootNodeWorldSize; };
-
 	QVector3D getNodeCenter(NodeID nodeID) const { return m_nodeMap.at(nodeID).getCenter().toQVector3D(); }
 
 	const SafeUnorderedMap<NodeID, TestChamberNode>& getNodeMap() const { return m_nodeMap; };
 
 	std::optional<ChamberSurface> getSurface(NodeID node, WallSide side) const;
 	void getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID node, WallSide side) const;
-	bool coordInNode(QVector3D coord, NodeID nodeID) const;
-	// Find the neighboring nodes of the given node in all 6 directions
-	// The neighbors may be nullopt if they do not exist (if the node is at the edge of the octree)
-	// The neighbors will either be the same size as the given node, or larger
-	// Recursive function that guarantees to find neighbors
-	// void getNeighborNodes(NodeID node, std::array<std::optional<NodeID>, 6>& out) const;
-
-	// Given a node, check if all its neighbors are the same size as itself
-	// very cheap operation Try to use this instead of getNeighborNodes whenever possible
-	bool areNeighborsSameSize(NodeID node) const;
-	// Given a node, check if all its neighbors are active
-	bool areNeighborsActive(NodeID node) const;
 
 	// Uses the hash function to try to locate the node at the given center coordinate
 	// Returns std::nullopt if there is no such node that has that exact center coordinate
@@ -89,20 +75,6 @@ public:
 	const NodeID searchNodeWithCoord(QVector3D coord) const;
 	const NodeID searchNodeWithCoord(QVector3D coord, NodeID parentID) const;
 	NodeID findLeafNear(IntVector3D coord, unsigned int size) const;
-	
-	// Uses the hash function to try to locate the node that uses the given coord as the centere coordinate
-	// const std::optional<NodeID> searchNodeWithCoord(IntVector3D coord) const;
-
-	// Find the node with specified size that includes the give coordinate
-	// Recursive function that guarantees to find the node
-	const NodeID searchNodeWithCoordSize(const QVector3D coord, unsigned int size) const;
-	const NodeID searchNodeWithCoordSize(const IntVector3D coord, unsigned int size) const;
-	// Returned node may or may not have children
-	// Returned node may be larger than the requested size if it does not have any child
-	// Will return the smallest node that contains the coord if the node of exact size does not exist at the coordinate
-	NodeID getNodeOfSizeAtCoord(QVector3D coord, unsigned int size) const;
-	NodeID getNodeOfSizeAtCoord(QVector3D coord, NodeID parentID, unsigned int size) const;
-
 	std::optional<RayHitResult> rayCast(Ray ray) const;
 
 	// Returns mins and maxs of the node's bounding box: (-,-,-) and (+,+,+)
@@ -112,7 +84,6 @@ public:
 
 	// Returns leaf nodes which touch the specified bbox
 	void getNodesTouchingBBox(const QVector3D& mins, const QVector3D& maxs, std::vector<NodeID>& out) const;
-	void setNeighbors(NodeID node);
 	// Calculates the potential coordinate for the center of a node at the given size that is closest to the given
 	// coordinate The returned coordinate may not correspond to an actual node
 	IntVector3D getClosestPossibleNodeCenterAtLevel(IntVector3D coord, unsigned int nodeSize) const;
@@ -132,21 +103,19 @@ public:
 
 	// Expand the tree until the coordinate is enclosed by a node of given size
 	NodeID subdivideNodeToCoord(QVector3D coord, NodeID parentID, unsigned int size);
-	int setNodeActive(NodeID node, bool active);
+
 	int setNodesActive(std::vector<NodeID>& nodes, bool active);
 
 	// Based on the octree structure, generate surfaces
-	void generateSurfaces();
+	void generateSurfaces(); //faster than threaded on extra-thin trees
 	void generateSurfacesThreaded();
 
-	void eraseNode(NodeID nodeID);
+	// the default puzzlemaker space
 	void createDefaultSpace();
 	// Extrude all surfaces selected
 	int extrudeSurfaces(Selector* selector);
 	// Receve all surfaces selected
 	int recedeSurfaces(Selector* selector);
-	// Recursively destroy a node and all its children
-	void destroyBranch(NodeID nodeID);
 
 	// Given a bounding box, subdivide all nodes within in so that their sides lie along the bounding box sides
 	// - out will be set to the resulting nodes inside the bbox
@@ -189,9 +158,6 @@ private:
 	void checkChildrenTouchingBBox(NodeID parentID, const QVector3D& mins, const QVector3D& maxs,
 	                               std::vector<NodeID>& out) const;
 
-	const NodeID searchNodeWithCoordSize(QVector3D coord, unsigned int size, NodeID parentID) const;
-	const NodeID searchNodeWithCoordSize(IntVector3D coord, unsigned int size, NodeID parentID) const;
-
 	IntVector3D getNodeBBoxMin(NodeID id) const;
 	IntVector3D getNodeBBoxMax(NodeID id) const;
 
@@ -205,6 +171,7 @@ private:
 
 	int m_gridSize;
 
+	// Per-chamber undostack
 	UndoStack m_undoStack;
 };
 

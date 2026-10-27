@@ -81,10 +81,6 @@ public:
 		return m_childIDs.value_initialize();
 	}
 
-	NodeID getNeighbor(WallSide direction) const { return m_neighbors[static_cast<int>(direction)]; }
-
-	std::array<NodeID, 6>& getNeighbors() { return m_neighbors; }
-
 private:
 	const NodeID m_id;
 	const IntVector3D m_center; // Position of the center of the node in world units
@@ -93,7 +89,5 @@ private:
 
 	std::optional<NodeID> m_parentID;
 	PMP::OptionalArray<NodeID, 8> m_childIDs;
-	// these neighbors are nodes with same size as this node
-	std::array<NodeID, 6> m_neighbors = {0, 0, 0, 0, 0, 0};
 };
 } // namespace PMP

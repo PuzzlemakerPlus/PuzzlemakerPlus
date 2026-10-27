@@ -94,24 +94,6 @@ void TestChamber::createOctreeNode(NodeID newID, std::optional<NodeID> parentID,
 		    newID, TestChamberNode(newID, parentID.value(), center, size, m_nodeMap.at(parentID.value()).getActive()));
 	else
 		m_nodeMap.emplace(newID, TestChamberNode(newID, center, size));
-	setNeighbors(newID);
-}
-
-int TestChamber::setNodeActive(NodeID node, bool active)
-{
-	auto& tcn = m_nodeMap.at(node);
-	// TODO: this is different from the comment. need to check if fixing this would break something
-	if (tcn.getActive() == false)
-		return 0; // State of the node has not changed
-	tcn.setActive(active);
-	// Also need to make sure all adjacent nodes have matching size.
-	// TODO: now that we have IntVector3D, this can be optimized further
-	std::array<IntVector3D, 6> outerCoords = getNeighborNodeCenters(tcn.getSize(), tcn.getCenter());
-	for (const auto& coord : outerCoords)
-	{
-		subdivideNodeToCoordOptimized(coord.toQVector3D(), 0, tcn.getSize());
-	}
-	return 1; // State of the node has changed
 }
 
 void TestChamber::matchNeighborSizes(const std::vector<NodeID>& nodes)
@@ -189,20 +171,6 @@ void TestChamber::getSurfaceChildren(std::vector<ChamberSurface>& out, NodeID no
 	}
 }
 
-// void TestChamber::getNeighborNodes(NodeID node, std::array<std::optional<NodeID>, 6>& out) const
-//{
-//	const TestChamberNode& currentNode = m_nodeMap.at(node);
-//	std::array<IntVector3D, 6> neighborCoords = getNeighborNodeCenters(currentNode.getSize(), currentNode.getCenter());
-//	for (int i = 0; i < 6; ++i)
-//	{
-//		try {
-//			NodeID neighborNodeID = getNodeOfSizeAtCoord(neighborCoords[i].toQVector3D(), currentNode.getSize());
-//			out[i] = neighborNodeID;
-//		} catch (const std::runtime_error&) {
-//			out[i] = std::nullopt; // Out of bounds
-//		}
-//	}
-// }
 std::optional<NodeID> TestChamber::tryGetNodeAtCoord(IntVector3D coord) const
 {
 	NodeID hash = positionToNodeID(coord);
@@ -433,11 +401,6 @@ void TestChamber::generateSurfacesThreaded()
 	}
 }
 
-void TestChamber::eraseNode(NodeID nodeID)
-{
-	m_nodeMap.erase(nodeID);
-	m_surfaceMap.erase(nodeID);
-}
 
 void TestChamber::createDefaultSpace()
 {
@@ -531,23 +494,6 @@ int TestChamber::recedeSurfaces(Selector* selector)
 	if (!changed.empty())
 		m_undoStack.addAction(TCEditAction::recede(this, selector, std::move(changed), selBefore, *selector));
 	return nodesChanged;
-}
-
-// does destroy the given node
-void TestChamber::destroyBranch(NodeID nodeID)
-{
-	auto& n = m_nodeMap.at(nodeID);
-	if (!n.hasChildren())
-	{
-		m_nodeMap.erase(nodeID);
-		return;
-	}
-	const auto& child = n.readChildrenID();
-	for (int i = 0; i < 8; i++)
-	{
-		destroyBranch(child[i]);
-	}
-	m_nodeMap.erase(nodeID);
 }
 
 // does not destroy the given node
