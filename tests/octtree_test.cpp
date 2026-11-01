@@ -42,9 +42,9 @@ void RunRandomNodeSearches(PMP::TestChamber& tc, int numTests = 5)
 	auto start = std::chrono::high_resolution_clock::now();
 
 	for (int i = 0; i < numTests; ++i) {
-		float x = dist(gen);
-		float y = dist(gen);
-		float z = dist(gen);
+		int x = dist(gen);
+		int y = dist(gen);
+		int z = dist(gen);
 
 		PMP::NodeID id = tc.searchNodeWithCoord({x, y, z});
 		std::cout << "Found Node that contains (" << x << "," << y << "," << z << "): " << id << std::endl;

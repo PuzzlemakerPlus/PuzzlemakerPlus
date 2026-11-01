@@ -72,8 +72,8 @@ public:
 
 	// Find the smallest node that includes the give coordinate
 	// Recursive function that guarantees to find the node
-	const NodeID searchNodeWithCoord(QVector3D coord) const;
-	const NodeID searchNodeWithCoord(QVector3D coord, NodeID parentID) const;
+	const NodeID searchNodeWithCoord(IntVector3D coord) const;
+	const NodeID searchNodeWithCoord(IntVector3D coord, NodeID parentID) const;
 	NodeID findLeafNear(IntVector3D coord, unsigned int size) const;
 	std::optional<RayHitResult> rayCast(Ray ray) const;
 

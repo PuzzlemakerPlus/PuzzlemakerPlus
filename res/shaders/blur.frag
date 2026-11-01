@@ -4,9 +4,18 @@ uniform sampler2D u_input;     // input texture
 uniform vec2 u_direction;      // (1,0) for horizontal, (0,1) for vertical
 uniform int u_radius = 10;
 uniform float u_sigma = 3.0f;
+uniform sampler2D u_depth;
+uniform sampler2D u_normal;
+uniform float u_near;
+uniform float u_far;
 out vec4 FragColor;
 in vec2 vUv;
 
+float linZ(float depth)
+{
+    float ndc = depth * 2.0 - 1.0;
+    return (2.0 * u_near * u_far) / (u_far + u_near - ndc * (u_far - u_near));
+}
 
 void main()
 {
@@ -19,7 +28,7 @@ void main()
         return;
     }
 
-    ivec2 texSize = textureSize(u_input, 0) / 2;
+    ivec2 texSize = textureSize(u_input, 0);
     vec2 texel = 1.0 / vec2(texSize);
 
     int radius = u_radius;
@@ -31,6 +40,9 @@ void main()
 
     float twoSigma2 = 2.0 * sigma * sigma;
 
+    vec3 n0 = texture(u_normal, vUv).xyz;
+    float z0 = linZ(texture(u_depth, vUv).r);
+
     vec4 sum      = vec4(0.0);
     float weightSum = 0.0;
 
@@ -39,10 +51,13 @@ void main()
         for (int ox = -radius; ox <= radius; ++ox)
         {
             vec2 offset = vec2(ox, oy) * texel;
-            vec4 s = texture(u_input, vUv + offset);
+            vec2 uv = vUv + offset;
+            vec4 s = texture(u_input, uv);
+            bool sameFace = dot(texture(u_normal, uv).xyz, n0) > 0.9;
+            bool sameDepth = abs(linZ(texture(u_depth, uv).r) - z0) < 16.0 + 0.004 * z0;
 
             // Only mix with neighbors that are also ¡°blur-eligible¡±
-            if (s.w > 0.5f)
+            if (s.w > 0.5f && sameFace && sameDepth)
             {
                 float r2 = float(ox * ox + oy * oy); // distance^2
                 float w  = exp(-r2 / twoSigma2);     // Gaussian weight

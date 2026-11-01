@@ -2,8 +2,9 @@
 
 const int KERNEL_SIZE = 64;
 
-uniform float u_range = 2.0f;
-uniform float u_variableRange = 0.05f;  // keep this low. remember that the maximum range is (ratio+1)**KERNEL_SIZE
+uniform float u_near;
+uniform float u_far;
+uniform float u_radius = 96.0f;  // world units
 
 uniform mat4 u_proj;
 uniform mat4 u_view;
@@ -45,26 +46,26 @@ vec3 uvToWorld(vec2 uv, float depth)
 
     vec4 ndc = vec4(uv * 2.0 - 1.0, z, 1.0);
 
-    // ¡æ view space
+    // ï¿½ï¿½ view space
     vec4 view = u_invProj * ndc;
     view /= view.w;
 
-    // ¡æ world space
+    // ï¿½ï¿½ world space
     vec4 world = u_invView * view;
     return world.xyz;
 }
 void worldToUvDepth(vec3 worldPos, out vec2 uv, out float depth)
 {
-    // ¡æ clip space
+    // ï¿½ï¿½ clip space
     vec4 clip = u_proj * u_view * vec4(worldPos, 1.0);
 
-    // perspective divide ¡æ NDC
+    // perspective divide ï¿½ï¿½ NDC
     vec3 ndc = clip.xyz / clip.w;   // [-1, 1]
 
-    // NDC ¡æ uv
+    // NDC ï¿½ï¿½ uv
     uv = ndc.xy * 0.5 + 0.5;        // [0, 1]
 
-    // NDC z ¡æ depth buffer
+    // NDC z ï¿½ï¿½ depth buffer
     depth = (ndc.z + 1.0) * 0.5;    // [0, 1]
 }
 vec4 randomQuat(uint seed)
@@ -113,36 +114,29 @@ void main()
     float depth   = texture(u_depth, vUv).r;
     vec3 pos = uvToWorld(vUv,depth);
 
-    int hit = 0;
-    float range = u_range;
-    float ratio = u_variableRange;
-    
     vec4 q = randomQuat(seed(vUv));
 
-    float occlusion = 0;
-    int count = 0;
+    vec3 n = normalize(normal.xyz);
+    float originZ = linearViewZ(depth, u_near, u_far);
+    float occlusion = 0.0;
     for(int i=0;i<KERNEL_SIZE;i++)
     {
-        range *= 1 + ratio;
         vec3 offset = rotateByQuat(u_kernel[i], q);
-        if(dot(normalize(offset), normalize(normal.xyz)) < 0) continue; //only check with hemisphere
-        count++;
-        vec3 samplePos = pos + offset * range;
+        if(dot(offset, n) < 0.0) offset = -offset; //flip into the hemisphere so that no sample is wasted
+
+        float s = float(i + 1) / float(KERNEL_SIZE);
+        vec3 samplePos = pos + offset * u_radius * (0.1 + 0.9 * s * s);
 
         vec2 sampleUV;
         float sampleDepth;
         worldToUvDepth(samplePos, sampleUV, sampleDepth);
-        float fragPos = texture(u_depth, sampleUV).r;
-        float linSampleZ = linearViewZ(sampleDepth, 1, 1000);
-        float linFragZ   = linearViewZ(fragPos, 1, 1000);
-        float depthDiff = linSampleZ - linFragZ;
-        if(0.0 < depthDiff && depthDiff < 1)
-        {
-            occlusion += 1;
-        }
+
+        float sampleZ  = linearViewZ(sampleDepth, u_near, u_far);
+        float surfaceZ = linearViewZ(texture(u_depth, sampleUV).r, u_near, u_far);
+        float bias = 2.0 + 1.7e-8 * sampleZ * sampleZ; //depth buffer precision falls with distance squared
+        float inRange = smoothstep(0.0, 1.0, u_radius / max(abs(originZ - surfaceZ), 0.001));
+        if(surfaceZ < sampleZ - bias) occlusion += inRange;
     }
-    occlusion = 1 - occlusion / float(count);
-    occlusion = clamp(occlusion * 2 - 1, 0,1);
-    occlusion = sigmoid(occlusion, 10, 0.7);
-    FragColor = vec4(vec3(occlusion),1.0f);
+    //contrast is applied in deferred.frag, after the blur
+    FragColor = vec4(vec3(1.0 - occlusion / float(KERNEL_SIZE)), 1.0f);
 }

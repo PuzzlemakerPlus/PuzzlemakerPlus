@@ -99,12 +99,12 @@ IntVector3D TestChamber::getClosestPossibleNodeCenterAtLevel(IntVector3D coord, 
 	                   snap(rel.z(), scale) - scale / 2);
 }
 
-const NodeID TestChamber::searchNodeWithCoord(QVector3D coord) const
+const NodeID TestChamber::searchNodeWithCoord(IntVector3D coord) const
 {
 	return searchNodeWithCoord(coord, m_rootNode);
 }
 
-const NodeID TestChamber::searchNodeWithCoord(QVector3D coord, NodeID parentID) const
+const NodeID TestChamber::searchNodeWithCoord(IntVector3D coord, NodeID parentID) const
 {
 	if (isPointOOB(coord))
 		throw std::runtime_error("Coordinate Out Of Bounds");
@@ -199,12 +199,12 @@ NodeID TestChamber::findLeafNear(IntVector3D coord, unsigned int size) const
 	{
 		std::optional<NodeID> id = tryGetNodeAtCoord(getClosestPossibleNodeCenterAtLevel(coord, s));
 		if (id.has_value())
-			return nodeHasChild(*id) ? searchNodeWithCoord(coord.toQVector3D(), *id) : *id;
+			return nodeHasChild(*id) ? searchNodeWithCoord(coord, *id) : *id;
 	}
 	// fallback. realistically shouldnt fire unless there is an 'offgrid' node
 	// this fallback I think will catch offgrid nodes as long as it is properly part of tree
 	// can a node be offgrid and also be part of the tree?
-	return searchNodeWithCoord(coord.toQVector3D());
+	return searchNodeWithCoord(coord);
 }
 
 std::optional<ChamberSurface> TestChamber::getSurface(NodeID node, WallSide side) const

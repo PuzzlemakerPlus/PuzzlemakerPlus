@@ -88,6 +88,6 @@ QVector3D quaternionToUnitVector(QVector4D quat)
 	float y = quat.y();
 	float z = quat.z();
 	float w = quat.w();
-	return QVector3D(2 * (x * z + w * y), 2 * (y * z - w * z), 1 - 2 * (x * x + y * y));
+	return QVector3D(2 * (x * z + w * y), 2 * (y * z - w * x), 1 - 2 * (x * x + y * y));
 }
 } // namespace PMP

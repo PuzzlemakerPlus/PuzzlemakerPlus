@@ -28,6 +28,7 @@ uniform sampler2D u_normal;
 uniform sampler2D u_albedo;
 uniform sampler2D u_depth;
 uniform sampler2D u_ao;
+uniform float u_aoPower;
 
 float viewZFromDepth(float depth)
 {
@@ -107,7 +108,7 @@ void main()
         //vec3 N = normalize(mat3(u_invView) * N_view);
     vec3 N = texture(u_normal, vUv).xyz;
     float depth = texture(u_depth, vUv).r;
-    vec3 ao = texture(u_ao, vUv).rgb;
+    float ao = pow(texture(u_ao, vUv).r, u_aoPower);
     // If nothing was drawn here, depth is usually 1.0 (far plane)
     if (depth == 1.0)
     {
@@ -150,7 +151,7 @@ void main()
     }
     float v_viewZ = viewZFromDepth(depth);
     float fog = clamp((v_viewZ - u_fogStart) / (u_fogEnd - u_fogStart), 0.0, 1.0);
-    vec3 finalColor = mix(color, u_fogColor, fog) * ao; // * ao;
+    vec3 finalColor = mix(color * ao, u_fogColor, fog);
     FragColor = vec4(finalColor, 1.0);
     
 }

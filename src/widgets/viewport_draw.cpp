@@ -554,6 +554,7 @@ void Viewport::drawDeferred(QMatrix4x4 view, QMatrix4x4 light, QVector3D lightDi
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, blurredAO);
 	m_deferredShader.setUniformValue("u_ao", 4);
+	m_deferredShader.setUniformValue("u_aoPower", m_aoPower * std::pow(m_cameraDistance / cameraDistDefault, m_aoFarBoost));
 
 	m_fullscreenVAO.bind();
 	glDrawArrays(GL_TRIANGLES, 0, 3); // fullscreen triangle that is generated in the vertex shader
@@ -601,19 +602,14 @@ void Viewport::drawAO(QMatrix4x4 view)
 	// Matrices
 	m_aoShader.setUniformValue("u_view", view);
 	m_aoShader.setUniformValue("u_invView", view.inverted());
-	QMatrix4x4 aoprojection;
-	aoprojection.setToIdentity();
-	const float aspect = (float)width() / (float)(height() > 0 ? height() : 1);
-	aoprojection.perspective(m_fov, aspect, 1, 3000);
-
-	m_aoShader.setUniformValue("u_proj", aoprojection);
-	m_aoShader.setUniformValue("u_invProj", aoprojection.inverted());
+	m_aoShader.setUniformValue("u_proj", m_projection);
+	m_aoShader.setUniformValue("u_invProj", m_projection.inverted());
+	m_aoShader.setUniformValue("u_near", m_near);
+	m_aoShader.setUniformValue("u_far", m_far);
 	m_aoShader.setUniformValueArray("u_kernel", m_aokernel.data(), (GLsizei)m_aokernel.size());
 
-	// see ao.frag for explanation
-	// m_aoShader.setUniformValue("u_range", 70.0f);
-	// m_aoShader.setUniformValue("u_variableRange", 0.05f);
-	// m_aoShader.setUniformValue("u_cutOff", 0.4f);
+	// keep the AO band a constant size on screen across the zoom range
+	m_aoShader.setUniformValue("u_radius", m_aoRadiusScale * m_cameraDistance);
 	// G-buffer inputs
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, m_gDepth);
@@ -643,11 +639,19 @@ GLuint Viewport::blurTexture(GLuint texture)
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	m_blurShader.bind();
-	m_blurShader.setUniformValue("u_radius", 10); // value terms of texels
-	m_blurShader.setUniformValue("u_sigma", 4.0f);
+	m_blurShader.setUniformValue("u_radius", 4); // value terms of texels
+	m_blurShader.setUniformValue("u_sigma", 2.5f);
+	m_blurShader.setUniformValue("u_near", m_near);
+	m_blurShader.setUniformValue("u_far", m_far);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	m_blurShader.setUniformValue("u_input", 0);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, m_gDepth);
+	m_blurShader.setUniformValue("u_depth", 1);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, m_gNormal);
+	m_blurShader.setUniformValue("u_normal", 2);
 
 	m_fullscreenVAO.bind();
 	glDrawArrays(GL_TRIANGLES, 0, 3);

@@ -251,6 +251,11 @@ private:
 	float m_fogEnd = fogEndDefault;
 	QVector3D m_fogCol = {0.1, 0.13, 0.2};
 
+	// AO control
+	float m_aoRadiusScale = 0.0192f;
+	float m_aoPower = 1.6f;          // default AO
+	float m_aoFarBoost = 0.3f;
+
 	// Shadow control
 	bool m_drawShadow = false;
 
