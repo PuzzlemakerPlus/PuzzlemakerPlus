@@ -8,9 +8,9 @@ It is currently very early in development and not ready for general use, but we 
 
 Install Qt version 6.8 or higher. The official installer requires an account, if you want to avoid this you can use [aqtinstall](https://github.com/miurahr/aqtinstall) instead, or install it from your system package manager on Linux.
 
-Clone this repo and run CMake. CMake should automatically detect your Qt installation if it is at the default location. If it is not, you will need to manually set the CMake variable `Qt6_DIR` to the location of the install directory.
+Clone this repo and run CMake. CMake should automatically detect your Qt installation if it is at the default location. Can be done in aqt with Can be done with ``-O C:\Qt``. If it is not, you will need to manually set the CMake variable `Qt6_DIR` to the location of the install directory.
 
-On windows, Visual Studio is required to set up Qt6
+On windows, Visual Studio is required to set up Qt6. 
 
 ```
 git clone https://github.com/PuzzlemakerPlus/PuzzlemakerPlus.git
