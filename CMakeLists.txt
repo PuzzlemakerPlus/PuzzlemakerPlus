@@ -33,28 +33,18 @@ FetchContent_Declare(
 FetchContent_Declare(
   sourcepp
   GIT_REPOSITORY https://github.com/craftablescience/sourcepp.git
-  GIT_TAG v2026.1.3
+  GIT_TAG v2026.11.1
 )
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs")  # ON if you want .so/.dll
+
 set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "Abseil uses your C++ standard")
+FetchContent_MakeAvailable(absl)
 
 # only build necessary sourcepp libraries
+set(SOURCEPP_LIBS_START_ENABLED OFF CACHE BOOL "" FORCE)
 set(SOURCEPP_USE_KVPP ON CACHE BOOL "" FORCE)
 set(SOURCEPP_USE_VPKPP ON CACHE BOOL "" FORCE)
-
-set(SOURCEPP_USE_VTFPP OFF CACHE BOOL "" FORCE)
-set(SOURCEPP_USE_VCRYPTPP OFF CACHE BOOL "" FORCE)
-set(SOURCEPP_USE_TOOLPP OFF CACHE BOOL "" FORCE)
-set(SOURCEPP_USE_SNDPP OFF CACHE BOOL "" FORCE)
-set(SOURCEPP_USE_STEAMPP OFF CACHE BOOL "" FORCE)
-set(SOURCEPP_USE_GAMEPP OFF CACHE BOOL "" FORCE)
-set(SOURCEPP_USE_MDLPP OFF CACHE BOOL "" FORCE)
-set(SOURCEPP_USE_FSPP OFF CACHE BOOL "" FORCE)
-set(SOURCEPP_USE_DMXPP OFF CACHE BOOL "" FORCE)
-set(SOURCEPP_USE_BSPPP OFF CACHE BOOL "" FORCE)
-
-FetchContent_MakeAvailable(absl)
 FetchContent_MakeAvailable(sourcepp)
 
 # FetchContent_Declare(
