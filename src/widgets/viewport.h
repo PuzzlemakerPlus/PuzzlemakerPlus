@@ -218,6 +218,8 @@ private:
 	TestChamber* m_testChamber = nullptr;
 	Selector* m_selector = nullptr;
 
+	QSize m_targetSize; //shader target size
+
 	// Camera transformation matrices
 	// (Chamber geometry won't use a model matrix, item model matrices will be stored in the item class)
 	QMatrix4x4 m_projection;

@@ -766,6 +766,18 @@ void Viewport::paintGL()
 	// std::cout << "Blur Size: " << blurW << "x" << blurH << std::endl;
 	// std::cout << "AO Size: " << aoW << "x" << aoH << std::endl;
 	// qDebug() << "Start drawing";
+
+	const QSize px = (size() * devicePixelRatioF());
+	if (px != m_targetSize && !px.isEmpty())
+	{
+		// recreate buffer targets on DPI change
+		createGBufferFBO(px.width(), px.height());
+		createSSAOFBO(px.width(), px.height());
+		createBlurFBO(px.width(), px.height());
+		resizeSelectionFBO(px.width(), px.height());
+		m_targetSize = px;
+	}
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);

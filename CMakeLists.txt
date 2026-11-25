@@ -33,7 +33,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   sourcepp
   GIT_REPOSITORY https://github.com/craftablescience/sourcepp.git
-  GIT_TAG v2026.1.3
+  GIT_TAG v2026.11.1
 )
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs")  # ON if you want .so/.dll
