@@ -157,6 +157,8 @@ private:
 	// TODO: shorten this name?
 	void checkChildrenTouchingBBox(NodeID parentID, const QVector3D& mins, const QVector3D& maxs,
 	                               std::vector<NodeID>& out) const;
+	// raises highestZ to the top of the highest active leaf under nodeID
+	void findHighestActiveZ(NodeID nodeID, int& highestZ) const;
 
 	IntVector3D getNodeBBoxMin(NodeID id) const;
 	IntVector3D getNodeBBoxMax(NodeID id) const;
